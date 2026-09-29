@@ -8,6 +8,8 @@ Open `index.html` in a browser. It is self-contained; the data is embedded.
 - **What earns an oral**: score statistics across about 17,000 reviewed papers (orals vs spotlights vs posters vs rejects), your baseline posters compared with the spotlight bar, a reading list, and a framing checklist.
 - **Sources & scales**: the data source, each venue's scoring scale, and caveats.
 
+- **Reading list**: star any paper with “Add to reading list”, then track it as To read / Reading / Read with your own notes, and copy the list as Markdown or BibTeX. On the published claude.ai page the list syncs across devices and only you can see or edit it. Opened from this repo, it is saved in that browser only.
+
 `papers.json` holds the same data as structured JSON.
 
 Orals and spotlights are from the main conference track only; workshop papers are not included. Award winners come from the official icml.cc and neurips.cc award pages and include a few Datasets & Benchmarks and Position track awards, which are labeled. Test-of-time awards are left out. arXiv links were matched by title through the arXiv API and verified; papers without a confident match have no arXiv link.
