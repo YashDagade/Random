@@ -1,0 +1,3 @@
+/* descent panel: keep display equations from widening the prose column on phones (they scroll instead) */
+#descent .p-intro, #descent .p-after { grid-template-columns: minmax(0, 1fr); }
+#descent .p-text .eq, #descent .step > div { min-width: 0; }

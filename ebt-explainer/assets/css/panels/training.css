@@ -1,0 +1,7 @@
+/* training: keep wide math inside the prose column; compact controls under the figure */
+#training .p-text > * { min-width: 0; }
+#training .p-text .eq { min-width: 0; overflow-x: auto; overflow-y: hidden; }
+#training .p-stage { gap: 10px; }
+#training .tr-ctl { gap: 8px; }
+#training .tr-ctl .controls { gap: 6px 18px; }
+#training .tr-ctl .readout { gap: 2px 14px; }

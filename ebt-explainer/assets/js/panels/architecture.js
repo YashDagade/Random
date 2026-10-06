@@ -1,5 +1,6 @@
 /* Panel: inside an EBT. How a candidate prediction enters a Transformer, why the naive autoregressive mask leaks,
-   the paper's attention scheme (Eq. 3, App. C.3) and its two-matmul implementation, one energy per guess.
+   the paper's attention scheme (Eq. 3, App. C.3) and its two-matmul implementation, one energy per guess, and the
+   bidirectional (image) variant.
    The dots in the mask are measured live: a tiny random-weight 2-layer attention network is perturbed input by input
    (central finite differences) and the sensitivity of every output to every input is recorded. */
 (function () {
@@ -10,21 +11,23 @@
     { id: 'small', P: 48.8, L: 12, D: 768, H: 12 }, { id: 'medium', P: 176, L: 24, D: 1024, H: 16 },
     { id: 'large', P: 396, L: 24, D: 1536, H: 16 }, { id: 'xl', P: 708, L: 24, D: 2048, H: 32 },
   ];
-  const MODES = [['tpp', 'T++'], ['concat', 'concat (naive)'], ['inter', 'interleave'], ['ebt', 'EBT Eq. 3']];
+  const MODES = [['tpp', 'T++'], ['concat', 'naive'], ['inter', 'interleave'], ['ebt', 'Eq. 3'], ['bi', 'bidirectional']];
+  const ONE = (mode) => mode === 'tpp' || mode === 'bi'; // one stream of S positions (no separate guess stream)
   const SUB = (n) => String(n).split('').map(d => '₀₁₂₃₄₅₆₇₈₉'[+d] || d).join('');
   const WARN = '#d4421c';
 
   // ---------- masks over the grouped order [z_1..z_N | ẑ_2..ẑ_{N+1}] ----------
   // index i < N: observed z_{i+1}; index N+p: prediction ẑ_{p+2} (guess for token p+2, made from z_1..z_{p+1})
   function buildMask(mode, N) {
-    const n = mode === 'tpp' ? N : 2 * N;
+    const n = ONE(mode) ? N : 2 * N;
     const pos = (i) => mode === 'inter' ? (i < N ? 2 * i : 2 * (i - N) + 1) : i;
     const M = [];
     for (let q = 0; q < n; q++) {
       const row = [];
       for (let k = 0; k < n; k++) {
         let a;
-        if (mode === 'ebt') a = q < N ? (k < N && k <= q) : (k < N ? k <= q - N : k === q);
+        if (mode === 'bi') a = true;
+        else if (mode === 'ebt') a = q < N ? (k < N && k <= q) : (k < N ? k <= q - N : k === q);
         else a = pos(k) <= pos(q);
         row.push(a);
       }
@@ -56,7 +59,7 @@
   function inputs(net, N, mode) {
     const X = [];
     for (let i = 0; i < N; i++) X.push(net.tok[i].map((x, d) => x + net.pos[i][d]));
-    if (mode !== 'tpp') for (let p = 0; p < N; p++) X.push(net.guess[p + 1].map((x, d) => x + net.pos[p + 1][d]));
+    if (!ONE(mode)) for (let p = 0; p < N; p++) X.push(net.guess[p + 1].map((x, d) => x + net.pos[p + 1][d]));
     return X;
   }
   // attention for one layer; returns per-row pre-Wo outputs (used to verify the C.3 scheme too)
@@ -87,7 +90,7 @@
   // J[r][c] = || d out_r / d x_c ||, central differences; rows = output rows (energies or T++ logits proxy)
   function dependence(net, N, mode) {
     const M = buildMask(mode, N), X = inputs(net, N, mode), n = X.length, D = net.D, eps = 1e-5;
-    const rows = mode === 'tpp' ? [...Array(N).keys()] : [...Array(N).keys()].map(p => N + p);
+    const rows = ONE(mode) ? [...Array(N).keys()] : [...Array(N).keys()].map(p => N + p);
     const J = rows.map(() => new Array(n).fill(0));
     for (let c = 0; c < n; c++) for (let d = 0; d < D; d++) {
       const x0 = X[c][d];
@@ -120,41 +123,20 @@
     id: 'architecture',
     nav: 'Inside an EBT',
     title: 'Inside an EBT: the guess goes in, an energy comes out',
-    lede: 'A Transformer++ reads its prediction off the output layer. An EBT feeds a candidate prediction into the input, beside the context, and gets back one number per position. Doing that for every position of a sequence at once takes a carefully built attention mask.',
+    lede: 'A Transformer++ reads its prediction off the output. An EBT feeds a candidate in beside the context and gets back one energy per position.',
     text: `
-      <p>Take a context of $S$ tokens $z_1,\\dots,z_S$. A Transformer++ embeds them, runs causal blocks, and maps each final hidden state to logits over the vocabulary for the following token. The prediction lives at the <em>output</em>, and one forward pass produces all $S$ of them.</p>
-      <p>An EBT moves the prediction to the <em>input</em>. Every position keeps a guess $\\hat y_{i+1}$ for the token after $z_i$. Each guess is a vector of logits over all $V = 50{,}277$ GPT-NeoX tokens, initialized as Gaussian noise. The blocks only read $D$-dimensional embeddings, so the guess is normalized and projected first:</p>
-      <div class="eq">$$p = \\mathrm{softmax}(\\hat y), \\qquad \\hat z = p^{\\top} W_{\\text{proj}} \\in \\mathbb R^{D}$$<span class="why">Listing 1, p.43–44 ("vocab_to_embed"); Fig 2 calls it the Linear Projector. Without the softmax, runs "often had extreme activations as well as large loss spikes" (p.43).</span></div>
-      <p>Gradient descent needs a continuous input, which is why the guess is a distribution and not a token id. When $p$ is one-hot, $p^{\top} W_{\text{proj}}$ picks out one row, like an ordinary embedding lookup; in between it is a weighted mix of rows [derived reading].</p>
-      <p>The context embeddings $z_o$ and the guess embeddings $z_p$ (each $S \\times D$) are concatenated into one $2S \\times D$ sequence. The network returns one scalar per guess, $E_{i+1} = E_\\theta(z_{\\le i}, \\hat z_{i+1})$, and a thinking step moves all $S$ guesses at once:</p>
-      <div class="eq">$$\\hat y \\;\\leftarrow\\; \\hat y \\;-\\; \\alpha\\, \\nabla_{\\hat y} \\textstyle\\sum_{i} E_{i+1}$$<span class="why">Listing 1 calls autograd once on predicted_energies.sum(). That hands each guess its own gradient only if no energy depends on any other guess. The attention mask is what guarantees it.</span></div>
-      <p>The figure follows one such step. The schematic on top shows the data flow; the matrix below shows who may attend to whom, measured on a small live network.</p>`,
+      <p>For text, each position holds a guess $\\hat y$: logits over all 50,277 tokens, started as noise. A softmax and a linear projector embed it: a one-hot guess becomes a token embedding, anything in between a smooth mix gradient descent can move.</p>
+      <p>Context and guess embeddings form one sequence of length $2S$ through ordinary Llama 2 blocks, and each guess position returns one scalar energy. A thinking step is a forward pass plus a backward pass to the input:</p>
+      <div class="eq">$$\\hat y \\leftarrow \\hat y - \\alpha\\, \\nabla_{\\hat y} \\textstyle\\sum_{i} E_{i+1}$$<span class="why">One gradient call (Listing 1). It gives each guess its own gradient only if no energy reads another guess.</span></div>`,
     steps: [
-      { label: 'Baseline: the Transformer++ mask', html: '<p>Rows are queries, columns are keys. In a causal Transformer++, token $z_i$ attends to $z_1,\\dots,z_i$: a lower triangle. The dots are measured, not drawn: we perturb each input of a small random-weight network and record how far each output moves, $\\lVert \\partial\\,\\mathrm{out}_i / \\partial z_k \\rVert$. They fill exactly the triangle.</p>' },
-      { label: 'Feed the guess in, mask naively', html: '<p>Append the guesses after the context and apply the usual causal mask to all $2S$ positions. Every guess now sits after every context token, so $\\hat z_{i+1}$ can attend to $z_{i+1}$, the very token it should predict, and to later tokens (orange). The probe shows its energy moving with them. Training would learn "low energy when the guess matches the next input", a shortcut that is useless at generation time, when the next token does not exist yet. Guesses also read earlier guesses (hatched). The paper names the leak (p.8); this mechanism is our reading.</p>' },
-      { label: 'Interleave instead?', html: '<p>Placing each guess right before the token it predicts, $z_1, \\hat z_2, z_2, \\hat z_3, \\dots$, removes the leak but keeps coupling (hatched): guesses read earlier guesses, and context tokens read guesses, so the context itself now depends on noise. The matrix keeps the grouped order so the four schemes line up; the mask is computed on the interleaved positions. Footnote 11 (p.31) explains why the paper avoids this: each prediction would carry stochasticity "not only by its initial value but also by all initial values of all previous predictions".</p>' },
-      { label: 'The paper\'s mask (Eq. 3)', html: '<p>The context stream is computed exactly as in a Transformer++: lower triangle, empty top-right block, never reading a guess (p.31–32). Each guess $\\hat z_{i+1}$ attends to $z_1,\\dots,z_i$ and to itself, the diagonal of the bottom-right block. Leak and coupling are now exactly zero. Press <b>[ resample weights ]</b>: the zeros come from the wiring, not from lucky weights.</p>' },
-      { label: 'Build it with two matmuls (C.3)', html: '<p>A guess\'s score with itself is not an entry of $Q_pK_o^\\top$, so Eq. 3 cannot be one matrix product. Appendix C.3 computes $\\tilde S = Q_p K_o^\\top/\\sqrt{d_k}$, one score per guess and context token. Its superdiagonal holds each guess\'s score against its own target (orange). C.3 appends a column, zeroes the superdiagonal by multiplying with a 0/1 mask (which keeps it differentiable), and writes the self-scores $\\mathrm{sum}(Q_p \\ast K_p)/\\sqrt{d_k}$ into those slots. A softmax with the causal mask shifted by one follows. Last, the superdiagonal $s$ is cloned out and zeroed, the extra column is dropped, and $z_p = S\'\\,V_o + s \\ast V_p$. The readout checks the result against plain masked attention over all $2S$ positions. (C.3 writes $N$ for the context length; we keep $N$ for parameters.)</p>' },
-      { label: 'One energy and one gradient per guess', html: '<p>Each guess position ends in one scalar (Listing 1 returns energies of shape B×S×1; the paper does not specify the head). In the dashed block, $\\partial E_{i+1}/\\partial \\hat z_k$ is non-zero only for $k = i+1$, so the gradient of $\\sum_i E_{i+1}$ hands every guess exactly its own gradient, and one autograd call per thinking step suffices. With coupling, the same call would mix gradients across guesses. The readout measures how much would cross under each scheme. The dashed loop is the thinking step itself: a forward pass, then a backward pass to the input.</p>' },
+      { label: 'The Transformer++ mask', html: '<p>Rows are queries, columns keys: $z_i$ attends to $z_1,\\dots,z_i$. Dots are measured: we nudge each input of a small random network and record how far each output moves.</p>' },
+      { label: 'Concatenate naively', html: '<p>Append the guesses and apply the usual causal mask to all $2S$ positions. Now the guess for token $i{+}1$ sees $z_{i+1}$, its own answer (orange). Training would learn "low energy when the guess copies the next input", useless at generation time (p.8 names the leak; the mechanism is our reading). Interleaving removes it but makes guesses read each other.</p>' },
+      { label: 'Eq. 3: one energy per guess', html: '<p>The context stream stays ordinary causal attention and never reads a guess. Each guess reads $z_1,\\dots,z_i$ and itself. Leak and coupling are exactly zero for any weights (try resample). In the dashed block each energy depends only on its own guess, so $\\nabla_{\\hat y}\\sum_i E_{i+1}$ hands every guess its own gradient. The energy head is unspecified.</p>' },
+      { label: 'What a step costs', html: '<p>A guess\'s score with itself is not an entry of $Q_pK_o^\\top$, so Appendix C.3 builds Eq. 3 from one product plus a swapped-in diagonal: $2S^2{+}S$ scores instead of $(2S)^2$. With the doubled sequence and backward passes, a step costs about 3.33× a Transformer++ step (6.66× for two-step pretraining, p.36).</p>' },
+      { label: 'Bidirectional EBT (images)', html: '<p>For denoising the paper builds on DiT code, calling it "relatively straightforward" (p.8). Every patch of the candidate image attends to every other; our reading is that no special mask is needed because the clean target is never an input.</p>' },
     ],
-    after: `
-      <h3>The rest is a Transformer++</h3>
-      <p>EBTs reuse the Llama 2 Transformer++ code (p.33) with RMSNorm, SwiGLU, RoPE and Xavier initialization (p.42). The Q/K/V weights are shared between the context and guess streams "to enable a one-to-one comparison to existing feed-forward transformers" (footnote 12, p.32). Autoregressive EBTs also prepend a learnable embedding of the optimization step index, which helped S1 models most and is credited with "enabling the accumulation of attention mass" (p.42). The bidirectional EBT used for images is built on DiT code (p.33) and is "relatively straightforward" (p.8). Our reading is that it needs no special mask because the clean image is never an input, so there is nothing to copy.</p>
-      <h3>Model sizes (Table D.1, p.33)</h3>
-      <div class="tbl"><table><thead><tr><th>size</th><th class="num">non-emb. params</th><th class="num">layers</th><th class="num">D</th><th class="num">heads</th></tr></thead><tbody>
-        <tr><td>xxs</td><td class="num">6.18M</td><td class="num">6</td><td class="num">384</td><td class="num">6</td></tr>
-        <tr><td>xs</td><td class="num">12.4M</td><td class="num">12</td><td class="num">384</td><td class="num">6</td></tr>
-        <tr><td>small</td><td class="num">48.8M</td><td class="num">12</td><td class="num">768</td><td class="num">12</td></tr>
-        <tr><td>medium</td><td class="num">176M</td><td class="num">24</td><td class="num">1024</td><td class="num">16</td></tr>
-        <tr><td>large</td><td class="num">396M</td><td class="num">24</td><td class="num">1536</td><td class="num">16</td></tr>
-        <tr><td>xl</td><td class="num">708M</td><td class="num">24</td><td class="num">2048</td><td class="num">32</td></tr>
-      </tbody></table></div>
-      <p>With no FFN multiplier (p.34) a block holds about $7D^2$ weights (4 for attention, 3 for SwiGLU), so $N \\approx 7LD^2$: 6.19M for xxs, 396M for large [derived].</p>
-      <h3>What the doubled sequence costs</h3>
-      <p>With $S$ context tokens the EBT processes $2S$ positions. Appendix D.5 writes $2S-2$ because there $S$ counts the whole training sequence: $S-1$ inputs and $S-1$ next-token guesses (p.35–36). Weight multiplications grow linearly with positions, so they double. Attention scores are where a four-fold blow-up could hide: full $2S \\times 2S$ attention with a generalized causal mask (C.4) costs "4 times the number of FLOPs as normal attention, which is around double" the C.3 version (p.33). C.3 computes $2S^2 + S$ scores instead of $4S^2$ (the readout counts them).</p>
-      <p>Per optimization step the paper counts a forward pass and two backward-sized passes over the doubled sequence, $(2N + 4N + 4N) \\times 2 = 20N$ FLOPs per token: ≈3.33× a Transformer++ step, and 6.66× for the two-step pretraining runs (p.36). Because the context stream never reads a guess, it is identical at every thinking step when the step condition is shared (S2, p.45) and could in principle be computed once; the paper's accounting does not assume this [derived]. The <a href="#costs">costs</a> section prices it all.</p>
-      <p class="note">The probe is not a trained EBT: 2 layers, 1 head, width 8, random weights, an energy head on each guess, wired with the selected mask. It measures the wiring, which is the same for any weights. Sensitivities are central finite differences computed in your browser.</p>`,
-    source: [{ kind: 'paper', note: 'Eq. 3, C.3, Listing 1, D.1' }, { kind: 'concept', note: 'leak mechanism: our reading' }, { kind: 'ext', note: 'live probe' }],
+    after: `<p class="note">The probe is a random-weight 2-layer network, not a trained EBT: it measures wiring, not learned behavior.</p>`,
+    source: [{ kind: 'paper', note: 'Eq. 3, C.3, Listing 1, D.1, D.5' }, { kind: 'concept', note: 'leak mechanism, bidirectional mask: our reading' }, { kind: 'ext', note: 'live probe' }],
 
     figure(stage, ctx) {
       const { lib } = ctx, h = lib.h, C = lib.C;
@@ -182,16 +164,17 @@
 
       // ---------- frame 1: schematic ----------
       const F1 = lib.frame(stage, { label: 'One thinking step, end to end', sub: 'text EBT · Listing 1 (p.43–44) · shapes per sequence' });
+      const F1sub = F1.wrap.querySelector('.fig-sub');
       const sch = rcanvas(F1.frame, w => w < 560 ? 304 : 178, 'Schematic of an EBT forward pass: context and guess streams concatenated, Transformer blocks, energy head, and the gradient loop back to the guess');
       const c1 = h('div', { class: 'controls' }); stage.appendChild(c1);
       const sizeSeg = lib.segmented({ label: 'Model size (Table D.1)', options: SIZES.map((s, i) => [i, s.id]), value: 0, onchange: (v) => { st.size = v; drawSch(); sizeRO(); } });
       c1.appendChild(h('span', { class: 'fig-label' }, 'size · Table D.1')); c1.appendChild(sizeSeg.el);
       const sizeNote = h('span', { class: 'readout' }); c1.appendChild(sizeNote);
-      function sizeRO() { const S = SIZES[st.size]; sizeNote.innerHTML = `<span>N <b>${S.P}M</b> non-embedding params</span>`; }
+      function sizeRO() { const S = SIZES[st.size]; sizeNote.innerHTML = `<span>P <b>${S.P}M</b> non-embedding params</span>`; }
 
       function drawSch() {
         const c = sch.ctx, W = sch.w, H = sch.h; sch.clear();
-        const tpp = st.mode === 'tpp', hl = new Set(st.hl), S = SIZES[st.size];
+        const tpp = st.mode === 'tpp', bi = st.mode === 'bi', hl = new Set(st.hl), S = SIZES[st.size];
         const narrow = W < 560, X = (f) => Math.round(f * W);
         let N;
         if (!narrow) N = {
@@ -205,14 +188,16 @@
           cat: [X(.06), 200, X(.29), 246], tf: [X(.34), 186, X(.68), 260], head: [X(.73), 200, X(.985), 246],
         };
         const cx = (b) => (b[0] + b[2]) / 2, cy = (b) => (b[1] + b[3]) / 2;
-        const maskName = { tpp: 'causal mask', concat: 'causal over 2S', inter: 'interleaved', ebt: 'mask: Eq. 3' }[st.mode];
+        const maskName = { tpp: 'causal mask', concat: 'causal over 2S', inter: 'interleaved', ebt: 'mask: Eq. 3', bi: 'full attention' }[st.mode];
         const lab = {
           tok: ['CONTEXT', 'S tokens'], emb: ['EMBED', 'S×D'],
           ylog: ['GUESS ŷ', 'S×V logits', 'init N(0, I)'], sm: ['SOFTMAX', 'p = σ(ŷ)'], proj: ['PROJECT', 'p·W → S×D'],
-          cat: ['CONCAT', tpp ? '(none)' : '2S×D'], tf: ['BLOCKS ×' + S.L, 'D ' + S.D + ' · ' + S.H + ' heads', 'N ' + S.P + 'M', maskName],
+          cat: ['CONCAT', tpp ? '(none)' : '2S×D'], tf: ['BLOCKS ×' + S.L, 'D ' + S.D + ' · ' + S.H + ' heads', 'P ' + S.P + 'M', maskName],
           head: tpp ? ['LM HEAD', 'S×V logits'] : ['ENERGY', 'E: S×1'],
         };
-        const faint = (id) => tpp && (id === 'ylog' || id === 'sm' || id === 'proj' || id === 'cat');
+        if (bi) Object.assign(lab, { tok: ['CONDITION', 'unspecified'], ylog: ['GUESS ŷ', 'whole image'], sm: ['PATCHIFY', '16×16 px'], proj: ['PROJECT', '→ S×D'], cat: ['CONCAT', '(none)'], head: ['ENERGY', 'head not', 'specified'] });
+        if (F1sub) F1sub.innerHTML = bi ? 'image EBT · DiT backbone (p.33) · shapes per image' : 'text EBT · Listing 1 (p.43–44) · shapes per sequence';
+        const faint = (id) => (tpp && (id === 'ylog' || id === 'sm' || id === 'proj' || id === 'cat')) || (bi && (id === 'tok' || id === 'emb' || id === 'e1' || id === 'zo' || id === 'cat'));
         const col = (id) => hl.has(id) ? C.blue : C.ink;
         const edge = (pts, id, o = {}) => {
           const on = hl.has(id), a = faint(id) ? 0.22 : 1;
@@ -242,22 +227,24 @@
           else edge([[N.emb[2], cy(N.emb)], [cx(N.cat), cy(N.emb)], [cx(N.cat), N.cat[1]]], 'zo');
           edge([[N.ylog[2], cy(N.ylog)], [N.sm[0], cy(N.sm)]], 'ylog');
           edge([[N.sm[2], cy(N.sm)], [N.proj[0], cy(N.proj)]], 'sm');
-          edge([[N.proj[2], cy(N.proj)], [cx(N.cat), cy(N.proj)], [cx(N.cat), N.cat[3]]], 'proj');
-          if (!tpp) edge([[N.cat[2], cy(N.cat)], [N.tf[0], cy(N.tf)]], 'cat');
+          if (!bi) edge([[N.proj[2], cy(N.proj)], [cx(N.cat), cy(N.proj)], [cx(N.cat), N.cat[3]]], 'proj');
+          if (!tpp && !bi) edge([[N.cat[2], cy(N.cat)], [N.tf[0], cy(N.tf)]], 'cat');
+          if (bi) edge([[N.proj[2], cy(N.proj)], [N.tf[0] - 14, cy(N.proj)], [N.tf[0] - 14, cy(N.tf) + 20], [N.tf[0], cy(N.tf) + 20]], 'bip');
           edge([[N.tf[2], cy(N.tf)], [N.head[0], cy(N.head)]], 'tf');
-          T(c, tpp ? 'z  S×D' : 'z_o  S×D', (N.emb[2] + cx(N.cat)) / 2 + (tpp ? 18 : 0), cy(N.emb) - 15, { size: 10.5, color: C.muted, align: 'center' });
-          if (!tpp) T(c, 'z_p  S×D', (N.proj[2] + cx(N.cat)) / 2, cy(N.proj) + 5, { size: 10.5, color: hl.has('proj') ? C.blue : C.muted, align: 'center' });
+          if (!bi) T(c, tpp ? 'z  S×D' : 'z_o  S×D', (N.emb[2] + cx(N.cat)) / 2 + (tpp ? 18 : 0), cy(N.emb) - 15, { size: 10.5, color: C.muted, align: 'center' });
+          if (!tpp && !bi) T(c, 'z_p  S×D', (N.proj[2] + cx(N.cat)) / 2, cy(N.proj) + 5, { size: 10.5, color: hl.has('proj') ? C.blue : C.muted, align: 'center' });
         } else {
           const bx = X(.67), by = 172;
           if (tpp) edge([[N.emb[2], cy(N.emb)], [bx, cy(N.emb)], [bx, by], [cx(N.tf), by], [cx(N.tf), N.tf[1]]], 'zo');
           else edge([[N.emb[2], cy(N.emb)], [bx, cy(N.emb)], [bx, by], [cx(N.cat), by], [cx(N.cat), N.cat[1]]], 'zo');
           edge([[N.ylog[2], cy(N.ylog)], [N.sm[0], cy(N.sm)]], 'ylog');
           edge([[N.sm[2], cy(N.sm)], [N.proj[0], cy(N.proj)]], 'sm');
-          edge([[cx(N.proj), N.proj[3]], [cx(N.proj), by + 6], [cx(N.cat) + 8, by + 6], [cx(N.cat) + 8, N.cat[1]]], 'proj');
-          if (!tpp) edge([[N.cat[2], cy(N.cat)], [N.tf[0], cy(N.cat)]], 'cat');
+          if (!bi) edge([[cx(N.proj), N.proj[3]], [cx(N.proj), by + 6], [cx(N.cat) + 8, by + 6], [cx(N.cat) + 8, N.cat[1]]], 'proj');
+          if (!tpp && !bi) edge([[N.cat[2], cy(N.cat)], [N.tf[0], cy(N.cat)]], 'cat');
+          if (bi) edge([[cx(N.proj) + 10, N.proj[3]], [cx(N.proj) + 10, by - 2], [cx(N.tf) + 30, by - 2], [cx(N.tf) + 30, N.tf[1]]], 'bip');
           edge([[N.tf[2], cy(N.head)], [N.head[0], cy(N.head)]], 'tf');
-          T(c, tpp ? 'z' : 'z_o', bx + 5, 70, { size: 10.5, color: C.muted });
-          if (!tpp) T(c, 'z_p', cx(N.proj) + 5, 150, { size: 10.5, color: hl.has('proj') ? C.blue : C.muted });
+          if (!bi) T(c, tpp ? 'z' : 'z_o', bx + 5, 70, { size: 10.5, color: C.muted });
+          if (!tpp && !bi) T(c, 'z_p', cx(N.proj) + 5, 150, { size: 10.5, color: hl.has('proj') ? C.blue : C.muted });
         }
         Object.keys(N).forEach(boxF);
         // the thinking loop
@@ -266,7 +253,7 @@
           const yb = narrow ? 276 : 154, xl = narrow ? 8 : cx(N.ylog);
           if (!narrow) edge([[cx(N.head), N.head[3]], [cx(N.head), yb], [xl, yb], [xl, N.ylog[3]]], loopOn ? 'loop' : 'loopx', { dash: [5, 4] });
           else edge([[cx(N.head), N.head[3]], [cx(N.head), yb], [xl, yb], [xl, cy(N.ylog)], [N.ylog[0], cy(N.ylog)]], loopOn ? 'loop' : 'loopx', { dash: [5, 4] });
-          const msg = 'ŷ ← ŷ − α ∇ŷ Σ E   (backward pass to the input)';
+          const msg = bi ? (narrow ? 'ŷ ← ŷ − α ∇ŷ E   (all patches at once)' : 'ŷ ← ŷ − α ∇ŷ E   (one step updates every patch of the image)') : 'ŷ ← ŷ − α ∇ŷ Σ E   (backward pass to the input)';
           T(c, msg, narrow ? W / 2 : (xl + cx(N.head)) / 2, yb + 5, { size: 10.5, color: loopOn ? C.blue : C.muted, align: 'center', maxWidth: W - 20 });
         } else {
           T(c, 'Transformer++: the prediction is read from the output, one forward pass per token', W / 2, narrow ? 276 : 154, { size: 10.5, color: C.muted, align: 'center', maxWidth: W - 20 });
@@ -277,8 +264,8 @@
       const row = h('div', { class: 'fig-row' }); stage.appendChild(row);
       const F2 = lib.frame(row, { label: 'Attention mask · measured dependence' });
       F2.wrap.style.flex = '1 1 340px';
-      const cellFor = (w) => { const lw = labelW(w); if (st.view === 'c3') return Math.min(46, (w - lw - 8) / (st.N + 1)); const n = st.mode === 'tpp' ? st.N : 2 * st.N; return Math.min(26, (w - lw - 8) / n); };
-      const mx = rcanvas(F2.frame, (w) => { const n = st.view === 'c3' ? st.N : (st.mode === 'tpp' ? st.N : 2 * st.N); return 44 + cellFor(w) * n + (st.view === 'c3' ? 60 : (st.blockHL || st.mode === 'inter' ? 40 : 10)); }, 'Attention mask matrix with measured input sensitivities');
+      const cellFor = (w) => { const lw = labelW(w); if (st.view === 'c3') return Math.min(46, (w - lw - 8) / (st.N + 1)); const n = ONE(st.mode) ? st.N : 2 * st.N; return Math.min(26, (w - lw - 8) / n); };
+      const mx = rcanvas(F2.frame, (w) => { const n = st.view === 'c3' ? st.N : (ONE(st.mode) ? st.N : 2 * st.N); return 44 + cellFor(w) * n + (st.view === 'c3' ? 60 : (st.blockHL || st.mode === 'inter' ? 40 : 10)); }, 'Attention mask matrix with measured input sensitivities');
       const F3 = lib.frame(row, { label: 'Readout', sub: 'hover or tap a row', dashed: true, pad: 12 });
       F3.wrap.style.flex = '1 1 200px';
       const ro = h('div', { class: 'arch-ro' }); F3.frame.appendChild(ro);
@@ -308,13 +295,13 @@
         return cache[key];
       }
       function labelW(w) { return w < 360 ? 70 : 84; }
-      const nameOf = (i, N) => i < N ? 'z' + SUB(i + 1) : 'ẑ' + SUB(i - N + 2);
-      const wordOf = (i, N) => i < N ? TOKENS[i] : TOKENS[i - N + 1];
+      const nameOf = (i, N) => st.mode === 'bi' ? 'ŷ' + SUB(i + 1) : i < N ? 'z' + SUB(i + 1) : 'ẑ' + SUB(i - N + 2);
+      const wordOf = (i, N) => st.mode === 'bi' ? 'patch' : i < N ? TOKENS[i] : TOKENS[i - N + 1];
       let geo = null;
 
       function drawMask() {
         const c = mx.ctx, W = mx.w; mx.clear();
-        const N = st.N, tpp = st.mode === 'tpp', n = tpp ? N : 2 * N;
+        const N = st.N, tpp = ONE(st.mode), n = tpp ? N : 2 * N;
         const lw = labelW(W), cell = cellFor(W), x0 = lw, y0 = 40;
         geo = { x0, y0, cell, n };
         const dep = getDep(), M = dep.M;
@@ -323,7 +310,7 @@
         if (!tpp) {
           T(c, 'context z_o', x0 + cell * N / 2, 2, { size: 10, color: C.muted, align: 'center' });
           T(c, 'guesses z_p', x0 + cell * N * 1.5, 2, { size: 10, color: C.blue, align: 'center' });
-        } else T(c, 'tokens z (keys)', x0 + cell * N / 2, 2, { size: 10, color: C.muted, align: 'center' });
+        } else T(c, st.mode === 'bi' ? 'patches of the guess ŷ (keys)' : 'tokens z (keys)', x0 + cell * N / 2, 2, { size: 10, color: st.mode === 'bi' ? C.blue : C.muted, align: 'center' });
         // column labels
         for (let k = 0; k < n; k++) T(c, nameOf(k, N), x0 + (k + .5) * cell, 20, { size: cell < 20 ? 9.5 : 10.5, color: k < N ? C.ink : C.blue, align: 'center' });
         // cells
@@ -355,7 +342,7 @@
             const v = dep.J[ri][k]; if (!(v > 0)) continue;
             const kd = tpp ? 'ctx' : kind(q, k, N);
             const r = Math.max(1.6, cell * 0.36 * Math.sqrt(v / vmax));
-            const colr = kd === 'target' || kd === 'future' ? WARN : kd === 'couple' ? '#6b6b70' : (q < N && !tpp ? C.ink : (tpp ? C.ink : C.blue));
+            const colr = kd === 'target' || kd === 'future' ? WARN : kd === 'couple' ? '#6b6b70' : (q < N && !tpp ? C.ink : (tpp ? (st.mode === 'bi' ? C.blue : C.ink) : C.blue));
             lib.dot(c, x0 + (k + .5) * cell, y0 + (q + .5) * cell, r, colr);
           }
         });
@@ -428,16 +415,16 @@
       }
 
       function readout(hov, dep) {
-        const N = st.N, tpp = st.mode === 'tpp', n = tpp ? N : 2 * N, M = dep.M;
+        const N = st.N, tpp = ONE(st.mode), n = tpp ? N : 2 * N, M = dep.M;
         let html = '';
         if (hov != null && hov < n) {
           const isP = hov >= N;
           const seen = [], leaks = [], couples = [];
           for (let k = 0; k < n; k++) if (M[hov][k]) {
-            const kd = tpp ? 'ctx' : kind(hov, k, N), nm = (k === hov && isP) ? 'itself' : (k < N ? TOKENS[k] : nameOf(k, N));
+            const kd = tpp ? 'ctx' : kind(hov, k, N), nm = (k === hov && (isP || st.mode === 'bi')) ? 'itself' : (k < N && st.mode !== 'bi' ? TOKENS[k] : nameOf(k, N));
             if (kd === 'ctx' || kd === 'self') seen.push(nm); else if (kd === 'target') leaks.push(TOKENS[k] + ' (its own target)'); else if (kd === 'future') leaks.push(TOKENS[k] + ' (future)'); else couples.push(nameOf(k, N));
           }
-          const title = isP ? `<b>${nameOf(hov, N)}</b> · guess for “${TOKENS[hov - N + 1]}” after “${TOKENS.slice(0, hov - N + 1).join(' ')}”` : `<b>${nameOf(hov, N)}</b> · observed “${TOKENS[hov]}”`;
+          const title = st.mode === 'bi' ? `<b>${nameOf(hov, N)}</b> · patch ${hov + 1} of the candidate image` : isP ? `<b>${nameOf(hov, N)}</b> · guess for “${TOKENS[hov - N + 1]}” after “${TOKENS.slice(0, hov - N + 1).join(' ')}”` : `<b>${nameOf(hov, N)}</b> · observed “${TOKENS[hov]}”`;
           html += `<p>${title}</p><p>attends to: ${seen.join(' · ') || 'nothing'}</p>`;
           html += leaks.length ? `<p class="bad">leak: ${leaks.join(' · ')}</p>` : (isP || tpp ? '<p>leak: none</p>' : '');
           if (!tpp) html += couples.length ? `<p class="cpl">${isP ? 'coupled to guesses' : 'reads guesses'}: ${couples.join(' · ')}</p>` : '<p>coupling: none</p>';
@@ -456,7 +443,7 @@
         // mode summary
         let tot = 0, bad = 0, cpl = 0;
         dep.rows.forEach((q, ri) => dep.J[ri].forEach((v, k) => { tot += v; if (!tpp) { const kd = kind(q, k, N); if (kd === 'target' || kd === 'future') bad += v; if (kd === 'couple') cpl += v; } }));
-        const scores = tpp ? `S² = ${N * N}` : st.mode === 'ebt' ? `2S²+S = ${2 * N * N + N} (C.3)` : `(2S)² = ${4 * N * N}`;
+        const scores = tpp ? `S² = ${N * N}${st.mode === 'bi' ? ' (full)' : ''}` : st.mode === 'ebt' ? `2S²+S = ${2 * N * N + N} (C.3)` : `(2S)² = ${4 * N * N}`;
         info.style.display = st.blockHL ? 'none' : '';
         info.innerHTML = `<span>scores computed <b>${scores}</b></span>` + (tpp ? '' : `<span>leaked <b>${(100 * bad / tot).toFixed(1)}%</b> · coupled <b>${(100 * cpl / tot).toFixed(1)}%</b> of ‖∂E‖</span>`);
       }
@@ -493,7 +480,7 @@
       mx.canvas.setAttribute('tabindex', '0');
       mx.canvas.addEventListener('keydown', (ev) => {
         if (st.view !== 'mask' || (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp')) return;
-        const n = st.mode === 'tpp' ? st.N : 2 * st.N, cur = st.pin != null ? st.pin : (st.mode === 'tpp' ? st.def : st.N + st.def);
+        const n = ONE(st.mode) ? st.N : 2 * st.N, cur = st.pin != null ? st.pin : (ONE(st.mode) ? st.def : st.N + st.def);
         st.pin = Math.max(0, Math.min(n - 1, cur + (ev.key === 'ArrowDown' ? 1 : -1))); st.hover = null; drawMask(); ev.preventDefault(); ev.stopPropagation();
       });
       mx.canvas.addEventListener('click', (ev) => { if (st.view !== 'mask') return; const hh = hit(ev); if (hh) { st.pin = hh.r; st.hover = hh; drawMask(); } });
@@ -511,7 +498,7 @@
       function warm() {
         if (warmT) return;
         const todo = [];
-        for (let n = 3; n <= 8; n++) ['ebt', 'concat', 'inter', 'tpp'].forEach(m => todo.push(m + ':' + n));
+        for (let n = 3; n <= 8; n++) ['ebt', 'concat', 'inter', 'tpp', 'bi'].forEach(m => todo.push(m + ':' + n));
         const next = () => { const key = todo.find(k => !cache[k]); if (!key) { warmT = null; return; } const [m, n] = key.split(':'); cache[key] = dependence(net, +n, m); warmT = setTimeout(next, 40); };
         warmT = setTimeout(next, 200);
       }
@@ -525,10 +512,9 @@
         step(i) {
           if (i === 0) set({ mode: 'tpp', view: 'mask', hl: [], def: 2 });
           if (i === 1) set({ mode: 'concat', view: 'mask', hl: ['ylog', 'sm', 'proj', 'cat', 'zo'], def: 1 });
-          if (i === 2) set({ mode: 'inter', view: 'mask', hl: ['cat'], def: 2 });
-          if (i === 3) set({ mode: 'ebt', view: 'mask', hl: ['tf'], def: 2 });
-          if (i === 4) { set({ mode: 'ebt', view: 'c3', hl: ['tf'], op: 0 }); playOps(); }
-          if (i === 5) set({ mode: 'ebt', view: 'mask', hl: ['head', 'loop', 'loopx'], def: 3, blockHL: true });
+          if (i === 2) set({ mode: 'ebt', view: 'mask', hl: ['tf', 'head', 'loop', 'loopx'], def: 3, blockHL: true });
+          if (i === 3) { set({ mode: 'ebt', view: 'c3', hl: ['tf'], op: 0 }); playOps(); }
+          if (i === 4) set({ mode: 'bi', view: 'mask', hl: ['ylog', 'sm', 'bip', 'tf', 'head', 'loop', 'loopx'], def: 2 });
         },
         show() { warm(); },
         hide() { stopOps(); if (warmT) clearTimeout(warmT); warmT = null; },

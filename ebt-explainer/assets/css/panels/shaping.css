@@ -1,0 +1,11 @@
+/* shaping: keep wide math inside the prose column; regularizer toggles */
+#shaping .p-intro, #shaping .p-after, #shaping .steps { grid-template-columns: minmax(0, 1fr); }
+#shaping .p-text .eq, #shaping .p-text .step > div { min-width: 0; }
+#shaping .ctr-ro { min-height: 2.6em; align-content: flex-start; }
+#shaping .shp-tg { gap: 8px 16px; }
+#shaping .shp-tg .tg[aria-pressed="false"] { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--faint); }
+#shaping .shp-tg .tg[aria-pressed="true"] { color: var(--blue); font-weight: 700; text-decoration: none; }
+#shaping .shp-t2 { min-height: 2.6em; align-content: flex-start; }
+#shaping .shp-dcol { gap: 10px; align-content: start; padding-top: 30px; }
+#shaping .shp-dcol .ctl { max-width: none; }
+@media (max-width: 600px) { #shaping .shp-dcol { padding-top: 0; } }

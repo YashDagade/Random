@@ -1,8 +1,8 @@
 /* Panel: thinking over a whole vocabulary (text EBTs).
    Top instrument: the toy character-level text EBT (data/text.json weights, run live) thinking about one next character:
    probability bars for the top symbols, the logit update -α∂E/∂ŷ under them (zero-sum through the softmax), energy / entropy / p(true) per step.
-   Bottom instrument (tabs): a held-out sentence coloured by energy (live, easy/hard groups, |ΔE| < ε stopping rule),
-   paper Fig 8 (digitized), and the toy's held-out loss versus thinking steps with the one-pass baseline. */
+   Bottom instrument (tabs): a held-out sentence coloured by energy (live, easy/hard groups, raw vs per-context relative energy)
+   and paper Fig 8 (digitized). */
 (function () {
   'use strict';
 
@@ -86,36 +86,28 @@
   }
 
   const SHORT = ['…and q → u', '…in th → e', '…informatio → n', 'new word', 'year digit', 'after a comma'];
-  const DSN = { val: 'held-out web text', ood_shakespeare: 'Shakespeare (OOD)', ood_code: 'Python code (far OOD)', train: 'train text' };
 
   EBT.panel({
     id: 'tokens',
     nav: 'Thinking over a vocabulary',
     title: 'Thinking over a whole vocabulary',
-    lede: 'For text, an EBT does not predict a token. It predicts a full distribution over the vocabulary, starts it as noise, and reshapes it step by step, with the energy scoring every intermediate version.',
+    lede: 'For text, the guess is not a token but a whole distribution over the vocabulary. It starts as noise and is reshaped step by step, with the energy scoring every version.',
     text: `
-      <p>In a language EBT the candidate $\\hat y$ is a vector of logits with one entry per vocabulary item: $V = 50{,}277$ in the paper (GPT-NeoX tokenizer), 54 symbols in our character-level toy. It starts as Gaussian noise, $\\hat y_0 \\sim \\mathcal N(0, I)$, and every thinking step moves all $V$ logits at once (Listing 1, p.43–44).</p>
-      <p>A Transformer reads embeddings, not logits, so the guess is converted first:</p>
-      <div class="eq">$$p = \\mathrm{softmax}(\\hat y), \\qquad e \\;=\\; p^{\\top} W \\;=\\; \\sum_{v=1}^{V} p_v\\, W_v$$<span class="why">Listing 1: vocab_to_embed(softmax(...)); Fig 2 calls it the "Linear Projector". W has one row per symbol (in the toy, 54 × 128).</span></div>
-      <p>The model therefore scores a soft mixture of token embeddings. Normalizing the guess with the softmax was "crucial for the stability of EBTs": runs on unnormalized logits "often had extreme activations as well as large loss spikes" (p.43). Training puts cross-entropy on the final distribution, $J = -\\log p_y(\\hat y_N)$ for the true token $y$, and never supervises the energy itself.</p>`,
+      <p>In a language EBT, $\\hat y$ holds one logit per vocabulary item (50,277 in the paper, 54 characters in our toy, which runs live here), drawn from $\\mathcal N(0, I)$. A Transformer reads embeddings, so the guess enters as a soft mixture of token embeddings:</p>
+      <div class="eq">$$p = \\mathrm{softmax}(\\hat y), \\qquad e = \\sum_{v} p_v\\, W_v$$<span class="why">Fig 2's "Linear Projector"; Listing 1 (p.43–44). Without the softmax, training was unstable (p.43).</span></div>
+      <p>Training scores the optimized distribution with cross-entropy against the true token. The energy itself is never supervised (p.37).</p>`,
     steps: [
-      { label: 'A guess is a distribution', html: '<p>Step 0. The bars show $p = \\mathrm{softmax}(\\hat y_0)$ for the ten symbols the model ends up favouring, plus the other 44 lumped together. Random logits give a lumpy but uninformative distribution, with entropy a little below the uniform $\\ln 54 \\approx 3.99$ nats. The dashed box marks the true next character; ink ticks show what a same-size one-pass model predicts.</p>' },
-      { label: 'What the Transformer sees', html: '<p>The guess enters the network as $e = \\sum_v p_v W_v$. The line under the bars lists the largest weights in that mixture. At step 0 the input is a blur of dozens of embeddings. After a few steps it is close to the embedding of one or two characters.</p>' },
-      { label: 'The gradient through the softmax', html: '<p>By the chain rule through the softmax,</p><div class="eq">$$\\frac{\\partial E}{\\partial \\hat y_v} = p_v\\Big(g_v - \\sum_u p_u\\, g_u\\Big), \\qquad g = \\frac{\\partial E}{\\partial p}$$</div><p>The strip under the bars shows the update $-\\alpha\\,\\partial E/\\partial \\hat y_v$. Two consequences. The updates sum to zero, because the softmax ignores a shift shared by all logits, so thinking only moves mass between symbols. And each update is scaled by $p_v$: a symbol with almost no probability barely moves even when the energy favours it. That is why the starting noise matters, and why different starts can end on different answers.</p>' },
-      { label: 'Think', html: '<p>Play, or drag the step slider. Within one or two steps the mass collapses onto a few symbols, and energy and entropy fall together. Then try the hard contexts. For "first letter of a new word" the true \'j\' never gains mass. For "year digit" it spreads its mass over several digits and a space, with almost none on the true \'2\'. Press <b>[ new start ]</b>: easy contexts reach the same answer from any start, hard ones do not.</p>' },
-      { label: 'Easy and hard, in the paper', html: '<p>Fig 8 (p.12), digitized: normalized energy per token across 12 thinking iterations. "for easier to predict tokens, such as \'the\' or \'but\', EBTs optimize to lower energies faster, whereas for harder to predict tokens, such as \'fox\' or \'problem\' EBTs have higher energy that does not converge across steps" (p.10–11). Note that almost all of the change happens at iteration 1; afterwards the rows are flat. The normalization is not stated.</p>' },
-      { label: 'Easy and hard, in our toy', html: '<p>Every character of a held-out sentence, predicted from its 40-character prefix, all from the same $\\hat y_0$. Boxed characters start a word (hard); the line plot averages each group. With raw energy the hard characters end <em>lower</em> than the easy ones, the opposite of Fig 8. Only after subtracting each context\'s energy at a uniform guess, $E - E(x, \\hat y{=}0)$ (our normalization), do they come out higher. Over 4,096 held-out positions: raw −4.07 (hard) vs −3.97 (easy); relative −2.91 vs −3.18 (data/text.json).</p>' },
-      { label: 'When to stop', html: '<p>A natural stopping rule is $|E_i - E_{i-1}| < \\varepsilon$. The small digits under the characters show how many steps each one would use; drag ε. The paper describes thinking "until convergence of the predicted energy" (Fig 2 caption, p.4) but reports no adaptive-stopping experiment. In the toy, easy and hard characters stop after about the same number of steps (five to six at ε = 0.02 in these sentences): the energy keeps creeping down for every character, so the rule measures the tail of the descent rather than difficulty. In Fig 8 the hard tokens instead keep fluctuating at a higher level.</p>' },
-      { label: 'Does thinking longer help?', html: '<p>Held-out loss of the toy against the number of steps, with the same-size one-pass baseline (dashed). Trained with 2–3 steps, the toy keeps improving to 16: 2.331 → 2.250 nats on held-out web text (7.8% lower perplexity, paired 95% CI of the gain 0.063 to 0.093 nats). It never approaches the baseline\'s 1.599. The gain shrinks on Shakespeare (5.4%) and reverses on Python code (3.5% higher perplexity at 16 steps), the opposite of the paper\'s Fig 7, where thinking helps more the further out of distribution the data is.</p>' },
+      { label: 'A guess is a distribution', html: '<p>Step 0: random logits give a lumpy, uninformative distribution. Dashed box: the true next character. Ink ticks: a same-size one-pass model.</p>' },
+      { label: 'What the Transformer sees', html: '<p>The guess becomes one embedding mixture $e$, which the network scores against the context. At step 0 it blends dozens of embeddings; a few steps later, nearly one.</p>' },
+      { label: 'The gradient through the softmax', html: '<div class="eq">$$\\frac{\\partial E}{\\partial \\hat y_v} = p_v\\Big(g_v - \\sum_u p_u\\, g_u\\Big), \\quad g = \\frac{\\partial E}{\\partial p}$$</div><p>The updates (strip under the bars) sum to zero, so thinking only moves mass between symbols. Each is scaled by $p_v$: a symbol with almost no mass barely moves, so different starts can end on different answers.</p>' },
+      { label: 'Think', html: '<p>Press play. Mass collapses onto a few symbols within two steps as energy and entropy fall. Try the "year digit" context and <b>[ new start ]</b>: easy contexts reach the same answer from any start, hard ones do not.</p>' },
+      { label: 'Energy levels and uncertainty', html: '<p>Training touches $E$ only through $\\nabla_{\\hat y}E$, so adding any $c(x)$ changes no step and no loss. Energies compare cleanly within one context, which is all Best-of-N needs; across contexts their levels are free. Still, in Fig 8 (digitized) hard tokens such as "fox" stay higher than easy ones such as "the" (p.10–11): emergent, not guaranteed. The normalization is unstated and most change happens at iteration 1. In our toy (sentence tab), raw levels put word-initial characters lower; subtracting each context\'s energy at a uniform guess restores the paper\'s order.</p>' },
     ],
     after: `
-      <h3>What changes relative to a Transformer++</h3>
-      <p>A Transformer++ maps the context to logits in one pass and stops. An EBT treats the logits as a free variable, feeds them back in through $p^{\\top}W$, and moves them along $-\\nabla_{\\hat y}E$. Every intermediate distribution is a usable prediction with a score attached. That is what lets each token get its own amount of thinking, or be verified against other candidates (p.8).</p>
-      <p>The toy is also honest about the price. With one pass and the same encoder, the baseline reaches 1.599 nats per character; the EBT needs several steps to reach 2.25 and took about 2.8× the training wall-clock (483 s vs 173 s). The paper sees the same direction at its scale: EBT pretraining perplexity is worse (33.43 vs 31.36, Table 3), and its thinking gains are reported relative to its own no-thinking point (Fig 6a, p.11).</p>
-      <p class="note">Toy: 54 symbols, 40-character context, about 0.26M parameters, α₀ = 10, trained with 2–3 steps, random α, Langevin σ = 0.25 and a replay buffer, loss at the last step only. Loss is in nats per character and cannot be compared with the paper's per-token perplexities. All bars, curves and sentence colours are computed in your browser from the toy's weights, except the loss-versus-steps tab, which reads the stored evaluation in data/text.json.</p>`,
+      <p>Every intermediate distribution is a usable prediction with a score attached, which lets each token get its own amount of thinking. The price: our same-size one-pass baseline still predicts better, as the paper's Transformer++ does in pretraining perplexity (Table 3).</p>`,
     source: [
       { kind: 'toy', note: 'text EBT run live · data/text.json' },
-      { kind: 'paper', note: 'Listing 1 (p.43–44), Fig 8 digitized (approx.)' },
+      { kind: 'paper', note: 'Listing 1 (p.43–44), Fig 8 digitized (approx.), Table 3' },
     ],
     figure(stage, ctx) {
       const { lib } = ctx, h = lib.h, C = lib.C;
@@ -142,7 +134,7 @@
 
       // ---------------- state ----------------
       const S = { ex: 0, custom: 'the capital of france is paris. the capital of italy is r', seed: 1, N: 12, t: 12, playing: false, showGrad: true,
-        tab: 'chars', sent: 0, emode: 'rel', st: 8, eps: 0.02, ds: 'val', f8: 0, hover: -1 };
+        tab: 'chars', sent: 0, emode: 'raw', st: 8, f8: 0, hover: -1 };
       let tr = null;          // current trace
       const ctxStr = () => S.ex === 'custom' ? S.custom : EX[S.ex].context;
       const trueIdx = () => S.ex === 'custom' ? -1 : VIDX.get(EX[S.ex].true_next);
@@ -182,8 +174,8 @@
 
       // ---------------- layout: bottom tabs ----------------
       const tabRow = h('div', { class: 'controls tk-tabs' }); stage.appendChild(tabRow);
-      const segTab = lib.segmented({ label: 'View', options: [['chars', 'a sentence · live'], ['fig8', 'paper · Fig 8'], ['curve', 'thinking longer · toy data']], value: 'chars', onchange: (v) => { S.tab = v; syncTab(); } });
-      tabRow.appendChild(h('span', { class: 'fig-label' }, 'easy vs hard')); tabRow.appendChild(segTab.el);
+      const segTab = lib.segmented({ label: 'View', options: [['chars', 'toy sentence · live'], ['fig8', 'paper · Fig 8']], value: 'chars', onchange: (v) => { S.tab = v; syncTab(); } });
+      tabRow.appendChild(h('span', { class: 'fig-label' }, 'energy levels, easy vs hard')); tabRow.appendChild(segTab.el);
       const FT = lib.frame(stage, {});
       const subRow = h('div', { class: 'controls tk-sub' }); FT.frame.appendChild(subRow);
       const BWB = wide ? Math.min(640, SWD) : 360;
@@ -196,10 +188,8 @@
       SENTS.push({ name: 'Fig 8a', prefix: (PB + ' ').slice(-40), text: PA });
       SENTS.push({ name: 'Fig 8b', prefix: (PA + ' ').slice(-40), text: PB });
       const segSent = lib.segmented({ label: 'Sentence', options: SENTS.map((s, i) => [i, s.name]), value: 0, onchange: (v) => { S.sent = v; drawBottom(); kick(); } });
-      const segMode = lib.segmented({ label: 'Energy shown', options: [['rel', 'relative'], ['raw', 'raw E']], value: 'rel', onchange: (v) => { S.emode = v; drawBottom(); } });
-      const slEps = lib.slider({ id: 'tk-eps', label: 'ε, stop rule', min: -3, max: -0.5, step: 0.05, value: Math.log10(S.eps), fmt: (v) => Math.pow(10, v).toFixed(v < -2 ? 4 : 3), oninput: (v) => { S.eps = Math.pow(10, v); drawBottom(); } });
+      const segMode = lib.segmented({ label: 'Energy shown', options: [['raw', 'raw E'], ['rel', 'E − E(x, uniform)']], value: 'raw', onchange: (v) => { S.emode = v; drawBottom(); } });
       const segF8 = lib.segmented({ label: 'Fig 8 panel', options: [[0, 'Fig 8a'], [1, 'Fig 8b']], value: 0, onchange: (v) => { S.f8 = v; drawBottom(); } });
-      const segDs = lib.segmented({ label: 'Dataset', options: Object.keys(DSN).filter(k => D.thinking_curve && D.thinking_curve.datasets[k]).map(k => [k, DSN[k]]), value: 'val', onchange: (v) => { S.ds = v; drawBottom(); } });
 
       ctx.setCaption('Gray: other symbols · dashed box: true character · ink tick: one-pass baseline');
 
@@ -364,11 +354,10 @@
         if (J.j >= J.n) J.done = true;
         return true;
       }
-      const stopStep = (Es, eps) => { for (let i = 1; i < Es.length; i++) if (Math.abs(Es[i] - Es[i - 1]) < eps) return i; return Es.length - 1; };
       let cellGeo = null;
       function drawChars() {
         const J = sentJob(S.sent), md = M0();
-        const cw = wide ? 15.5 : 16, lineH = 34, perLine = Math.floor((BWB - 12) / cw), lines = Math.ceil(J.n / perLine);
+        const cw = wide ? 15.5 : 16, lineH = 26, perLine = Math.floor((BWB - 12) / cw), lines = Math.ceil(J.n / perLine);
         const textH = lines * lineH + 4, plotH = 78, Hh = textH + plotH + 8 + (wide ? 0 : 22);
         bot.size(BWB, Hh); bot.clear(); const c = bot.ctx;
         const val = (j, i) => S.emode === 'rel' ? J.E[j][i] - J.Eu[j] : J.E[j][i];
@@ -386,8 +375,6 @@
             lib.text(c, ch === ' ' ? '·' : ch, x + (cw - 1) / 2, y + 10.5, { size: 14, kind: 'mono', color: dark ? '#fff' : C.ink, align: 'center', baseline: 'middle' });
             if (J.grp[j] === 'hard') { c.strokeStyle = C.ink; c.lineWidth = 1.4; c.strokeRect(x + 0.5, y + 0.5, cw - 2, 20); }
             if (j === S.hover) { c.strokeStyle = C.blue; c.lineWidth = 2; c.strokeRect(x - 0.5, y - 0.5, cw, 23); }
-            const ss = stopStep(J.E[j], S.eps);
-            lib.text(c, String(ss), x + (cw - 1) / 2, y + 22, { size: 11, kind: 'mono', color: C.muted, align: 'center' });
           } else {
             c.fillStyle = C.tint || '#f7f7f9'; c.fillRect(x, y, cw - 1, 21);
             lib.text(c, ch === ' ' ? '·' : ch, x + (cw - 1) / 2, y + 11, { size: 14, kind: 'mono', color: C.faint, align: 'center', baseline: 'middle' });
@@ -400,7 +387,7 @@
         const gs = [['hard', C.blue, null, 2.2], ['easy', C.ink, [6, 4], 1.6], ['other', C.muted, [1.5, 3], 1.4]];
         let glo = Infinity, ghi = -Infinity; gs.forEach(([g]) => { if (!G[g].length) return; for (let i = 2; i <= 8; i++) { const m = mean(G[g], i); glo = Math.min(glo, m); ghi = Math.max(ghi, m); } });
         if (!isFinite(glo)) { glo = 0; ghi = 1; } const pd = (ghi - glo) * 0.15 || 0.1; glo -= pd; ghi += pd;
-        lib.text(c, (S.emode === 'rel' ? 'mean E − E(x, ŷ=0)' : 'mean raw E') + ' by group, steps 2–8', px - 40, py - 17, { size: 11, kind: 'mono', color: C.muted });
+        lib.text(c, (S.emode === 'rel' ? 'mean E − E(x, uniform)' : 'mean raw E') + ' by group, steps 2–8', px - 40, py - 17, { size: 11, kind: 'mono', color: C.muted });
         const ax = lib.axes(c, { x: px, y: py, w: pw, h: plotH - 42, xlim: [2, 8], ylim: [glo, ghi], xticks: [2, 4, 6, 8], yticks: niceTicks(glo, ghi, 3), yfmt: (v) => v.toFixed(1), size: 11 });
         gs.forEach(([g, col, dash, wd]) => { if (G[g].length) lib.plot(c, ax, [2, 3, 4, 5, 6, 7, 8].map(i => [i, mean(G[g], i)]), { color: col, width: wd, dash, markers: 2 }); });
         const lx = wide ? px + pw + 22 : px - 40, ly = wide ? py - 4 : py + plotH - 18;
@@ -411,17 +398,16 @@
         });
         if (wide) lib.text(c, 'boxed = word start', lx, ly + 56, { size: 11, kind: 'mono', color: C.muted });
         // readout
-        const ms = (arr) => arr.length ? (arr.reduce((s, j) => s + stopStep(J.E[j], S.eps), 0) / arr.length).toFixed(1) : '–';
         const fin = (arr) => arr.length ? mean(arr, 8).toFixed(2) : '–';
         let hov = '';
-        if (S.hover >= 0 && S.hover < J.j) { const j = S.hover; hov = `<span>'${J.txt[j] === ' ' ? '␣' : J.txt[j]}' ${J.grp[j]} · E at 0,2,4,6,8: ${J.E[j].filter((_, i) => i % 2 === 0).map(v => v.toFixed(2)).join(' ')} · p(true) <b>${fx(J.pt[j])}</b> · stops at <b>${stopStep(J.E[j], S.eps)}</b></span>`; }
+        if (S.hover >= 0 && S.hover < J.j) { const j = S.hover; hov = `<span>'${J.txt[j] === ' ' ? '␣' : J.txt[j]}' ${J.grp[j]} · E at 0,2,4,6,8: ${J.E[j].filter((_, i) => i % 2 === 0).map(v => v.toFixed(2)).join(' ')} · p(true) <b>${fx(J.pt[j])}</b></span>`; }
         bro.innerHTML = `<span>${J.done ? '' : `<span style="color:var(--blue)">computing ${J.j}/${J.n}…</span> `}after 8 steps: hard <b>${fin(G.hard)}</b> · easy <b>${fin(G.easy)}</b> · other <b>${fin(G.other)}</b></span>` +
-          (hov || `<span>steps used under the ε rule: hard <b>${ms(G.hard)}</b> · easy <b>${ms(G.easy)}</b> <span style="color:var(--muted)">· hover a character</span></span>`);
+          (hov || '<span style="color:var(--muted)">hover a character for its energies</span>');
       }
       bot.canvas.addEventListener('mousemove', (ev) => {
         if (S.tab !== 'chars' || !cellGeo) return; const [px, py] = bot.toLocal(ev), g = cellGeo;
         const li = Math.floor((py - g.y0) / g.lineH), ci = Math.floor((px - g.x0) / g.cw), j = li * g.perLine + ci;
-        const ok = ci >= 0 && ci < g.perLine && li >= 0 && (py - g.y0 - li * g.lineH) < 24 && j < sentJob(S.sent).n;
+        const ok = ci >= 0 && ci < g.perLine && li >= 0 && (py - g.y0 - li * g.lineH) < 22 && j < sentJob(S.sent).n;
         const nh = ok ? j : -1; if (nh !== S.hover) { S.hover = nh; drawChars(); }
       });
       bot.canvas.addEventListener('click', (ev) => { bot.canvas.dispatchEvent(new MouseEvent('mousemove', { clientX: ev.clientX, clientY: ev.clientY })); });
@@ -453,42 +439,11 @@
         bro.innerHTML = `<span>"Normalized Energy" 0–1 re-coloured: darker = lower (paper: yellow = low, purple = high; normalization not stated). Iteration 0 = random guess. <a href="media/paper/fig08.png" target="_blank" rel="noopener">original ↗</a></span>`;
       }
 
-      // ---------------- bottom: held-out loss vs steps (stored) ----------------
-      function drawCurve() {
-        const TC = D.thinking_curve; bot.size(BWB, wide ? 200 : 250); bot.clear(); const c = bot.ctx; if (!TC) return;
-        const d = TC.datasets[S.ds] || TC.datasets.val, st = TC.steps, xs = st[st.length - 1];
-        const lo = Math.min(d.baseline_ce, ...d.ebt_fixed_alpha_ce.slice(2)) - 0.15, hi = Math.max(...d.ebt_fixed_alpha_ce.slice(2), ...d.ebt_random_alpha_ce.slice(2)) + 0.2;
-        const box = wide ? { x: 50, y: 22, w: BWB - 250, h: 136 } : { x: 44, y: 50, w: BWB - 58, h: 150 };
-        const ax = lib.axes(c, { x: box.x, y: box.y, w: box.w, h: box.h, xlim: [0, xs], ylim: [lo, hi], xticks: [0, 2, 3, 4, 8, 12, 16], yticks: niceTicks(lo, hi, 4), yfmt: (v) => v.toFixed(1), size: 11 });
-        lib.text(c, 'thinking steps N', box.x + box.w, box.y + box.h + 22, { size: 11, kind: 'mono', color: C.muted, align: 'right' });
-        lib.text(c, 'held-out loss, nats/char', 4, box.y - 18, { size: 11, kind: 'mono', color: C.muted });
-        c.save(); c.fillStyle = C.blue4; c.fillRect(ax.X(2), box.y, ax.X(3) - ax.X(2), box.h); c.restore();
-        lib.text(c, 'trained', (ax.X(2) + ax.X(3)) / 2, box.y + 3, { size: 10.5, kind: 'mono', color: C.blue, align: 'center' });
-        const clip = (arr) => arr.map((v, i) => [st[i], v]).filter(p => p[1] <= hi);
-        c.save(); c.strokeStyle = C.ink; c.lineWidth = 1.5; c.setLineDash([6, 4]); c.beginPath(); c.moveTo(ax.X(0), ax.Y(d.baseline_ce)); c.lineTo(ax.X(xs), ax.Y(d.baseline_ce)); c.stroke(); c.restore();
-        lib.plot(c, ax, clip(d.ebt_random_alpha_ce), { color: C.blue2, width: 1.4, dash: [3, 3] });
-        lib.plot(c, ax, clip(d.ebt_fixed_alpha_ce), { color: C.blue, width: 2.2, markers: 2.4 });
-        const i3 = st.indexOf(3), i16 = st.length - 1;
-        lib.text(c, d.ebt_fixed_alpha_ce[i3].toFixed(3), ax.X(3) + 4, ax.Y(d.ebt_fixed_alpha_ce[i3]) + 5, { size: 11, kind: 'mono', color: C.blue });
-        lib.text(c, d.ebt_fixed_alpha_ce[i16].toFixed(3), ax.X(xs), ax.Y(d.ebt_fixed_alpha_ce[i16]) - 16, { size: 11, kind: 'mono', color: C.blue, align: 'right' });
-        lib.text(c, d.baseline_ce.toFixed(3), ax.X(xs), ax.Y(d.baseline_ce) + 4, { size: 11, kind: 'mono', color: C.ink, align: 'right' });
-        lib.text(c, `N = 0 (random guess): ${d.ebt_fixed_alpha_ce[0].toFixed(2)}, off scale`, ax.X(4.5), ax.Y((d.baseline_ce + d.ebt_fixed_alpha_ce[i16]) / 2) - 6, { size: 10.5, kind: 'mono', color: C.muted });
-        const items = [[C.blue, null, 'EBT, α = 10', 2.2], [C.blue2, [3, 3], 'EBT, random α', 1.4], [C.ink, [6, 4], 'one-pass baseline', 1.5]];
-        items.forEach(([col, dash, lab, wd], k) => {
-          const xx = wide ? BWB - 186 : 6 + k * 118, yy = wide ? 24 + k * 20 : 4;
-          c.save(); c.strokeStyle = col; c.lineWidth = wd; if (dash) c.setLineDash(dash); c.beginPath(); c.moveTo(xx, yy + 7); c.lineTo(xx + 18, yy + 7); c.stroke(); c.restore();
-          lib.text(c, wide ? lab : lab.replace('one-pass ', ''), xx + 24, yy, { size: 11, kind: 'mono', color: C.ink });
-        });
-        const g = d.paired_gain_N3_to_N16, dce = d.ebt_fixed_alpha_ce[i16] - d.ebt_fixed_alpha_ce[i3], pct = dce <= 0 ? (1 - Math.exp(dce)) * 100 : -(Math.exp(dce) - 1) * 100;
-        bro.innerHTML = `<span>${DSN[S.ds]}: N = 3 → 16 changes loss by <b>${(d.ebt_fixed_alpha_ce[i16] - d.ebt_fixed_alpha_ce[i3]).toFixed(3)}</b> nats (perplexity ${pct >= 0 ? pct.toFixed(1) + '% lower' : (-pct).toFixed(1) + '% higher'}); paired gain 95% CI ${g.ci95_nats[0].toFixed(3)} to ${g.ci95_nats[1].toFixed(3)} nats</span><span style="color:var(--muted)">stored evaluation, data/text.json · baseline = same encoder, one forward pass</span>`;
-      }
-
-      function drawBottom() { if (S.tab === 'chars') drawChars(); else if (S.tab === 'fig8') drawFig8(); else drawCurve(); }
+      function drawBottom() { if (S.tab === 'chars') drawChars(); else drawFig8(); }
       function syncTab() {
         segTab.set(S.tab); subRow.innerHTML = '';
-        if (S.tab === 'chars') { subRow.appendChild(segSent.el); subRow.appendChild(segMode.el); subRow.appendChild(slEps.el); segSent.set(S.sent); segMode.set(S.emode); slEps.set(Math.log10(S.eps)); }
+        if (S.tab === 'chars') { subRow.appendChild(segSent.el); subRow.appendChild(segMode.el); segSent.set(S.sent); segMode.set(S.emode); }
         if (S.tab === 'fig8') { if (!wide) subRow.appendChild(segF8.el); else subRow.appendChild(h('span', { class: 'fig-sub' }, 'Fig 8 · token energies across thinking steps')); }
-        if (S.tab === 'curve') { subRow.appendChild(segDs.el); segDs.set(S.ds); }
         drawBottom(); kick();
       }
 
@@ -509,16 +464,13 @@
       function kick() { draw(); if (ctx.visible()) loop.start(); }
       function draw() { drawBars(); drawSide(); readout(); }
 
-      const STEPS = [
-        { t: 0, tab: 'chars' }, { t: 0, tab: 'chars' }, { t: 0, tab: 'chars' }, { play: true, tab: 'chars' },
-        { tab: 'fig8' }, { tab: 'chars', sent: 0, emode: 'raw' }, { tab: 'chars', sent: 0, emode: 'rel', eps: 0.02 }, { tab: 'curve' },
-      ];
+      const STEPS = [{ t: 0 }, { t: 0 }, { t: 0 }, { play: true }, { tab: 'fig8' }];
       let booted = false;
       function boot() { if (booted || !M0()) return; booted = true; recompute(false); }
       return {
         step(i) {
           const o = STEPS[i] || STEPS[0];
-          if (o.tab) S.tab = o.tab; if (o.sent != null) S.sent = o.sent; if (o.emode) S.emode = o.emode; if (o.eps) S.eps = o.eps;
+          if (o.tab) S.tab = o.tab;
           segTab.set(S.tab);
           if (!ctx.visible()) { S.pendingStep = i; return; }
           applyStep(i);
@@ -529,8 +481,7 @@
       function applyStep(i) {
         boot(); const o = STEPS[i] || STEPS[0];
         if (i <= 3 && S.ex === 'custom') { S.ex = 0; sel.value = '0'; inpWrap.hidden = true; recompute(false); }
-        S.focus = ['bars', 'embed', 'grad'][i] || null; pipe.classList.toggle('on', S.focus === 'embed');
-        if (o.sent != null) { S.st = 8; S.hover = -1; }
+        S.focus = ['bars', 'embed', 'grad'][i] || null; pipe.classList.toggle('on', S.focus === 'embed'); FT.frame.classList.toggle('tk-hl', i === 4);
         if (o.t != null) { S.t = o.t; S.playing = false; syncPlay(); }
         if (o.play) { S.t = 0; S.playing = !reduced; if (reduced) S.t = S.N; syncPlay(); }
         syncTab(); kick();

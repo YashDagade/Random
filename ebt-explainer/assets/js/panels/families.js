@@ -1,4 +1,4 @@
-/* Panel: four ways to predict the next token (paper Fig 1, Table 1, Sec 6.1–6.4).
+/* Panel: why per-prediction thinking matters, and four ways to predict the next token (paper Fig 1, Table 1, Sec 6.1-6.4).
    Stage: four lanes (AR Transformer, RNN, Diffusion Transformer, EBT) answer the same next-token question under a shared
    budget of forward passes. Three candidate tokens, so every prediction is a point in the probability simplex (a triangle).
    - Diffusion: a real DDIM sampler over the 3 logits with the exact denoiser for a Gaussian target around its belief.
@@ -6,8 +6,7 @@
      step lowers E by less than 0.002.
    - AR and RNN: one pass gives softmax(belief); internals are schematic.
    Every lane gets the same size of knowledge error (logit noise), so this is about mechanism, not accuracy.
-   Prose slots: "numbers vs arrows" lab (step 4; energy vs a learned vector field with controllable curl) and Table 1
-   (step 6; hover a cell for the paper's reason and page). Ported and restyled from legacy/sections/families.js. */
+   Step 5 holds a compact Table 1 in the prose; hovering a row highlights that lane. Consolidated from legacy system2 + families. */
 (function () {
   'use strict';
   const PKEYS = ['easy', 'medium', 'hard'];
@@ -55,64 +54,28 @@
     return { T, zs, eps, mu };
   }
 
-  // ---------- numbers vs arrows (prose lab) ----------
-  const WELLS = [{ m: [-1.15, -0.45], s: 0.85, w: 0.55 }, { m: [1.35, 0.75], s: 0.62, w: 0.45 }];
-  const SWIRL = [0.1, 0.15], NPATH = 64, DOM = { x: [-3, 3], y: [-2.25, 2.25] };
-  const lw2 = (y) => WELLS.map(W => Math.log(W.w) - ((y[0] - W.m[0]) ** 2 + (y[1] - W.m[1]) ** 2) / (2 * W.s * W.s));
-  function E2(y) { const ls = lw2(y), m = Math.max(...ls); return -(m + Math.log(ls.reduce((a, l) => a + Math.exp(l - m), 0))); }
-  function gradE2(y) { const ls = lw2(y), m = Math.max(...ls), ex = ls.map(l => Math.exp(l - m)), Z = ex.reduce((a, b) => a + b, 0); let gx = 0, gy = 0; WELLS.forEach((W, k) => { const rk = ex[k] / Z; gx += rk * (y[0] - W.m[0]) / (W.s * W.s); gy += rk * (y[1] - W.m[1]) / (W.s * W.s); }); return [gx, gy]; }
-  function field(y, c) { const g = gradE2(y), dx = y[0] - SWIRL[0], dy = y[1] - SWIRL[1], env = Math.exp(-(dx * dx + dy * dy) / (2 * 1.6 * 1.6)); return [-g[0] - c * env * dy, -g[1] + c * env * dx]; }
-  function bez(A, B, side) { const mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2, dx = B[0] - A[0], dy = B[1] - A[1], L = Math.hypot(dx, dy) || 1, d = 0.55 * L + 0.5; const Cc = [mx - dy / L * d * side, my + dx / L * d * side]; return (t) => [(1 - t) * (1 - t) * A[0] + 2 * (1 - t) * t * Cc[0] + t * t * B[0], (1 - t) * (1 - t) * A[1] + 2 * (1 - t) * t * Cc[1] + t * t * B[1]]; }
-  function pathIntegral(P, c) { let s = 0, prev = P(0); for (let i = 1; i <= NPATH; i++) { const cur = P(i / NPATH), mid = P((i - 0.5) / NPATH), f = field(mid, c); s -= f[0] * (cur[0] - prev[0]) + f[1] * (cur[1] - prev[1]); prev = cur; } return s; }
-
-  // ---------- Table 1 ----------
-  const FACETS = [
-    { n: 'Facet 1', t: 'Dynamic compute allocation', d: 'Spend more computation on harder predictions, at the granularity of each prediction (p.3, footnote 3). Lunch versus a career change.' },
-    { n: 'Facet 2', t: 'Uncertainty in continuous spaces', d: 'Know how unsure a prediction is, also for continuous outputs such as video frames, where there is no softmax (p.3). A pedestrian who might step out from behind a parked car.' },
-    { n: 'Facet 3', t: 'Verification of predictions', d: 'Score a candidate, so the model can stop early, think longer, or keep the best of many. "verifying solutions is exponentially easier than generating solutions" (p.3).' },
-  ];
-  const ROWS = [
-    { n: 'FF Transformers', why: [
-      'Fixed depth and width and a single forward pass per prediction, so they "are unable to dynamically allocate more computation to each prediction" (Sec 6.1, p.15). Chain-of-thought adds tokens, but each token still gets a fixed budget (Sec G.1.2, p.39).',
-      'Softmax gives token probabilities for text (p.3), but for continuous outputs "the normalization process ... is not as well-defined", so uncertainty needs tricks such as Vector Quantization or ELBO objectives (p.15).',
-      'Not trained to verify samples, so improving a single prediction at inference "often requires external models" (p.15).'] },
-    { n: 'RNNs', why: [
-      '"most modern RNNs only update their internal state with new information, meaning they cannot be used for thinking longer" (p.2). Recurrent-depth variants can loop but are not widely adopted (footnote 2, p.3).',
-      'Like Transformers, standard RNNs "generally do not provide strong or reliable uncertainty estimates" for continuous outputs without discretization or pseudo-objectives (p.3).',
-      'Recurrent-depth RNNs "still lack mechanisms for explicit verification" (p.2): they "amortize gradient prediction of the energy function" (p.16).'] },
-    { n: 'Diffusion Transformers', why: [
-      'More denoising steps means more computation per prediction (p.3). But "a fixed denoising schedule ... restricts their ability to adaptively halt or extend computation" (p.16), and they "typically fail to benefit from denoising steps beyond what they were trained on" (p.2).',
-      'Each step predicts noise, not an energy, so "diffusion models cannot give unnormalized likelihood estimates at each step" (Fig 1 caption, p.2). Likelihoods need the full reverse process with ELBOs or solvers (p.37). Score-based diffusion can express uncertainty but is less widely used (footnote 4, p.3).',
-      '"in practice an external verifier is necessary to improve performance at inference time beyond increasing denoising steps" (p.16).'] },
-    { n: 'EBTs', why: [
-      'Thinking is gradient descent on the energy, so an EBT can iterate "for any number of steps" (Table 1 caption, p.3) and stop when the energy converges (Fig 2 caption, p.4). Extra passes cut the OOD perplexity increase by up to 29% from EBT\'s own no-thinking point (Fig 6a).',
-      'The energy is an unnormalized likelihood, defined for continuous predictions too (p.3, p.4). Hard tokens keep higher energy than easy ones (Fig 8, p.12); nearly empty early video frames have higher energy (Fig 11, p.14). The evidence is qualitative (heatmaps with an unspecified normalization), and energy values are never supervised directly (p.37).',
-      'The forward pass is the verifier: one scalar per candidate. Algorithm 2 optimizes M candidates and keeps the lowest-energy one (p.7), with no external reward or verifier model (p.8).'] },
-  ];
+  const T1 = `<table class="fam-table"><thead><tr><th></th><th class="c">think longer<span>Facet 1</span></th><th class="c">uncertainty<span>Facet 2</span></th><th class="c">verify<span>Facet 3</span></th></tr></thead><tbody>`
+    + [['FF Transformer', 0, 0, 0], ['RNN', 0, 0, 0], ['Diffusion', 1, 0, 0], ['EBT', 1, 1, 1]].map(([n, ...f], i) => `<tr data-lane="${i}"${i === 3 ? ' class="ebt"' : ''}><td>${n}</td>${f.map(v => `<td class="c ${v ? 'yes' : 'no'}">${v ? '✓' : '✗'}</td>`).join('')}</tr>`).join('')
+    + '</tbody></table>';
 
   EBT.panel({
     id: 'families',
     nav: 'Four model families',
     title: 'Four ways to predict the next token',
-    lede: 'Every family in the paper\'s Figure 1 predicts token t+1 from tokens 1..t. They differ in what one forward pass returns, and in whether a second pass on the same token can help.',
+    lede: 'Some predictions deserve more thought than others. Whether a model can give it depends on what one forward pass returns, and whether a second pass can help.',
     text: `
-      <figure class="fam-fig1"><div class="paper-fig"><img src="media/paper/fig01.png" alt="Paper Figure 1: (a) AR Transformer maps x1..xt to the next token; (b) an RNN chains states over x1..xt; (c) a Diffusion Transformer takes x1..xt and a candidate and outputs Noise(candidate); (d) an EBT takes x1..xt and a candidate and outputs Energy(candidate)."></div><figcaption><span class="src paper">from the paper · Fig 1, p.2</span></figcaption></figure>
-      <p>Look at what comes out of each box: a token, a token, Noise($\\hat x_{t+1}$), Energy($\\hat x_{t+1}$). The last two also take a candidate prediction <em>as input</em>, so they can be run again on an improved candidate. That single difference decides who can think longer, and who can tell how good its guess is.</p>
-      <p>The figure runs all four on one next-token question with a shared budget of forward passes. We keep three candidate tokens so that every prediction, a distribution $q$ over the candidates, is a point in a triangle; a real model has 50,277 (Table D.2). The dashed crosshair marks the true next-token distribution $p$.</p>`,
+      <p>Psychology calls fast, automatic thinking <b>System 1</b> and slow, deliberate thinking <b>System 2</b>: lunch takes a moment, a career change far longer (p.3). The paper wants System 2 for every single prediction, learned from unlabeled data alone, without rewards, answer checkers or a second model (p.2). That takes two things: a way to turn extra compute into a better answer, and a signal for when to stop.</p>
+      <p>In the figure, four families share one prompt and a budget of passes. With three candidate tokens, each prediction is a point in a triangle; the dashed crosshair is the true distribution $p$.</p>`,
     steps: [
-      { label: 'Same question, four machines', html: '<p>Press <b>[ play ]</b>. Each tick, every lane that can still use a pass runs one. The KL chart under the lanes tracks the gap to the truth, $\\mathrm{KL}(p\\,\\|\\,q)$, which we can measure and the models cannot. All lanes share the same size of knowledge error, so they end near the same point; what differs is how they get there and what they know about it.</p>' },
-      { label: 'AR and RNN: compute is fixed per token', html: '<p>An AR Transformer computes $$p_\\theta(x_{t+1}\\mid x_{\\le t}) = \\mathrm{softmax}\\big(f_\\theta(x_{\\le t})\\big)$$ with a fixed stack of layers, so every token costs the same (Sec 6.1, p.15), and a rerun on the same input returns the same $p$. An RNN updates $h_t = g(h_{t-1}, x_t)$ only when a new token $x_t$ arrives (p.2, p.16); with no new token there is nothing to update. Their extra passes are crossed out.</p>' },
-      { label: 'Diffusion: more passes, fixed schedule', html: '<p>A diffusion Transformer starts from noise and denoises over a schedule of $T$ steps, so it does spend more compute per prediction (Table 1, Facet 1). But $T$ is set before it starts. You can pick a different $T$ in advance, but the model cannot decide half-way that this token needs more or fewer steps: the schedule "restricts their ability to adaptively halt or extend computation" (p.16), and models "typically fail to benefit from denoising steps beyond what they were trained on" (p.2). Here $T = 8$: a larger budget goes unused, a smaller one squeezes the same schedule into fewer, coarser steps (drag the budget below 8).</p>' },
-      { label: 'Diffusion outputs arrows, not scores', html: '<p>Each denoising step outputs a noise estimate, which is a scaled score: $$\\epsilon_\\theta(x_t, t) \\approx -\\sigma_t\\,\\nabla_{x_t}\\log p_t(x_t)$$ where $\\sigma_t = \\sqrt{1-\\bar\\alpha_t}$ is the noise scale at step $t$. Writing $E_t = -\\log p_t + \\text{const}$ gives $\\epsilon_\\theta \\approx \\sigma_t\\nabla E_t$: the gradient of an energy (one per noise level), never the energy itself. That is why the paper calls diffusion an implicit EBM (p.36, p.41). The diffusion triangle now shows its arrow field; the EBT triangle shows a number at every point. To rank two candidates with arrows alone you must integrate along a path, and a learned field need not be an exact gradient:</p><div class="fam-slot" data-slot="arrows"></div>' },
-      { label: 'EBT: a number per candidate, descended until it settles', html: '<p>An EBT returns one scalar $E_\\theta(x,\\hat y)$ and predicts by descending it (Eq. 1, p.7): $$\\hat y_{i+1} = \\hat y_i - \\alpha\\,\\nabla_{\\hat y}E_\\theta(x,\\hat y_i).$$ The paper counts one function evaluation per step (p.8); each also needs a backward pass to $\\hat y$. The lane stops when $E \\le \\tau = 0.45$ (good enough) or when a step lowers $E$ by less than 0.002 (converged, as in the Fig 2 caption). From the default start, the easy prompt stops after 6 passes, because its energy falls below τ. The medium and hard prompts never get that low: the energy levels off near the entropy of the lane\'s belief, and the lane stops only when it stops falling (9 and 8 passes). The pass count also depends on where the random start lands; press <b>[ new noise ]</b>. The level of the plateau does not: thinking longer cannot make a favorite color predictable, and the high plateau is the model reporting that (Facets 1 and 2), much as hard tokens keep higher energy in the paper\'s Fig 8.</p>' },
-      { label: 'Table 1, cell by cell', html: '<p>The paper condenses the comparison into Table 1 (p.3). Hover, tap or tab to a cell for the paper\'s reason; hovering a row highlights that lane. The ✗ marks are "generally" true: recurrent-depth RNNs and score-based diffusion or mixture density networks are partial exceptions (footnotes 2 and 4, p.3).</p><div class="fam-slot" data-slot="table1"></div>' },
+      { label: 'Same question, four machines', html: '<p>Press <b>play</b>. Each tick, every lane that can still use a pass runs one. All lanes share the same knowledge error, so they land close together (KL chart); what differs is how they get there.</p>' },
+      { label: 'AR and RNN: fixed compute per token', html: '<p>An AR Transformer maps the context through a fixed stack of layers to $\\mathrm{softmax}(f_\\theta(x_{\\le t}))$: "the" and the last digit of a long sum get the same pass, and a rerun returns the same answer. An RNN updates its state only when a new token arrives. Extra passes are crossed out.</p>' },
+      { label: 'Diffusion: a fixed schedule of arrows', html: '<p>A diffusion Transformer denoises over $T$ steps, so it does spend more compute, but $T$ is fixed in advance: it cannot halt or extend half-way (p.16). Each step predicts noise, $\\epsilon_\\theta \\approx \\sigma_t\\nabla E_t$: an amortized gradient of an energy it never outputs (arrows in its triangle). Arrows say which way is better, not how good a guess is: it cannot score its own candidates.</p>' },
+      { label: 'EBT: a score, descended until it settles', html: '<p>An EBT takes the candidate as input and returns one number, the energy $E_\\theta(x,\\hat y)$, shaded over the triangle. Thinking is gradient descent on it, $\\hat y \\leftarrow \\hat y-\\alpha\\nabla_{\\hat y}E_\\theta$, stopping when $E$ is low enough or stops falling. On this hard prompt the energy levels off high: more thought cannot make a favorite color predictable, and the plateau reports that.</p>' },
+      { label: 'Table 1: three facets', html: '<p>Table 1 (p.3); hover a row to find its lane. ✗ holds "generally": recurrent-depth RNNs and score-based diffusion are partial exceptions.</p><div class="fam-t1">' + T1 + '</div>' },
     ],
     after: `
-      <h3>What EBT adds, and what it costs</h3>
-      <p>The paper calls diffusion the closest relative: diffusion models "can be seen as predicting the gradient of the data density/energy function", so EBMs are "a generalization of diffusion models that learn to explicitly verify predictions" (p.16). Recurrent-depth RNNs likewise "amortize gradient prediction of the energy function" (p.16). Learning the scalar itself is what buys a stopping rule, an uncertainty readout and Best-of-N selection without a second model.</p>
-      <p>The price: every EBT step needs a backward pass to $\\hat y$, and training differentiates through those steps (gradients of gradients). Each optimization step of an autoregressive EBT costs about 3.33× the FLOPs of a Transformer++ training step, so the two-step pretraining runs cost 6.66× (p.36). The advantages over diffusion in Sec E.2 hold "under the assumption that the energy landscape is well formed and that optimization is well behaved" (p.37).</p>
-      <p class="note">What is real in the lanes: the diffusion lane runs DDIM with the exact denoiser for a Gaussian target around its belief; the EBT lane runs gradient descent on $E(\\hat y) = \\mathrm{CE}(b, \\mathrm{softmax}(\\hat y))$, whose gradient is $\\mathrm{softmax}(\\hat y) - b$ and whose minimum is the entropy of its belief $b$. AR and RNN internals are schematic. Beliefs are hand-set, with the same logit noise for every lane. The stopping threshold τ assumes energies are comparable across prompts; the paper never trains energy levels directly (p.37, p.41).</p>`,
-    source: [{ kind: 'concept', note: 'hand-set beliefs, real DDIM and descent' }, { kind: 'paper', note: 'Fig 1, Table 1, Sec 6.1–6.4' }],
+      <p class="note">The price: each EBT step needs a backward pass to $\\hat y$, and training differentiates through the steps, about 3.33× a Transformer++ training step per optimization step (p.36). The diffusion lane runs real DDIM, the EBT lane real descent on a cross-entropy energy; AR and RNN internals are schematic.</p>`,
+    source: [{ kind: 'concept', note: 'hand-set beliefs, real DDIM and descent' }, { kind: 'paper', note: 'p.2-3, Fig 1, Table 1, Sec 6.1-6.4' }],
 
     figure(stage, ctx) {
       const { lib } = ctx, h = lib.h, C = lib.C, T_ = lib.text;
@@ -388,75 +351,12 @@
         });
       }
 
-      // ---------- prose labs ----------
-      const slot = (name) => ctx.panel.querySelector(`.fam-slot[data-slot="${name}"]`);
-      const guard = (el, stepIdx) => { ['click', 'keydown', 'pointerdown'].forEach(ev => el.addEventListener(ev, (e) => { if (ctx.step === stepIdx) e.stopPropagation(); })); };
-      // numbers vs arrows
-      const arEl = slot('arrows');
-      const bS = { A: [-0.55, -1.15], B: [0.7, 1.25], c: 0.3, drag: null };
-      let bCv = null, bOut = null, egrid = null;
-      if (arEl) {
-        guard(arEl, 3); arEl.className = 'fam-slot fam-lab';
-        const sw = lib.slider({ id: 'fam-swirl', label: 'curl in the learned arrows', min: 0, max: 2, step: 0.05, value: bS.c, fmt: (v) => v.toFixed(2), oninput: (v) => { bS.c = v; bCv.draw(); bRead(); } });
-        const row = h('div', { class: 'controls' }, sw.el, lib.button('swap A, B', () => { const t0 = bS.A; bS.A = bS.B; bS.B = t0; bCv.draw(); bRead(); }), lib.button('random pair', () => { const r = lib.rng(++pairSeed * 7717); bS.A = [-2.4 + 4.8 * r(), -1.8 + 3.6 * r()]; bS.B = [-2.4 + 4.8 * r(), -1.8 + 3.6 * r()]; bCv.draw(); bRead(); }));
-        bCv = autoCanvas(arEl, { height: (w) => (w >= 360 ? Math.round((w - 12) / 2 * 0.75) + 18 : Math.round(w * 0.75) * 2 + 40), label: 'Left: an energy, one number per point, with candidates A and B. Right: a learned arrow field and two routes from A to B. Drag A or B.', draw: drawLab });
-        arEl.appendChild(row);
-        bOut = h('div', { class: 'fam-verdicts' }); arEl.appendChild(bOut);
-        arEl.appendChild(h('p', { class: 'fam-small' }, 'Real math: E is a two-well energy; the arrows are −∇E plus curl × a rotational field; each route estimate is −∫ arrows · dl with ' + NPATH + ' evaluations. Real diffusion likelihoods need an ODE solve or an ELBO over many noise levels (Sec E.2, p.37); this keeps only the core point. Trained score networks are close to, not exactly, conservative; how close varies, so treat the curl slider as a what-if.'));
-        bCv.canvas.addEventListener('pointerdown', (ev) => { const [px, py] = bCv.toLocal(ev); for (const i of [0, 1]) for (const nm of ['A', 'B']) { const r = panelRect(i, bCv.w), p = toPxL(r, bS[nm]); if (Math.hypot(px - p[0], py - p[1]) < 16) { bS.drag = { nm, i }; bCv.canvas.setPointerCapture(ev.pointerId); ev.preventDefault(); return; } } });
-        bCv.canvas.addEventListener('pointermove', (ev) => { if (!bS.drag) return; const [px, py] = bCv.toLocal(ev), r = panelRect(bS.drag.i, bCv.w), q = toDom(r, px, py); bS[bS.drag.nm] = [lib.clamp(q[0], DOM.x[0] + 0.1, DOM.x[1] - 0.1), lib.clamp(q[1], DOM.y[0] + 0.1, DOM.y[1] - 0.1)]; bCv.draw(); bRead(); });
-        const end = () => { bS.drag = null; }; bCv.canvas.addEventListener('pointerup', end); bCv.canvas.addEventListener('pointercancel', end);
-      }
-      let pairSeed = 3;
-      function panelRect(i, w) { const two = w >= 360; if (two) { const pw = (w - 12) / 2; return { x: i * (pw + 12), y: 18, w: pw, h: pw * 0.75 }; } return { x: 0, y: 18 + i * (w * 0.75 + 22), w, h: w * 0.75 }; }
-      const toPxL = (r, p) => [r.x + (p[0] - DOM.x[0]) / (DOM.x[1] - DOM.x[0]) * r.w, r.y + (DOM.y[1] - p[1]) / (DOM.y[1] - DOM.y[0]) * r.h];
-      const toDom = (r, px, py) => [DOM.x[0] + (px - r.x) / r.w * (DOM.x[1] - DOM.x[0]), DOM.y[1] - (py - r.y) / r.h * (DOM.y[1] - DOM.y[0])];
-      function drawLab(g, w) {
-        if (!egrid) { const n = 64; egrid = []; for (let r = 0; r < n; r++) { const rowv = []; for (let c = 0; c < n; c++) rowv.push(E2([DOM.x[0] + c / (n - 1) * 6, DOM.y[1] - r / (n - 1) * 4.5])); egrid.push(rowv); } }
-        const lo = lib.gridRange(egrid)[0], hi = lo + 7, lv = Array.from({ length: 8 }, (_, i) => lo + (hi - lo) * (i + 1) / 9);
-        const r0 = panelRect(0, w), r1 = panelRect(1, w);
-        T_(g, 'EBT: a number per point', r0.x, r0.y - 16, { size: 10.5, kind: 'mono', weight: 700, color: C.blue });
-        T_(g, 'diffusion: an arrow per point', r1.x, r1.y - 16, { size: 10.5, kind: 'mono', weight: 700, color: C.ink });
-        lib.heatmap(g, egrid, r0.x, r0.y, r0.w, r0.h, { range: [lo, hi], gamma: 0.8, alpha: 0.6 });
-        lib.contours(g, egrid, r0.x, r0.y, r0.w, r0.h, lv, { color: 'rgba(17,17,17,0.18)', width: 1 });
-        box(g, r0.x, r0.y, r0.w, r0.h, { stroke: C.ink }); box(g, r1.x, r1.y, r1.w, r1.h, { stroke: C.ink });
-        const nx = 13, ny = 10, cell = r1.w / nx;
-        for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
-          const p = [DOM.x[0] + (i + 0.5) / nx * 6, DOM.y[1] - (j + 0.5) / ny * 4.5], f = field(p, bS.c), mag = Math.hypot(f[0], f[1]); if (mag < 1e-6) continue;
-          const len = Math.min(cell * 0.8, 4 + mag * cell * 0.22), [px, py] = toPxL(r1, p);
-          lib.arrow(g, px - f[0] / mag * len / 2, py + f[1] / mag * len / 2, px + f[0] / mag * len / 2, py - f[1] / mag * len / 2, { color: 'rgba(17,17,17,0.35)', width: 1, head: 3.5 });
-        }
-        [[-1, null], [1, [5, 4]]].forEach(([side, dash]) => { const P = bez(bS.A, bS.B, side), pts = []; for (let i = 0; i <= 48; i++) pts.push(toPxL(r1, P(i / 48))); g.save(); g.beginPath(); g.rect(r1.x, r1.y, r1.w, r1.h); g.clip(); lib.line(g, pts, { color: C.ink, width: 1.6, dash }); g.restore(); });
-        const pa = toPxL(r1, bS.A), pb = toPxL(r1, bS.B), cm = [(pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2];
-        [[-1, 'route 1'], [1, 'route 2']].forEach(([side, nm]) => { const q = toPxL(r1, bez(bS.A, bS.B, side)(0.5)); let ux = q[0] - cm[0], uy = q[1] - cm[1]; const L = Math.hypot(ux, uy) || 1; ux /= L; uy /= L; const tx = lib.clamp(q[0] + ux * 14, r1.x + 30, r1.x + r1.w - 30), ty = lib.clamp(q[1] + uy * 10, r1.y + 8, r1.y + r1.h - 8); T_(g, nm, tx, ty, { size: 10, kind: 'mono', color: C.ink, align: 'center', baseline: 'middle' }); });
-        [r0, r1].forEach((r, i) => [['A', bS.A], ['B', bS.B]].forEach(([nm, p]) => {
-          const [px, py] = toPxL(r, p); lib.dot(g, px, py, 7.5, i === 0 ? C.blue : C.ink, { stroke: '#fff', lw: 1.5 });
-          T_(g, nm, px, py + 0.5, { size: 10, kind: 'mono', weight: 700, color: '#fff', align: 'center', baseline: 'middle' });
-          if (i === 0) { const lab = 'E ' + E2(p).toFixed(2); g.font = lib.font(10, 'mono'); const tw = g.measureText(lab).width; const lx = px + 10 + tw > r.x + r.w ? px - 10 - tw : px + 10; g.fillStyle = 'rgba(255,255,255,0.85)'; g.fillRect(lx - 2, py - 16, tw + 4, 13); T_(g, lab, lx, py - 15, { size: 10, kind: 'mono', color: C.ink }); }
-        }));
-      }
-      function bRead() {
-        if (!bOut) return;
-        const eA = E2(bS.A), eB = E2(bS.B), d = eB - eA, i1 = pathIntegral(bez(bS.A, bS.B, -1), bS.c), i2 = pathIntegral(bez(bS.A, bS.B, 1), bS.c);
-        const verdict = (x) => Math.abs(x) < 0.02 ? 'a tie' : x > 0 ? 'A is more likely' : 'B is more likely', sgn = (x) => (x >= 0 ? '+' : '') + x.toFixed(2);
-        const agree = Math.sign(i1) === Math.sign(i2);
-        bOut.innerHTML = `<div class="ebt"><b>energy</b><span>E(B) − E(A) = ${sgn(d)} → ${verdict(d)}</span><i>2 passes</i></div>`
-          + `<div><b>route 1</b><span>−∫ f·dl = ${sgn(i1)} → ${verdict(i1)}</span><i>${NPATH} passes</i></div>`
-          + `<div><b>route 2</b><span>−∫ f·dl = ${sgn(i2)} → ${verdict(i2)}</span><i>${NPATH} passes</i></div>`
-          + `<p class="${agree ? '' : 'warn'}">${bS.c < 0.02 ? 'No curl: the arrows are an exact gradient, so both routes match the energy, at 64 times the cost.' : agree ? `The routes differ by ${Math.abs(i1 - i2).toFixed(2)}: the answer depends on the route. Raise the curl or move B to make them disagree on the ranking.` : 'The routes disagree on which candidate is better: with arrows that are not an exact gradient, "how much better is B than A" has no single answer.'}</p>`;
-      }
-      // Table 1
-      const tEl = slot('table1');
-      if (tEl) {
-        guard(tEl, 5); tEl.className = 'fam-slot fam-t1';
-        const why = h('div', { class: 'fam-why', 'aria-live': 'polite' }); const cells = [];
-        const showCell = (ri, fi) => { cells.forEach(c => c.el.classList.toggle('on', c.ri === ri && c.fi === fi)); const v = LANES[ri].facets[fi]; why.innerHTML = `<div class="fam-why-h"><b>${ROWS[ri].n}</b> × <b>${FACETS[fi].n}: ${FACETS[fi].t}</b> <span class="${v ? 'yes' : 'no'}">${v ? '✓ yes' : '✗ no'}</span></div><p>${ROWS[ri].why[fi]}</p><p class="fam-small">${FACETS[fi].d}</p>`; };
-        const table = h('table', { class: 'fam-table' },
-          h('thead', {}, h('tr', {}, h('th', {}, 'Architecture'), FACETS.map(F => h('th', { class: 'c' }, F.n, h('span', {}, F.t))))),
-          h('tbody', {}, ROWS.map((R0, ri) => { const tr = h('tr', { class: ri === 3 ? 'ebt' : '' }, h('td', {}, R0.n), LANES[ri].facets.map((v, fi) => { const b = h('button', { type: 'button', class: 'fam-cell ' + (v ? 'yes' : 'no'), 'aria-label': `${R0.n}, ${FACETS[fi].t}: ${v ? 'yes' : 'no'}. Show the reason.` }, v ? '✓' : '✗'); ['mouseenter', 'focus', 'click'].forEach(e => b.addEventListener(e, () => showCell(ri, fi))); cells.push({ el: b, ri, fi }); return h('td', { class: 'c' }, b); })); tr.addEventListener('mouseenter', () => { S.hl = ri; lanesCv.draw(); }); tr.addEventListener('mouseleave', () => { S.hl = -1; lanesCv.draw(); }); return tr; })));
-        tEl.append(h('div', { class: 'tbl' }, table), why, h('p', { class: 'fam-small' }, 'Table 1 (p.3), verbatim marks. Reasons quote or paraphrase the pages cited.'));
-        showCell(2, 0);
-      }
+      // ---------- Table 1 rows (step 5 prose) highlight their lane ----------
+      ctx.panel.querySelectorAll('.fam-t1 tr[data-lane]').forEach(tr => {
+        const i = +tr.dataset.lane;
+        tr.addEventListener('mouseenter', () => { S.hl = i; lanesCv.draw(); });
+        tr.addEventListener('mouseleave', () => { S.hl = -1; lanesCv.draw(); });
+      });
 
       // ---------- animation ----------
       const PASS = () => lib.reducedMotion ? 0.01 : 0.42;
@@ -478,14 +378,13 @@
 
       ctx.setCaption('Slots: filled = used, crossed = unusable, empty = not needed. Triangle: the guess q over 3 tokens; crosshair = truth p; EBT shading = its energy over every possible guess (darker = lower, white lines = equal energy); its minimum sits at the lane\'s belief, a little off the truth.');
       compute(); S.k = R.ticks; S.phase = 1;
-      const kick = () => { canvases.forEach(c => c.draw()); bRead(); updateStatus(); };
+      const kick = () => { canvases.forEach(c => c.draw()); updateStatus(); };
       kick(); if (window.EBTV && EBTV.fontsReady) EBTV.fontsReady.then(kick);
       let shown = false;
       const CFG = [
         { prompt: 'medium', budget: 12, focus: null, quiver: false, facets: false, play: true },
         { prompt: 'medium', budget: 12, focus: ['ar', 'rnn'], quiver: false, facets: false },
-        { prompt: 'medium', budget: 12, focus: ['diff'], quiver: false, facets: false },
-        { prompt: 'medium', budget: 12, focus: ['diff', 'ebt'], quiver: true, facets: false },
+        { prompt: 'medium', budget: 12, focus: ['diff'], quiver: true, facets: false },
         { prompt: 'hard', budget: 12, focus: ['ebt'], quiver: false, facets: false, play: true },
         { prompt: 'medium', budget: 12, focus: null, quiver: false, facets: true },
       ];

@@ -21,3 +21,4 @@
 #tokens .tk-play .ctl { max-width: none; }
 #tokens .tk-btns { gap: 4px 14px; margin-top: 2px; }
 #tokens .tk-play .tk-tsl { flex: 1 1 140px; min-width: 120px; max-width: none; }
+#tokens .frame.tk-hl { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue); }

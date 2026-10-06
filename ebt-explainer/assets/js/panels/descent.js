@@ -3,30 +3,28 @@ EBT.panel({
   id: 'descent',
   nav: 'Thinking is gradient descent',
   title: 'Thinking is gradient descent on the prediction',
-  lede: 'An EBT never outputs an answer directly. It starts from noise and improves its guess by following the slope of its own energy, one forward and backward pass at a time.',
+  lede: 'An EBT never outputs an answer directly. It starts from noise and improves its guess by following the slope of its own energy.',
   text: `
-    <p>Fix the context $x$ and the weights $\\theta$. The energy $E_\\theta(x,\\hat y)$ is then just a function of the candidate prediction $\\hat y$, a surface over the space of possible answers. Low regions are answers the model judges compatible with the context.</p>
-    <p>To predict, the EBT does what any optimizer would do on such a surface. It computes the gradient of the energy with respect to the <em>prediction</em> (not the weights) and steps downhill:</p>
-    <div class="eq">$$\\hat y_{i+1} \\;=\\; \\hat y_i \\;-\\; \\alpha\\, \\nabla_{\\hat y}\\, E_\\theta(x, \\hat y_i), \\qquad \\hat y_0 \\sim \\mathcal N(0, I)$$<span class="why">Eq. 1 of the paper (p.7). α is the step size.</span></div>
-    <p>Each step costs one forward pass (to get $E$) plus one backward pass to the input (to get $\\nabla_{\\hat y}E$). The paper counts thinking in <b>function evaluations</b> (NFEs): one per optimization step.</p>`,
+    <p>Fix the context $x$ and the weights $\\theta$. The energy is then a surface over candidate predictions $\\hat y$, and to predict, the model rolls downhill on it, taking the gradient with respect to the <em>prediction</em>, not the weights:</p>
+    <div class="eq">$$\\hat y_{i+1} \\;=\\; \\hat y_i \\;-\\; \\alpha\\, \\nabla_{\\hat y}\\, E_\\theta(x, \\hat y_i)$$<span class="why">Eq. 1 (p.7). α: step size. Start: ŷ<sub>0</sub> ~ N(0, I).</span></div>
+    <p>Each step is one forward pass (for $E$) plus a backward pass to the input (for $\\nabla_{\\hat y}E$). The paper counts thinking in function evaluations (NFEs), one per step.</p>`,
   steps: [
-    { label: 'Start from noise', html: '<p>The first guess is random: $\\hat y_0 \\sim \\mathcal N(0, I)$. Nothing about the context is used yet. Press <b>[ new start ]</b> to draw another.</p>' },
-    { label: 'Ask the verifier', html: '<p>One forward pass returns a single number, the energy of this guess. Backpropagating that number to the input gives $\\nabla_{\\hat y}E$, the direction in which the guess gets <em>worse</em> fastest. The arrow shows $-\\alpha\\nabla_{\\hat y}E$.</p>' },
-    { label: 'Take one step', html: '<p>Move the guess along the arrow. Energy drops. This single update is one unit of "thinking".</p>' },
-    { label: 'Repeat until it settles', html: '<p>Keep stepping. When the energy stops falling, $|E_{i+1}-E_i| < \\varepsilon$, the model has converged and can stop. A harder context would need more steps: this is <b>dynamic compute</b>, Facet 1 of the paper.</p>' },
-    { label: 'Step size matters', html: '<p>Too small an $\\alpha$ crawls. Too large an $\\alpha$ overshoots and bounces across the valley. Drag the α slider and run again. The paper randomizes α during training so the learned landscape works for a range of step sizes (Sec 3.3).</p>' },
+    { label: 'Start from noise', html: '<p>The first guess is random and ignores the context. Press <b>[ new start ]</b> to draw another.</p>' },
+    { label: 'Ask the verifier', html: '<p>A forward pass scores the guess with one number. Backpropagating it to the input gives the uphill direction; the arrow shows $-\\alpha\\nabla_{\\hat y}E$.</p>' },
+    { label: 'Take one step', html: '<p>Move along the arrow. Energy drops. That single update is one unit of "thinking".</p>' },
+    { label: 'Repeat until it settles', html: '<p>Keep stepping until the energy stops falling. A harder context could take more steps: compute becomes <b>dynamic</b> (Facet 1), though the paper fixes the step count. At $\\alpha = 1$, this toy\'s training step size, two steps suffice; the paper trains with two or three (p.26).</p>' },
+    { label: 'Step size matters', html: '<p>Too small an $\\alpha$ crawls; too large overshoots and bounces across the valley. Drag the slider and run again. Training randomizes $\\alpha$ so the landscape suits a range of step sizes (Sec 3.3).</p>' },
   ],
   after: `
-    <h3>Why this is different</h3>
-    <p>A Transformer++ spends exactly one forward pass per token, whatever the difficulty. Here the number of steps is a dial you can turn at inference time, and every intermediate guess comes with a score. Those two properties are what the rest of the paper builds on.</p>
-    <p class="note">The landscape is a real model: a 2-D toy EBT trained for this explainer with the paper's recipe (unrolled steps, Langevin noise, replay buffer, random α and step count). Energies and gradients are computed live in your browser from its weights.</p>`,
+    <p>A Transformer++ spends one forward pass per token, whatever the difficulty. Here the step count is a dial turned at inference, and every intermediate guess comes with a score.</p>
+    <p class="note">The landscape is a 2-D toy EBT trained for this explainer with the paper's recipe. Energies and gradients are computed live from its weights.</p>`,
   source: [{ kind: 'toy', note: 'toy 2-D EBT, final checkpoint' }, { kind: 'paper', note: 'Eq. 1, Alg. 2' }],
   figure(stage, ctx) {
     const { lib } = ctx, h = lib.h, M = window.EBT.toy2d, C = lib.C;
     if (!M || !M.ready) { stage.appendChild(h('p', { class: 'callout warn' }, 'Toy model data missing (data/toy2d.json).')); return {}; }
     const K = M.nCkpt - 1, ext = M.extent;
     const ctxs = M.contexts.slice(0, 3);
-    let ci = 0, alpha = 1.0, y = null, path = [], energies = [], showArrow = false, timer = null;
+    let ci = 0, alpha = 0.5, y = null, path = [], energies = [], showArrow = false, timer = null;
     const row = h('div', { class: 'fig-row' }); stage.appendChild(row);
     const L = lib.frame(row, { label: 'Energy landscape', sub: 'E<sub>θ</sub>(x, ŷ) over ŷ ∈ ℝ² · click to place ŷ<sub>0</sub>' });
     L.wrap.style.flex = '1 1 360px';
@@ -58,12 +56,12 @@ EBT.panel({
         if (showArrow) {
           const { g: gr } = M.energyGrad(K, ctxs[ci].x, y);
           const tgt = [y[0] - alpha * gr[0], y[1] - alpha * gr[1]], a = px[px.length - 1], b = M.toPx(tgt, box);
-          lib.arrow(c, a[0], a[1], b[0], b[1], { color: '#111', width: 1.6, head: 9, dash: [5, 4] });
-          lib.text(c, '−α∇E', (a[0] + b[0]) / 2 + 8, (a[1] + b[1]) / 2 - 18, { size: 13, kind: 'mono', color: '#111' });
+          if (Math.hypot(b[0] - a[0], b[1] - a[1]) > 14) { lib.arrow(c, a[0], a[1], b[0], b[1], { color: '#111', width: 1.6, head: 9, dash: [5, 4] });
+          lib.text(c, '−α∇E', (a[0] + b[0]) / 2 + 8, (a[1] + b[1]) / 2 - 18, { size: 13, kind: 'mono', color: '#111' }); }
         }
       }
       // axes ticks
-      lib.text(c, 'ŷ₁ →', 548, 540, { size: 12, kind: 'mono', color: '#fff', align: 'right' });
+      lib.text(c, 'ŷ₁ →', 548, 540, { size: 12, kind: 'mono', color: C.muted, align: 'right' });
       drawPlot(); readout();
     }
     const sub = (n) => String(n).split('').map(d => '₀₁₂₃₄₅₆₇₈₉'[+d]).join('');
@@ -87,7 +85,7 @@ EBT.panel({
     function stop() { if (timer) clearInterval(timer); timer = null; }
     cv.canvas.addEventListener('click', (ev) => { const [px, py] = cv.toLocal(ev); start(M.fromPx(px, py, box)); showArrow = true; draw(); ctx.goStep(1); });
     const controls = h('div', { class: 'controls' }); stage.appendChild(controls);
-    const seg = lib.segmented({ label: 'Context', options: ctxs.map((c, i) => [i, 'x=' + c.x + ' · σ ' + c.sigma]), value: 0, onchange: (v) => { ci = v; start(); } });
+    const seg = lib.segmented({ label: 'Context', options: ctxs.map((c, i) => [i, 'x=' + c.x + ' · noise ' + c.sigma]), value: 0, onchange: (v) => { ci = v; start(); } });
     controls.appendChild(h('span', { class: 'fig-label' }, 'context'));
     controls.appendChild(seg.el);
     const sl = lib.slider({ id: 'descent-alpha', label: 'step size α', min: 0.05, max: 2.6, step: 0.05, value: alpha, fmt: (v) => v.toFixed(2), oninput: (v) => { alpha = v; draw(); } });
@@ -103,8 +101,8 @@ EBT.panel({
         stop();
         if (i === 0) { showArrow = false; start([-1.7, 1.6]); }
         if (i === 1) { showArrow = true; if (path.length > 1) start([-1.7, 1.6]); draw(); }
-        if (i === 2) { showArrow = true; if (path.length > 1) start([-1.7, 1.6]); alpha = 1.0; sl.set(1.0); stepOnce(); }
-        if (i === 3) { showArrow = true; alpha = 1.0; sl.set(1.0); start([-1.7, 1.6]); run(); }
+        if (i === 2) { showArrow = true; if (path.length > 1) start([-1.7, 1.6]); alpha = 0.5; sl.set(0.5); stepOnce(); }
+        if (i === 3) { showArrow = true; alpha = 0.5; sl.set(0.5); start([-1.7, 1.6]); run(); }
         if (i === 4) { showArrow = true; alpha = 2.4; sl.set(2.4); start([-1.7, 1.6]); run(18); }
       },
       hide() { stop(); },

@@ -1,8 +1,7 @@
 /* Panel: exploring with Langevin noise, choosing by energy (Eq. 2, Algorithm 2, Table 2).
-   Main instrument: a real 2-D slice of the toy character-level text EBT (data/text.json weights, decoded and run in the browser):
+   Figure: a real 2-D slice of the toy character-level text EBT (data/text.json weights, decoded and run in the browser):
    two logits move, the other 52 are frozen at 0. M candidates descend with Langevin noise; the lowest final energy wins.
-   Bottom instrument (tabs): a live Monte Carlo sweep over sigma (slice or full 54-D on held-out text),
-   the toy's stored full-vocabulary best-of-M results, and paper Table 2. */
+   Beside it, the energy of every candidate per step. */
 (function () {
   'use strict';
 
@@ -100,44 +99,29 @@
     { ctx: ' educated at highgate school in london, ', A: 't', B: 'a', truth: 'a', ext: [-4, 14], seg: '…in london, _' },
     { ctx: 'd and harvard universities. he was in th', A: 'e', B: 'a', truth: 'e', ext: [-4, 12], seg: '…he was in th_' },
   ];
-  const TABLE2 = [ // Table 2 (p.10), percent perplexity improvement, OOD BigBench Dyck
-    { name: 'No random step size', tl: -1.47, sv: 0.19, tls: '−1.47', svs: '0.19', why: 'α fixed in training. Thinking longer now hurts slightly (−1.47%) and verification barely helps (0.19%): the paper calls random step size critical.' },
-    { name: 'No random num. steps', tl: 0.00, sv: 9.65, tls: '0.00', svs: '9.65', why: 'Fixed step count in training. Extra steps give exactly 0.00%: the model never learned to use them. Verification still gives 9.65%.' },
-    { name: 'No Langevin dynamics', tl: 17.2, sv: 17.0, tls: '17.2', svs: '17.0', why: 'No noise in training. The best single-path gain (17.2%), but adding verification no longer helps (17.0%): less exploration, a landscape tuned to the direct path.' },
-    { name: 'No replay buffer', tl: 14.8, sv: 17.8, tls: '14.8', svs: '17.8', why: 'No replayed trajectories in training. 14.8% thinking longer, 17.8% with verification.' },
-    { name: 'Full System 2 config', tl: 7.19, sv: 18.7, tls: '7.19', svs: '18.7', full: true, why: 'All regularizers on. Its single-path gain (7.19%) trails the no-Langevin and no-replay rows, but it is the best once candidates are verified (18.7%).' },
-  ];
-  const DSN = { val: 'held-out web text', ood_shakespeare: 'Shakespeare (OOD)', ood_code: 'Python code (far OOD)', train: 'train text' };
-
   EBT.panel({
     id: 'langevin-bon',
     nav: 'Noise and self-verification',
     title: 'Exploring with noise, choosing by energy',
-    lede: 'Descent from one start finds one answer: the nearest basin. Run several noisy descents, keep the candidate the model itself scores lowest, and extra compute becomes a search, with no outside judge.',
+    lede: 'Descent from one start finds the nearest basin. Run several noisy descents and keep the candidate the model itself scores lowest: extra compute becomes a search, with no outside judge.',
     text: `
-      <p>Thinking longer refines one guess. The paper's second way to spend compute is <b>self-verification</b>: draw $M$ random starting guesses, run $N$ descent steps on each, and return the candidate with the lowest energy (Algorithm 2, p.7):</p>
-      <div class="eq">$$\\hat y^{*} \\;=\\; \\arg\\min_{j=1..M}\\; E_\\theta\\big(x,\\hat y_{N,j}\\big), \\qquad \\hat y_{0,j}\\sim\\mathcal N(0,I)$$<span class="why">Algorithm 2 (p.7). Cost: M·N function evaluations, each a forward pass plus a backward pass to the input.</span></div>
-      <p>Picking only helps if the candidates differ. Random starts give some diversity. During training the paper adds more with a variant of <b>Langevin dynamics</b>, a random kick in every update (Sec 3.3):</p>
-      <div class="eq">$$\\hat y_{i+1} \\;=\\; \\hat y_i - \\alpha\\,\\nabla_{\\hat y}E_\\theta(x,\\hat y_i) + \\eta_i, \\qquad \\eta_i\\sim\\mathcal N(0,\\sigma)$$<span class="why">Eq. 2 (p.7). σ is "the magnitude of the noise"; here it is the standard deviation of each coordinate.</span></div>
-      <p>The landscape on the left is a real one. It belongs to our toy character-level EBT (54 symbols), given the context "…school in london, _", where the true next character is 'a'. Its prediction $\\hat y$ is a vector of 54 logits, so we freeze 52 of them at 0 and let two move: the logits of 't' and 'a'. Every energy and gradient is computed in your browser from the trained weights.</p>`,
+      <p><b>Self-verification</b> (Algorithm 2, p.7): draw $M$ random starts, run $N$ descent steps on each, return the lowest-energy candidate.</p>
+      <div class="eq">$$\\hat y^{*} \\;=\\; \\arg\\min_{j=1..M}\\; E_\\theta\\big(x,\\hat y_{N,j}\\big)$$<span class="why">Cost: M·N function evaluations.</span></div>
+      <p>Choosing only helps if candidates differ. <b>Langevin dynamics</b> adds a random kick to every update (Eq. 2):</p>
+      <div class="eq">$$\\hat y_{i+1} \\;=\\; \\hat y_i - \\alpha\\,\\nabla_{\\hat y}E_\\theta(x,\\hat y_i) + \\eta_i$$<span class="why">η<sub>i</sub> ~ N(0, σ): Gaussian noise of size σ.</span></div>
+      <p>The landscape is real: our toy character-level EBT on "…school in london, _" (true next character 'a'). Its prediction is 54 logits; we freeze 52 at 0 and move the logits of 't' and 'a'.</p>`,
     steps: [
-      { label: 'One path, no noise', html: '<p>$M=1$, $\\sigma=0$: plain descent from one random start. It slides into the shallow basin near the origin, where \'t\' and \'a\' get about 11% each and most of the mass stays on the other 52 symbols. The energy stops falling, so by its own rule the model has converged, on a poor answer: $-\\log p(\\text{a}) \\approx 2.2$ nats.</p>' },
-      { label: 'Add Langevin noise', html: '<p>$\\sigma = 1$. Each update is the gradient step (dashed arrow) plus a random kick $\\eta_i$ (blue arrow). The path wanders. Now and then a kick carries it over a rim into a deeper valley. The single answer has become a random variable: sometimes much better, sometimes worse. Press <b>[ new starts ]</b> a few times.</p>' },
-      { label: 'Many candidates', html: '<p>Algorithm 2 with $M = 8$ starts and no noise. All eight fall into the same shallow basin, their energies agree, and there is nothing to choose between. Diversity from the starting point alone does not help when one basin captures almost every start.</p>' },
-      { label: 'Choose by energy', html: '<p>$M = 8$, $\\sigma = 1$. Now the candidates spread across basins. The lowest final energy (blue ring, $\\hat y^{*}$) sits in a deep valley where \'a\' wins. The model never saw the answer: it ranked its own candidates. The readout compares the pick with the average candidate and with an oracle that cheats by using the true label.</p>' },
-      { label: 'What noise buys, measured', html: '<p>The bottom chart repeats the experiment many times for every σ (live Monte Carlo, the same starts and kicks reused at every σ). One path (dashed) degrades as σ grows. The energy-picked best of $M$ (blue) drops sharply once noise lets candidates escape, then stays low. The oracle (dotted) shows how much diversity exists; the gap between blue and dotted is what the verifier leaves on the table. Try the one-valley context: there noise has nothing to find.</p>' },
-      { label: 'The full 54-D model', html: '<p>The slice shows the mechanism. The 54-D sweep runs the same experiment on 60 held-out positions of real web text, with every logit free, the toy\'s trained $\\alpha = 10$ and 8 steps. Here noise does not pay. Up to σ ≈ 0.25 the energy pick barely moves, and beyond that it gets worse, while the oracle keeps improving up to σ ≈ 1.25: better candidates exist, but the energy cannot single them out. The stored results (tab "full vocabulary") show what noise-free best-of-8 does buy: 2.329 → 2.250 nats on held-out text, against 1.869 for the oracle.</p>' },
-      { label: 'Why the paper adds noise in training', html: '<p>In the paper Langevin noise is a <em>training</em> regularizer: "Without this random noise term, exploration is often limited to paths leading directly to the energy minimum, leaving other regions poorly defined" (p.7). A verifier can only rank candidates in regions it was shaped on. Table 2 (p.10) shows the trade: without Langevin noise, thinking longer gains more (17.2% vs 7.19%), but self-verification gains less (17.0% vs 18.7%).</p>' },
+      { label: 'One path, no noise', html: '<p>Plain descent slides into a shallow basin near the origin where \'a\' gets about 11%. The energy stops falling, so the model has converged, on a poor answer.</p>' },
+      { label: 'Add Langevin noise', html: '<p>Each update is the gradient step (dashed) plus a kick $\\eta_i$ (blue). Sometimes a kick carries the path over a rim into a deeper valley. Press <b>[ new starts ]</b>.</p>' },
+      { label: 'Many starts, no noise', html: '<p>$M = 8$, $\\sigma = 0$. All eight fall into the same basin: random starts alone give nothing to choose between.</p>' },
+      { label: 'Choose by energy', html: '<p>$M = 8$, $\\sigma = 1$. Candidates spread across basins and the lowest energy (blue ring) lands where \'a\' wins. The model never saw the answer; it ranked its own guesses. The readout adds an oracle that cheats with the label.</p>' },
     ],
     after: `
-      <h3>Why noise helps a verifier, and when it does not</h3>
-      <p>Best-of-$M$ needs two things: candidates that land in different places, and an energy that ranks those places correctly. Noise supplies the first at a price, since every candidate is shaken and the single path degrades. Verification wins the price back only where the energy is reliable. That is why the paper puts the noise into training: the model visits, and so shapes, the regions off the direct path. It is also why the full configuration in Table 2 wins only in the column with verification.</p>
-      <p>The verifier is imperfect even in the paper. With less training data, "verifying 10 samples occasionally leads to worse performance than verifying 2 samples, likely because the EBT found an adversarial sample (a sample with low energy that is in fact not a good prediction)"; the effect faded as data grew (App. B.1, p.28). The gap between our blue and dotted curves is the same effect in miniature.</p>
-      <p class="note">Caveats. Algorithm 2 has no noise term, and whether the paper uses Langevin noise at inference is unspecified. Table 2 is one OOD benchmark (BigBench Dyck) and one seed, and its reference point is not stated. The slice freezes 52 logits at 0, so its basins are not the minima of the full model. Toy noise is added on every step except the last, as in its training. The "annealed" schedule is our extension; the paper lists annealed Langevin dynamics only as future work (p.27). Self-verification is per prediction (here per character) and uses the model's own energy, with no reward model (p.8).</p>`,
+      <p>In the paper, noise is a <em>training</em> regularizer: without it, "exploration is often limited to paths leading directly to the energy minimum, leaving other regions poorly defined" (p.7). A verifier can only rank regions it was shaped on. Table 2 (p.10, perplexity gains on BigBench Dyck) shows the trade: without Langevin noise, thinking longer gains more (17.2% vs 7.19%) but verification gains less (17.0% vs 18.7%).</p>
+      <p class="note">Caveats. The verifier can be fooled: at small data, best-of-10 was occasionally worse than best-of-2, an "adversarial sample" with low energy (p.28). In our full 54-D toy, noise does not help the energy pick. Algorithm 2 has no noise term; whether inference uses noise is unspecified.</p>`,
     source: [
       { kind: 'toy', note: 'text EBT run live · data/text.json' },
       { kind: 'paper', note: 'Eq. 2, Alg. 2, Table 2' },
-      { kind: 'ext', note: 'annealed noise' },
     ],
     figure(stage, ctx) {
       const { lib } = ctx, h = lib.h, C = lib.C;
@@ -149,7 +133,7 @@
       const Vn = D.vocab.length;
 
       // ---------------- state ----------------
-      const S = { si: 0, alpha: 5, N: 20, M: 8, sigma: 1.0, sched: 'const', seed: 1, t: 20, playing: false, inspect: -1, tab: 'sweep', sweepMode: 'slice', bonDs: 'val', bonN: 0, hoverRow: -1 };
+      const S = { si: 0, alpha: 5, N: 20, M: 8, sigma: 1.0, sched: 'const', seed: 1, t: 20, playing: false, inspect: -1 };
       let sim = null;                   // {cands:[{path,E,PT,G,Nz}], N}
       const grids = {}, planes = {};
       const sl = () => SLICES[S.si];
@@ -173,32 +157,14 @@
       c3.appendChild(lib.button('step', () => { S.playing = false; if (S.t >= S.N) S.t = 0; else S.t++; draw(); }));
 
       const c1 = h('div', { class: 'controls' }); stage.appendChild(c1);
-      const segCtx = lib.segmented({ label: 'Context', options: SLICES.map((s, i) => [i, s.seg]), value: 0, onchange: (v) => { S.si = v; S.inspect = -1; S.stopAt = null; recompute(true); restartSweep(); } });
+      const segCtx = lib.segmented({ label: 'Context', options: SLICES.map((s, i) => [i, s.seg]), value: 0, onchange: (v) => { S.si = v; S.inspect = -1; S.stopAt = null; recompute(true); } });
       c1.appendChild(h('span', { class: 'fig-label' }, 'context')); c1.appendChild(segCtx.el);
-      const segSch = lib.segmented({ label: 'Noise schedule', options: [['const', 'constant σ'], ['anneal', 'annealed (ext)']], value: 'const', onchange: (v) => { S.sched = v; recompute(false); restartSweep(); } });
-      c1.appendChild(h('span', { class: 'fig-label' }, 'noise')); c1.appendChild(segSch.el);
-
       const c2 = h('div', { class: 'controls lb-sliders' }); stage.appendChild(c2);
       const slS = lib.slider({ id: 'lb-sigma', label: 'noise σ', min: 0, max: 3, step: 0.05, value: S.sigma, fmt: (v) => v.toFixed(2), oninput: (v) => { S.sigma = v; recompute(false); } });
-      const slM = lib.slider({ id: 'lb-M', label: 'candidates M', min: 1, max: 16, step: 1, value: S.M, oninput: (v) => { S.M = v; S.inspect = -1; recompute(false); restartSweep(); } });
-      const slN = lib.slider({ id: 'lb-N', label: 'steps N', min: 1, max: 40, step: 1, value: S.N, oninput: (v) => { S.N = v; recompute(false); restartSweep(); } });
-      const slA = lib.slider({ id: 'lb-alpha', label: 'step size α', min: 0.5, max: 12, step: 0.5, value: S.alpha, fmt: (v) => v.toFixed(1), oninput: (v) => { S.alpha = v; recompute(false); restartSweep(); } });
+      const slM = lib.slider({ id: 'lb-M', label: 'candidates M', min: 1, max: 16, step: 1, value: S.M, oninput: (v) => { S.M = v; S.inspect = -1; recompute(false); } });
+      const slN = lib.slider({ id: 'lb-N', label: 'steps N', min: 1, max: 40, step: 1, value: S.N, oninput: (v) => { S.N = v; recompute(false); } });
+      const slA = lib.slider({ id: 'lb-alpha', label: 'step size α', min: 0.5, max: 12, step: 0.5, value: S.alpha, fmt: (v) => v.toFixed(1), oninput: (v) => { S.alpha = v; recompute(false); } });
       [slS, slM, slN, slA].forEach(s => c2.appendChild(s.el));
-
-      // bottom tabbed instrument
-      const tabRow = h('div', { class: 'controls lb-tabs' }); stage.appendChild(tabRow);
-      const segTab = lib.segmented({ label: 'View', options: [['sweep', 'noise sweep · live'], ['full', 'full vocabulary · toy data'], ['table2', 'paper · Table 2']], value: 'sweep', onchange: (v) => { S.tab = v; syncTab(); } });
-      tabRow.appendChild(h('span', { class: 'fig-label' }, 'what it buys')); tabRow.appendChild(segTab.el);
-      const FB = lib.frame(stage, {});
-      const subRow = h('div', { class: 'controls lb-sub' }); FB.frame.appendChild(subRow);
-      const segMode = lib.segmented({ label: 'Sweep space', options: [['slice', 'this 2-D slice'], ['full', '54-D, 60 held-out positions']], value: 'slice', onchange: (v) => { S.sweepMode = v; restartSweep(); drawBottom(); } });
-      const segDs = lib.segmented({ label: 'Dataset', options: Object.keys(DSN).filter(k => D.bon && D.bon.settings[0].datasets[k]).map(k => [k, DSN[k]]), value: 'val', onchange: (v) => { S.bonDs = v; drawBottom(); } });
-      const segBN = lib.segmented({ label: 'Steps per candidate', options: (D.bon ? D.bon.settings : []).map((s, i) => [i, 'N = ' + s.N]), value: 0, onchange: (v) => { S.bonN = v; drawBottom(); } });
-      const BW = wide ? Math.min(640, SWD) : 360, BH = wide ? 186 : 286, bv = lib.canvas(FB.frame, BW, BH, { label: 'Results chart for the selected view' });
-      const bro = h('div', { class: 'readout lb-bro' }); FB.frame.appendChild(bro);
-      bv.canvas.addEventListener('mousemove', (ev) => { if (S.tab !== 'table2') return; const [, py] = bv.toLocal(ev); const r = t2Row(py); if (r !== S.hoverRow) { S.hoverRow = r; drawBottom(); } });
-      bv.canvas.addEventListener('mouseleave', () => { if (S.hoverRow !== -1 && S.tab === 'table2') { S.hoverRow = -1; drawBottom(); } });
-      bv.canvas.addEventListener('click', (ev) => { if (S.tab !== 'table2') return; const [, py] = bv.toLocal(ev); S.hoverRow = t2Row(py); drawBottom(); });
 
       ctx.setCaption('Darker blue = lower energy. Circles: starts ŷ<sub>0,j</sub>. Gray: paths. Blue ring: lowest-energy candidate ŷ*. Dashed: true character at p = ½.');
 
@@ -348,158 +314,6 @@
           `<span>−log p('${s.truth}') · picked <b>${fx(ce[w])}</b></span><span>average <b>${fx(avg)}</b> · oracle <b>${fx(orc)}</b></span>` + insp;
       }
 
-      // ---------------- bottom: live sweep ----------------
-      // chart geometry for the bottom canvas (wide: legend at right; narrow: legend row on top)
-      const BOX = wide ? { x: 50, y: 18, w: BW - 250, h: BH - 58 } : { x: 44, y: 56, w: BW - 58, h: BH - 100 };
-      function legend(c, items, status) {
-        if (wide) {
-          const lx = BW - 184; let ly = 14;
-          items.forEach(([col, dash, label, sub_]) => { c.save(); c.strokeStyle = col; c.lineWidth = dash ? 1.6 : 2.4; if (dash) c.setLineDash(dash); c.beginPath(); c.moveTo(lx, ly + 7); c.lineTo(lx + 22, ly + 7); c.stroke(); c.restore(); lib.text(c, label, lx + 28, ly, { size: 12, kind: 'mono', color: C.ink }); if (sub_) lib.text(c, sub_, lx + 28, ly + 15, { size: 11, kind: 'mono', color: C.muted }); ly += sub_ ? 36 : 22; });
-          (status || []).forEach(([txt, col], i) => lib.text(c, txt, lx, ly + 2 + i * 14, { size: 11, kind: 'mono', color: col || C.muted }));
-        } else {
-          let lx = 6; const ly = 2;
-          items.forEach(([col, dash, label]) => { c.save(); c.strokeStyle = col; c.lineWidth = dash ? 1.6 : 2.4; if (dash) c.setLineDash(dash); c.beginPath(); c.moveTo(lx, ly + 7); c.lineTo(lx + 16, ly + 7); c.stroke(); c.restore(); const m = lib.text(c, label, lx + 20, ly, { size: 12, kind: 'mono', color: C.ink }); lx += 20 + m.w + 14; });
-          lib.text(c, (status || []).map(s => s[0]).join(' · '), 6, 18, { size: 11, kind: 'mono', color: (status && status[0] && status[0][1]) || C.muted });
-        }
-      }
-      const SIG = { slice: [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3], full: [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2] };
-      const RMAX = { slice: 40, full: 60 };
-      let SW = null, heldOut = null;
-      function heldOutPositions() {
-        if (heldOut) return heldOut;
-        const txt = (D.corpus && D.corpus.samples && D.corpus.samples.val) || '', md = M0(), out = [];
-        for (let i = 40; i < txt.length && out.length < 60; i += 6) { const ch = md.norm(txt[i]); if (!ch || !md.stoi.has(ch)) continue; out.push({ ctx: txt.slice(i - 40, i), t: md.stoi.get(ch) }); }
-        return (heldOut = out);
-      }
-      function restartSweep() {
-        const mode = S.sweepMode, sig = SIG[mode];
-        SW = { key: [mode, S.si, S.alpha, S.N, S.M, S.sched].join('|'), mode, si: S.si, alpha: S.alpha, N: S.N, M: S.M, sched: S.sched, sig, acc: sig.map(() => ({ n: 0, single: 0, pick: 0, orc: 0 })), r: 0, k: 0, done: false, R: RMAX[mode] };
-        kick();
-      }
-      function sweepUnit() {
-        const W = SW, md = M0(), sigma = W.sig[W.k], ce = [], E = [];
-        if (W.mode === 'slice') {
-          const ev = planeFor(W.si), out = new Array(6);
-          for (let j = 0; j < W.M; j++) {
-            const r = lib.rng(W.r * 104729 + j * 7919 + 101); let a = r.normal(), b = r.normal();
-            for (let i = 0; i < W.N; i++) { ev(a, b, true, out); const s = noiseAt(i, W.N, sigma, W.sched); a = Math.max(-40, Math.min(40, a - W.alpha * out[4] + s * r.normal())); b = Math.max(-40, Math.min(40, b - W.alpha * out[5] + s * r.normal())); }
-            ev(a, b, false, out); E.push(out[0]); ce.push(-Math.log(Math.max(1e-12, pTrue(out, W.si))));
-          }
-        } else {
-          const pos = heldOutPositions()[W.r], cx = md.context(pos.ctx), N = 8, al = md.alpha0, y = new Float64Array(Vn), g = new Float64Array(Vn), p = new Float64Array(Vn);
-          for (let j = 0; j < W.M; j++) {
-            const r = lib.rng(W.r * 104729 + j * 7919 + 202); for (let v = 0; v < Vn; v++) y[v] = r.normal();
-            for (let i = 0; i < N; i++) { md.evalE(cx, y, g); const s = noiseAt(i, N, sigma, W.sched); for (let v = 0; v < Vn; v++) y[v] = y[v] - al * g[v] + (s > 0 ? s * r.normal() : 0); }
-            E.push(md.evalE(cx, y, null, p)); ce.push(-Math.log(Math.max(1e-12, p[pos.t])));
-          }
-        }
-        let w = 0; E.forEach((e, j) => { if (e < E[w]) w = j; });
-        const A = W.acc[W.k]; A.n++; A.single += ce[0]; A.pick += ce[w]; A.orc += Math.min(...ce);
-        W.k++; if (W.k >= W.sig.length) { W.k = 0; W.r++; if (W.r >= Math.min(W.R, W.mode === 'full' ? heldOutPositions().length : W.R)) W.done = true; }
-      }
-      function sweepWork(ms) { if (!SW || SW.done || S.tab !== 'sweep') return false; const t0 = performance.now(); while (!SW.done && performance.now() - t0 < ms) sweepUnit(); return true; }
-      function drawSweep() {
-        const c = bv.ctx; bv.clear(); if (!SW) return;
-        const W = SW, sig = W.sig, ser = ['single', 'pick', 'orc'].map(k => sig.map((s, i) => W.acc[i].n ? [s, W.acc[i][k] / W.acc[i].n] : null).filter(Boolean));
-        const all = ser.flat().map(p => p[1]).filter(v => v > 0);
-        const ymin = W.mode === 'slice' ? 0.01 : 1, ymax = W.mode === 'slice' ? 20 : 20;
-        const ax = lib.axes(c, { x: BOX.x, y: BOX.y, w: BOX.w, h: BOX.h, xlim: [0, sig[sig.length - 1]], ylim: [ymin, ymax], ylog: true, xticks: W.mode === 'slice' ? [0, 0.5, 1, 1.5, 2, 2.5, 3] : [0, 0.5, 1, 1.5, 2], yticks: W.mode === 'slice' ? [0.01, 0.1, 1, 10] : [1, 2, 5, 10, 20], yfmt: (v) => String(v), size: 12 });
-        lib.text(c, 'noise σ', BOX.x + BOX.w, BOX.y + BOX.h + 24, { size: 12, kind: 'mono', color: C.muted, align: 'right' });
-        lib.text(c, '−log p(true), nats (log)', 4, BOX.y - 17, { size: 11, kind: 'mono', color: C.muted });
-        const clipY = (pts) => pts.map(p => [p[0], Math.max(ymin, Math.min(ymax, p[1]))]);
-        c.save(); c.strokeStyle = C.blue3; c.lineWidth = 1; c.setLineDash([3, 3]); const xs = ax.X(Math.min(S.sigma, sig[sig.length - 1])); c.beginPath(); c.moveTo(xs, BOX.y); c.lineTo(xs, BOX.y + BOX.h); c.stroke(); c.restore();
-        lib.plot(c, ax, clipY(ser[0]), { color: C.ink, width: 1.6, dash: [6, 4], markers: 2.5 });
-        lib.plot(c, ax, clipY(ser[2]), { color: C.muted, width: 1.4, dash: [1.5, 3.5], markers: 2.2 });
-        lib.plot(c, ax, clipY(ser[1]), { color: C.blue, width: 2.4, markers: 3.2 });
-        const nDone = Math.min(...W.acc.map(a => a.n)), R = W.mode === 'full' ? Math.min(W.R, heldOutPositions().length) : W.R;
-        const status = [[W.done ? 'done' : 'running…', W.done ? C.muted : C.blue], [nDone + '/' + R + (W.mode === 'full' ? ' positions' : ' runs') + ' per σ']];
-        if (all.some(v => v > ymax)) status.push(['values > 20 clipped']);
-        legend(c, [[C.ink, [6, 4], 'one path', 'M = 1'], [C.blue, null, 'energy pick', 'best of M by E'], [C.muted, [1.5, 3.5], 'oracle', 'best of M by label']], status);
-        const md = M0();
-        bro.innerHTML = W.mode === 'slice'
-          ? `<span>slice "${sl().seg}" · M <b>${W.M}</b> · N <b>${W.N}</b> · α <b>${W.alpha}</b> · ${W.sched === 'anneal' ? 'annealed' : 'constant'} noise</span>`
-          : `<span>54-D · M <b>${W.M}</b> · N <b>8</b> · α <b>${md ? md.alpha0 : 10}</b> (trained) · ${W.sched === 'anneal' ? 'annealed' : 'constant'} noise · positions from held-out RedPajama text</span>`;
-      }
-
-      // ---------------- bottom: stored toy best-of-M ----------------
-      let live54 = null;
-      function liveFull() {
-        const key = [S.si, S.M].join('|'); if (live54 && live54.key === key) return live54;
-        const md = M0(), s = sl(), cx = md.context(s.ctx), y = new Float64Array(Vn), g = new Float64Array(Vn), p = new Float64Array(Vn), out = [];
-        for (let j = 0; j < Math.min(S.M, 12); j++) {
-          const r = lib.rng(9000 + j * 31); for (let v = 0; v < Vn; v++) y[v] = r.normal();
-          for (let i = 0; i < 8; i++) { md.evalE(cx, y, g); for (let v = 0; v < Vn; v++) y[v] -= md.alpha0 * g[v]; }
-          const E = md.evalE(cx, y, null, p); let top = 0; for (let v = 1; v < Vn; v++) if (p[v] > p[top]) top = v;
-          out.push({ E, top: md.disp[top], pt: p[md.stoi.get(s.truth)] });
-        }
-        let w = 0; out.forEach((o, j) => { if (o.E < out[w].E) w = j; });
-        return (live54 = { key, out, w });
-      }
-      function drawFull() {
-        const c = bv.ctx; bv.clear(); const B = D.bon; if (!B) return;
-        const st = B.settings[S.bonN], d = st.datasets[S.bonDs] || st.datasets.val, Ms = B.M;
-        const vals = [].concat(d.energy_select_ce, d.oracle_ce, d.mean_ce);
-        let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
-        const ax = lib.axes(c, { x: BOX.x, y: BOX.y, w: BOX.w, h: BOX.h, xlim: [Ms[0], Ms[Ms.length - 1]], xlog: true, ylim: [lo, hi], xticks: Ms, yticks: niceTicks(lo, hi, 4), yfmt: (v) => v.toFixed(2), size: 12 });
-        lib.text(c, 'candidates M (log scale)', BOX.x + BOX.w, BOX.y + BOX.h + 24, { size: 12, kind: 'mono', color: C.muted, align: 'right' });
-        lib.text(c, 'loss, nats per character', 4, BOX.y - 17, { size: 11, kind: 'mono', color: C.muted });
-        lib.plot(c, ax, Ms.map((m, i) => [m, d.mean_ce[i]]), { color: C.ink, width: 1.6, dash: [6, 4], markers: 2.5 });
-        lib.plot(c, ax, Ms.map((m, i) => [m, d.oracle_ce[i]]), { color: C.muted, width: 1.4, dash: [1.5, 3.5], markers: 2.2 });
-        lib.plot(c, ax, Ms.map((m, i) => [m, d.energy_select_ce[i]]), { color: C.blue, width: 2.4, markers: 3.2 });
-        const last = Ms.length - 1;
-        lib.text(c, d.energy_select_ce[last].toFixed(3), ax.X(Ms[last]) - 6, ax.Y(d.energy_select_ce[last]) + 6, { size: 12, kind: 'mono', color: C.blue, align: 'right' });
-        lib.text(c, d.oracle_ce[last].toFixed(3), ax.X(Ms[last]) - 10, ax.Y(d.oracle_ce[last]) - 17, { size: 12, kind: 'mono', color: C.muted, align: 'right' });
-        legend(c, [[C.blue, null, 'energy pick', 'Algorithm 2'], [C.ink, [6, 4], 'average', 'a random candidate'], [C.muted, [1.5, 3.5], 'oracle', 'best by true label']], [[`N = ${st.N} steps, no noise`], ['stored: data/text.json']]);
-        const L = liveFull(), s = sl();
-        bro.innerHTML = `<span>this context, live in 54-D (α ${M0().alpha0}, 8 steps, σ 0): candidates → ` + L.out.map((o, j) => `<b style="${j === L.w ? '' : 'color:var(--ink2);font-weight:400'}">${o.top.replace(/</g, '&lt;')}</b>`).join(' ') +
-          ` · ŷ* = '${L.out[L.w].top}' (E ${fx(L.out[L.w].E)}) · true '${s.truth}', p at ŷ* <b>${fx(L.out[L.w].pt)}</b></span>`;
-      }
-
-      // ---------------- bottom: Table 2 ----------------
-      const T2 = wide ? { x0: 186, y0: 26, rh: 29, lab: 0 } : { x0: 8, y0: 36, rh: 44, lab: 15 };
-      const t2Row = (py) => { const r = Math.floor((py - T2.y0) / T2.rh); return r >= 0 && r < TABLE2.length ? r : -1; };
-      function drawT2() {
-        const c = bv.ctx; bv.clear();
-        const x0 = T2.x0, w = BW - x0 - 64, X = (v) => x0 + (v + 2) / 22 * w;
-        // legend
-        c.strokeStyle = C.ink; c.lineWidth = 1; c.strokeRect(x0 + 0.5, 6.5, 12, 7); lib.text(c, 'thinking longer', x0 + 18, 3, { size: 12, kind: 'mono', color: C.ink });
-        const lx2 = wide ? x0 + 150 : x0; const ly2 = wide ? 3 : 17;
-        c.fillStyle = C.blue; c.fillRect(lx2, ly2 + 3, 12, 8); lib.text(c, '+ self-verification', lx2 + 18, ly2, { size: 12, kind: 'mono', color: C.ink });
-        TABLE2.forEach((r, i) => {
-          const y = T2.y0 + i * T2.rh, hl = i === S.hoverRow || (S.hoverRow < 0 && (r.full || i === 2) && S.tab === 'table2' && emphT2);
-          if (hl) { c.fillStyle = C.blue4; c.fillRect(0, y - 3, BW, T2.rh - 2); }
-          if (wide) lib.text(c, r.name, x0 - 10, y + 6, { size: 12, kind: 'mono', color: C.ink, align: 'right', weight: r.full ? 700 : 400 });
-          else { lib.text(c, r.name, x0, y, { size: 12, kind: 'mono', color: C.ink, weight: r.full ? 700 : 400 }); }
-          const yy = y + T2.lab;
-          // thinking longer: outlined bar
-          const z = X(0);
-          c.strokeStyle = C.ink; c.lineWidth = 1; c.fillStyle = '#fff';
-          const tl0 = Math.min(z, X(r.tl)), tlw = Math.max(1.5, Math.abs(X(r.tl) - z));
-          c.fillRect(tl0, yy + 1, tlw, 11); c.strokeRect(tl0 + 0.5, yy + 1.5, tlw - 1, 10);
-          lib.text(c, r.tls, Math.max(z, X(r.tl)) + 5, yy, { size: 11, kind: 'mono', color: C.ink });
-          // + self-verification: filled blue
-          const sv0 = Math.min(z, X(r.sv)), svw = Math.max(1.5, Math.abs(X(r.sv) - z));
-          c.fillStyle = C.blue; c.fillRect(sv0, yy + 14, svw, 11);
-          lib.text(c, r.svs, Math.max(z, X(r.sv)) + 5, yy + 13, { size: 11, kind: 'mono', color: C.blue, weight: 600 });
-        });
-        const yb = T2.y0 + TABLE2.length * T2.rh;
-        c.strokeStyle = C.faint; c.lineWidth = 1; c.beginPath(); TABLE2.forEach((_, i) => { const yy = T2.y0 + i * T2.rh + T2.lab; c.moveTo(X(0) + 0.5, yy - 2); c.lineTo(X(0) + 0.5, yy + 27); }); c.stroke();
-        [0, 5, 10, 15, 20].forEach(v => lib.text(c, v + '%', X(v), yb + 2, { size: 11, kind: 'mono', color: C.muted, align: 'center' }));
-        const r = TABLE2[S.hoverRow >= 0 ? S.hoverRow : 2];
-        bro.innerHTML = `<span><b>${r.name}</b>: ${r.why} <span style="color:var(--muted)">(hover or tap a row)</span></span>`;
-      }
-      let emphT2 = true;
-
-      function drawBottom() { if (S.tab === 'sweep') drawSweep(); else if (S.tab === 'full') drawFull(); else drawT2(); }
-      function syncTab() {
-        segTab.set(S.tab); subRow.innerHTML = '';
-        if (S.tab === 'sweep') { subRow.appendChild(h('span', { class: 'fig-label' }, 'space')); subRow.appendChild(segMode.el); segMode.set(S.sweepMode); }
-        if (S.tab === 'full') { subRow.appendChild(segDs.el); subRow.appendChild(segBN.el); }
-        if (S.tab === 'table2') subRow.appendChild(h('span', { class: 'fig-sub' }, 'Table 2 (p.10) · % perplexity gain, OOD BigBench Dyck · one regularizer removed'));
-        if (S.tab === 'sweep' && !SW) restartSweep();
-        drawBottom(); kick();
-      }
-
       // ---------------- loop ----------------
       let acc = 0;
       const loop = lib.loop((dt) => {
@@ -513,7 +327,6 @@
           if (S.t >= stop) { S.t = stop; S.playing = false; }
           draw(); busy = true;
         }
-        if (sweepWork(7)) { drawBottom(); busy = true; }
         return busy || S.playing;
       });
       function kick() { draw(); if (ctx.visible()) loop.start(); }
@@ -532,43 +345,28 @@
         if (o.sigma != null) { S.sigma = o.sigma; slS.set(o.sigma); }
         if (o.N != null) { S.N = o.N; slN.set(o.N); }
         if (o.alpha != null) { S.alpha = o.alpha; slA.set(o.alpha); }
-        if (o.sched) { S.sched = o.sched; segSch.set(o.sched); }
-        if (o.tab) S.tab = o.tab;
-        if (o.sweepMode) S.sweepMode = o.sweepMode;
         if (o.seed != null) S.seed = o.seed;
         S.inspect = -1;
       }
       const STEPS = [
-        { M: 1, sigma: 0, seed: 3, tab: 'sweep', sweepMode: 'slice' },
-        { M: 1, sigma: 1, seed: 4, tab: 'sweep', sweepMode: 'slice' },
-        { M: 8, sigma: 0, seed: 1, tab: 'sweep', sweepMode: 'slice' },
-        { M: 8, sigma: 1, seed: 1, tab: 'sweep', sweepMode: 'slice' },
-        { M: 8, sigma: 1, seed: 1, tab: 'sweep', sweepMode: 'slice' },
-        { M: 8, sigma: 0.5, seed: 1, tab: 'sweep', sweepMode: 'full' },
-        { M: 8, sigma: 1, seed: 1, tab: 'table2' },
+        { M: 1, sigma: 0, seed: 3 },
+        { M: 1, sigma: 1, seed: 4 },
+        { M: 8, sigma: 0, seed: 1 },
+        { M: 8, sigma: 1, seed: 1 },
       ];
-      let curStep = 0;
       return {
         step(i) {
-          curStep = i; const o = STEPS[i] || STEPS[0];
-          const prevKey = SW && SW.key;
-          setAll(Object.assign({ si: i === 5 ? S.si : 0, N: 20, alpha: 5, sched: 'const' }, o));
-          if (i < 5 && S.si !== 0) { S.si = 0; segCtx.set(0); }
-          emphT2 = true; S.hoverRow = -1; S.stopAt = i === 1 ? 7 : null;
-          if (!ctx.visible()) { pendingAnim = true; sim = null; SW = null; syncTabSilently(); return; }
+          setAll(Object.assign({ si: 0, N: 20, alpha: 5 }, STEPS[i] || STEPS[0]));
+          S.stopAt = i === 1 ? 7 : null;
+          if (!ctx.visible()) { pendingAnim = true; sim = null; return; }
           recompute(true);
-          const key = [S.sweepMode, S.si, S.alpha, S.N, S.M, S.sched].join('|');
-          if (!SW || SW.key !== key || prevKey !== key) restartSweep();
-          syncTab();
         },
         show() {
           if (!sim) { simulate(); S.t = pendingAnim && !reduced ? 0 : (S.stopAt != null ? S.stopAt : S.N); S.playing = pendingAnim && !reduced; }
-          if (!SW) restartSweep();
-          syncTab(); kick();
+          kick();
         },
         hide() { loop.stop(); },
       };
-      function syncTabSilently() { segTab.set(S.tab); }
     },
   });
 })();
