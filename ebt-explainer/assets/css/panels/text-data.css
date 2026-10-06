@@ -1,0 +1,53 @@
+/* Panel 16 (text-data): tokens, pairs, batches, perplexity, benchmarks, Table 3. Scoped to #text-data. */
+#text-data .td-pipe { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 0; align-items: center; font-family: var(--f-mono); font-size: 11.5px; color: var(--faint); }
+#text-data .td-pipe li { display: inline-flex; align-items: center; }
+#text-data .td-pipe li + li::before { content: "→"; margin: 0 7px; color: var(--dash); }
+#text-data .td-pipe span { border-bottom: 1px solid transparent; padding: 1px 0; letter-spacing: .02em; }
+#text-data .td-pipe li.on span { color: var(--ink); border-bottom-color: var(--blue); }
+#text-data .td-view[hidden] { display: none !important; }
+#text-data .td-view { display: grid; gap: 14px; min-width: 0; }
+#text-data .td-docrow { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+#text-data .td-docrow select { max-width: 100%; min-width: 0; flex: 1 1 220px; }
+
+/* token chips */
+#text-data .td-chips { display: flex; flex-wrap: wrap; gap: 3px 0; align-items: baseline; line-height: 1.2; }
+#text-data .td-chip { appearance: none; font: 12.5px var(--f-mono); color: var(--ink); background: #fff; border: 1px solid var(--rule); margin: 0 2px 0 0; padding: 2px 3px; cursor: pointer; white-space: pre; display: inline-flex; flex-direction: column; align-items: flex-start; }
+#text-data .td-chip.cont { margin-left: -3px; border-left-color: var(--tint); }
+#text-data .td-chip .sp { color: var(--faint); }
+#text-data .td-chip .id { font-size: 10.5px; color: var(--muted); }
+#text-data .td-chip:hover, #text-data .td-chip.sel { border-color: var(--blue); color: var(--blue); }
+#text-data .td-chip.sel { box-shadow: inset 0 -2px 0 var(--blue); }
+#text-data .td-br { flex-basis: 100%; height: 0; }
+#text-data .td-info { min-height: 20px; }
+
+/* pairs */
+#text-data .td-sent { font-family: var(--f-mono); font-size: 12.5px; line-height: 1.6; color: var(--ink2); }
+#text-data .td-sent .c { color: var(--ink); background: var(--blue4); }
+#text-data .td-sent .t { color: var(--ink); outline: 1px dashed var(--ink); outline-offset: 1px; }
+#text-data .td-sent .f { color: var(--faint); }
+#text-data .td-ebtbox { border-left: 1px solid var(--blue); padding: 2px 0 2px 12px; font-family: var(--f-mono); font-size: 12px; line-height: 1.6; color: var(--ink2); }
+#text-data .td-ebtbox b { color: var(--blue); font-weight: 600; }
+
+/* benchmarks */
+#text-data .td-ex { display: grid; gap: 10px; max-height: 330px; overflow-y: auto; padding-right: 4px; font-size: 15px; line-height: 1.55; }
+#text-data .td-ex .lab { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 2px; }
+#text-data .td-ex .calc { font-family: var(--f-mono); font-size: 11.5px; color: var(--faint); }
+#text-data .td-ex mark { background: var(--blue4); color: var(--ink); outline: 1px solid var(--blue); }
+#text-data .td-ex .mono { font-family: var(--f-mono); font-size: 13px; }
+#text-data .td-choice { display: inline-block; font-family: var(--f-mono); font-size: 12.5px; border: 1px solid var(--rule); padding: 1px 8px; margin: 2px 6px 2px 0; }
+#text-data .td-choice.ok { border: 1px dashed var(--ink); color: var(--ink); font-weight: 700; }
+#text-data .td-dyck { display: flex; flex-wrap: wrap; gap: 3px; align-items: flex-end; font-family: var(--f-mono); font-size: 14px; }
+#text-data .td-br-chip { display: inline-block; min-width: 18px; text-align: center; padding: 2px 2px 3px; border: 1px solid var(--rule); color: var(--faint); background: #fff; }
+#text-data .td-br-chip.done { color: var(--ink); border-color: var(--dash); }
+#text-data .td-br-chip.cur { border-color: var(--blue); color: var(--blue); font-weight: 700; }
+#text-data .td-br-chip.need { border: 1px dashed var(--ink); color: var(--ink); font-weight: 700; }
+#text-data .td-stack { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; font-family: var(--f-mono); font-size: 12px; color: var(--muted); min-height: 26px; }
+
+/* table */
+#text-data .td-t3 table { font-size: 13px; }
+#text-data .td-t3 td, #text-data .td-t3 th { padding: 4px 8px; }
+#text-data .td-t3 .w { color: var(--warn); }
+#text-data .td-t3 .b { color: var(--blue); }
+#text-data .td-prog { font-family: var(--f-mono); font-size: 12px; color: var(--muted); min-height: 18px; }
+/* keep wide equations from widening the prose grid (they scroll inside .katex-display instead) */
+#text-data .p-intro > *, #text-data .p-after > *, #text-data .steps > * { min-width: 0; }

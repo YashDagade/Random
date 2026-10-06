@@ -1,0 +1,10 @@
+/* alg1: keep wide math and tables inside the prose column */
+#alg1 .p-text > * { min-width: 0; }
+#alg1 .p-text .eq { min-width: 0; overflow-x: auto; overflow-y: hidden; }
+#alg1 .p-text .tbl table { font-size: 14px; }
+#alg1 .p-text .tbl td { padding: 6px 8px; }
+#alg1 .p-stage { gap: 10px; }
+#alg1 .alg1-ctl { gap: 10px; align-content: start; padding-top: 4px; }
+#alg1 .alg1-ctl .controls { gap: 6px 18px; }
+#alg1 .alg1-ctl .ctl { max-width: none; flex: 1 1 100%; }
+#alg1 .alg1-ctl .readout { gap: 2px 14px; }

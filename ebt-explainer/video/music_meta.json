@@ -1,0 +1,74 @@
+{
+ "_meta": {
+  "source": "src/make_music.py",
+  "note": "beat-snapped music sections; seconds"
+ },
+ "bpm": 72.0,
+ "sr": 44100,
+ "dur_s": 630.0,
+ "video_end_s": 600.0,
+ "resolve_s": 590.0,
+ "scene_starts_s": [
+  0.0,
+  50.0,
+  125.0,
+  200.0,
+  260.0,
+  340.0,
+  410.0,
+  485.0,
+  555.0
+ ],
+ "sections": [
+  {
+   "name": "intro",
+   "t0": 0.0,
+   "t1": 50.0
+  },
+  {
+   "name": "families",
+   "t0": 50.0,
+   "t1": 125.0
+  },
+  {
+   "name": "energy",
+   "t0": 125.0,
+   "t1": 200.0
+  },
+  {
+   "name": "data",
+   "t0": 200.0,
+   "t1": 260.0
+  },
+  {
+   "name": "thinking",
+   "t0": 260.0,
+   "t1": 340.0
+  },
+  {
+   "name": "training",
+   "t0": 340.0,
+   "t1": 410.0
+  },
+  {
+   "name": "eval",
+   "t0": 410.0,
+   "t1": 485.0
+  },
+  {
+   "name": "scaling",
+   "t0": 485.0,
+   "t1": 555.0
+  },
+  {
+   "name": "wrap",
+   "t0": 555.0,
+   "t1": 570.0
+  },
+  {
+   "name": "ending",
+   "t0": 570.0,
+   "t1": 630.0
+  }
+ ]
+}

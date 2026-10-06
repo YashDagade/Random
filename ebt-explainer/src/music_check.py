@@ -17,8 +17,15 @@ WAV = os.path.join(ROOT, "video", "music.wav")
 PREVIEW = os.path.join(ROOT, "video", "music_preview_60s.wav")
 SCRATCH = "/tmp/claude-0/-home-user-Random/9843a8a1-7b0a-5ed7-8867-6762f4a2ea11/scratchpad/ebt"
 PNG = sys.argv[1] if len(sys.argv) > 1 else os.path.join(SCRATCH, "music_spec.png")
-BOUNDS = [0, 50, 125, 200, 260, 340, 410, 485, 555, 600, 650]
+BOUNDS = [0, 50, 125, 200, 260, 340, 410, 485, 555, 570, 630]
 NAMES = ["intro", "families", "energy", "data", "thinking", "training", "eval", "scaling", "wrap", "ending"]
+META = os.path.join(ROOT, "video", "music_meta.json")   # written by make_music.py (re-timed bounds)
+if os.path.exists(META):
+    import json
+    with open(META) as _f:
+        _secs = json.load(_f)["sections"]
+    BOUNDS = [s["t0"] for s in _secs] + [_secs[-1]["t1"]]
+    NAMES = [s["name"] for s in _secs]
 
 
 def db(x):
@@ -35,9 +42,9 @@ def main():
 
     peak = np.max(np.abs(x))
     rms_all = np.sqrt(np.mean(x ** 2))
-    body = x[int(10 * sr):int(640 * sr)]
+    body = x[int(10 * sr):n - 10 * sr]
     rms_body = np.sqrt(np.mean(body ** 2))
-    print(f"  peak {db(peak):.2f} dBFS | RMS whole {db(rms_all):.2f} dBFS | RMS 10-640 s {db(rms_body):.2f} dBFS"
+    print(f"  peak {db(peak):.2f} dBFS | RMS whole {db(rms_all):.2f} dBFS | RMS 10 s..end-10 s {db(rms_body):.2f} dBFS"
           f" | crest {db(peak) - db(rms_body):.1f} dB")
     clip = int(np.sum(np.abs(pcm.astype(np.int32)) >= 32767))
     print(f"  samples at full scale: {clip}")
@@ -61,7 +68,7 @@ def main():
           f" median {db(np.median(fe)):.1f} dBFS (dither floor about -101 dBFS)")
 
     # long-term spectrum
-    f, P = signal.welch(x.mean(axis=1)[int(10 * sr):int(640 * sr)], fs=sr, nperseg=16384)
+    f, P = signal.welch(x.mean(axis=1)[int(10 * sr):n - 10 * sr], fs=sr, nperseg=16384)
     tot = P.sum()
     for fc in (2000, 4000, 8000, 12000):
         print(f"  energy above {fc / 1000:g} kHz: {10 * np.log10(P[f > fc].sum() / tot):.1f} dB rel. total")
@@ -110,7 +117,7 @@ def main():
     ax.set_xlim(20, 22050)
     ax.set_ylim(-170, -40)
     ax.grid(alpha=0.3, which="both")
-    ax.set_title("Long-term average spectrum (10-640 s)")
+    ax.set_title("Long-term average spectrum (10 s to end-10 s)")
     ax.set_xlabel("Hz")
     ax.set_ylabel("dB/Hz")
 
@@ -129,7 +136,7 @@ def main():
         ax.axvline(bnd, color="k", lw=0.5, alpha=0.4)
         ax.text(bnd + 2, -12, NAMES[i], fontsize=9)
     ax.set_ylim(-60, 0)
-    ax.set_xlim(0, 650)
+    ax.set_xlim(0, n / sr)
     ax.set_xlabel("time (s)")
     ax.set_ylabel("dBFS")
     ax.legend(loc="lower center", ncol=2)

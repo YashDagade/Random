@@ -239,8 +239,9 @@ def main(npz, run_dir, root, n_eval=None, main_variant="ebt"):
         bi = int(np.argmax([c["psnr"] for c in dc]))
         res["diff_best"] = dc[bi]
         res["diff_note"] = ("DDIM from t=sigma*T down to 0 in K evenly spaced steps (NFE=K). K=t (one step per "
-                            "schedule step) is the natural full chain; diff_best is the best K on the eval set, "
-                            "an optimistic choice for the baseline.")
+                            "schedule step) is the natural full chain; diff_curve stops at K=100, so at sigma=0.2 the K=200 "
+                            "full chain appears only in the strips (frames.diff_full). diff_best is the best K on the "
+                            "eval set, an optimistic choice for the baseline.")
         if sig > 0.1:
             rec = []
             for K in [1, 2, 3, 10]:
@@ -388,13 +389,15 @@ def main(npz, run_dir, root, n_eval=None, main_variant="ebt"):
                     "128x128, DiT-L sized models, 100k steps). Images come from the Hugging Face datasets-server "
                     "JPEG previews of uoft-cs/cifar10 (quality ~75), so 'clean' means the decoded JPEG.",
             "dataset": {"name": "uoft-cs/cifar10 (plain_text)", "train_images": int(len(tr)), "eval_images": N_EVAL,
-                        "eval_split": "test rows 0..499", "resolution": "32x32 RGB", "pixel_range_model": "[-1, 1]",
+                        "eval_split": f"test rows 0..{N_EVAL - 1} (first {N_EVAL} of the {len(te)} downloaded test rows)",
+                        "train_split": f"train rows 0..{len(tr) - 1}", "resolution": "32x32 RGB", "pixel_range_model": "[-1, 1]",
                         "label_names": names},
             "psnr_definition": "PSNR = 10*log10(255^2 / MSE), MSE on 0..255 pixels averaged over all eval pixels "
                                "(this matches how paper Table 4 PSNR and MSE relate). psnr_mean_per_image also given.",
         },
         "noise": {
-            "schedule": "DDPM linear beta from 1e-4 to 2e-2 over T=1000 steps (paper Sec 4.3, p.13)",
+            "schedule": "DDPM linear beta from 1e-4 to 2e-2 (paper Sec 4.3, p.13) over T=1000 steps (T assumed: DiT default, "
+                        "the paper does not state the number of steps)",
             "sigma_definition": "sigma = fraction of the schedule; t = round(sigma*T); "
                                 "x_noisy = sqrt(abar_t)*y + sqrt(1-abar_t)*eps, abar_t = prod_{s=1..t}(1-beta_s)",
             "alpha_bar": {str(s): {"t": M.t_of_sigma(s), "alpha_bar": float(M.abar_of_t(M.t_of_sigma(s))),
@@ -420,7 +423,7 @@ def main(npz, run_dir, root, n_eval=None, main_variant="ebt"):
                     "alpha_random_factor": f"x exp(U(-ln {M.HP['ebt_alpha_rand']}, ln {M.HP['ebt_alpha_rand']}))",
                     "langevin_std": M.HP["ebt_langevin"], "loss": "MSE(yhat_N, y) at the last step, backprop through all "
                     "steps (second order)", "learnable_alpha": False, "replay_buffer": False,
-                    "inference": "deterministic gradient descent, same alpha, no noise, up to 32 steps"},
+                    "inference": f"deterministic gradient descent, same alpha, no noise, up to {EBT_MAX_STEPS} steps"},
             "ff": {"input": "x_noisy (3 channels)", "output": "clean image in one forward pass", "loss": "MSE"},
             "ff_time": {"note": "same FF model given the same WALL-CLOCK budget as the EBT (more optimizer steps)"},
             "diff": {"input": "concat(x_t, t/100) = 4 channels", "output": "eps", "train_t": "U{1..100} (sigma <= 0.1)",
@@ -444,8 +447,11 @@ def main(npz, run_dir, root, n_eval=None, main_variant="ebt"):
                                        "EBT": {"0.1": {"psnr": 27.25, "mse": 122.55}, "0.2": {"psnr": 23.29, "mse": 305.2}}},
                             "source": "paper Table 4, p.13 (COCO 2014 128x128)"},
     }
+    paper_ref = js.pop("paper_reference")
+    js = r4(js)
+    js["paper_reference"] = paper_ref  # paper Table 4 values kept exact (not rounded to 4 significant digits)
     with open(os.path.join(root, "data/image.json"), "w") as f:
-        json.dump(r4(js), f, separators=(",", ":"))
+        json.dump(js, f, separators=(",", ":"))
     print("wrote image.json", os.path.getsize(os.path.join(root, "data/image.json")), "bytes")
     # console summary
     for sig in SIGMAS:

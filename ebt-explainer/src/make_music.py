@@ -1,14 +1,26 @@
 """Procedural ambient music bed for the EBT explainer video (no downloads, numpy only).
 
 Output:
-  video/music.wav               44.1 kHz, 16-bit stereo, 650 s
+  video/music.wav               44.1 kHz, 16-bit stereo, video length + 30 s tail (630 s by default)
   video/music_preview_60s.wav   60 s excerpt (470-530 s: end of eval into the scaling build)
+  video/music.m4a               AAC 128k copy of music.wav (the canvas player prefers it)
+  video/music_meta.json         the beat-snapped section bounds, read by music_check/music_verify
+
+Usage:
+  python3 -I src/make_music.py                     # storyboard timing (9 scenes, video ends at 600 s)
+  python3 -I src/make_music.py --bounds 0,53,130,205,265,345,415,490,563.5,608.5
+        # re-time to the real scene starts + video end (10 numbers, seconds; snapped to beats)
+  python3 -I src/make_music.py --timeline          # print the chord timeline only (fast)
 
 Design (all deterministic, seeded):
   * 72 BPM, 4/4. One chord every 2 bars (8 beats). Key of D major, leaning lydian
     through the IV chord (Gmaj7#11).
-  * Scene boundaries [0, 50, 125, 200, 260, 340, 410, 485, 555, 600, 650] s fall on
-    whole beats at 72 BPM (t * 1.2 = beat), so every scene starts with a fresh chord.
+  * Scene starts [0, 50, 125, 200, 260, 340, 410, 485, 555] s and the video end (600 s) fall on
+    whole beats at 72 BPM (t * 1.2 = beat), so every scene starts with a fresh chord. Other
+    bounds (--bounds) are snapped to the nearest beat (at most 0.42 s shift).
+  * Ending cadence (Bm9 Gmaj9 Asus4 A, then Dmaj9 with falling bells) is placed so the Dmaj9
+    lands RESOLVE_LEAD = 10 s before the video ends: the cadence plays under the last scene and
+    the end card instead of after the video (render_video.js cuts the music with -shortest).
   * Instruments: detuned additive-sine pads (slow attack/release, harmonics open with the
     envelope for a low-pass feel), a soft marimba-like pluck arpeggio, a sparse bell
     melody in some sections, a very soft sine bass on chord roots.
@@ -29,13 +41,37 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "video", "music.wav")
 OUT_PREVIEW = os.path.join(ROOT, "video", "music_preview_60s.wav")
 OUT_M4A = os.path.join(ROOT, "video", "music.m4a")   # player.html prefers this (smaller than the WAV)
+OUT_META = os.path.join(ROOT, "video", "music_meta.json")
 
 SR = 44100
-DUR = 650.0
-N = int(SR * DUR)
 BPM = 72.0
 BEAT = 60.0 / BPM            # 0.8333 s
-BOUNDS = [0, 50, 125, 200, 260, 340, 410, 485, 555, 600, 650]
+# 9 scene starts + video end, from notes/STORYBOARD.md. Override with --bounds (see Usage).
+SCENE_BOUNDS = [0, 50, 125, 200, 260, 340, 410, 485, 555, 600]
+RESOLVE_LEAD = 10.0          # the final Dmaj9 arrives this many seconds before the video ends
+TAIL = 30.0                  # music keeps ringing past the video end (slack for ffmpeg -shortest)
+
+
+def _scene_beats():
+    vals = SCENE_BOUNDS
+    if "--bounds" in sys.argv:
+        vals = [float(v) for v in sys.argv[sys.argv.index("--bounds") + 1].split(",")]
+    beats = [int(round(v / BEAT)) for v in vals]
+    assert len(beats) == 10 and beats[0] == 0, "need 10 values: 9 scene starts (first 0) + video end"
+    assert all(b - a >= 8 for a, b in zip(beats, beats[1:])), "every scene needs >= 8 beats (6.7 s)"
+    return beats
+
+
+SCENE_BEATS = _scene_beats()
+VIDEO_END = SCENE_BEATS[-1] * BEAT
+# the ending section (24 beats of cadence before the Dmaj9) borrows the end of the wrap scene
+ENDING_BEAT = max(int(round((VIDEO_END - RESOLVE_LEAD) / BEAT)) - 24, SCENE_BEATS[8] + 8)
+RESOLVE_BEAT = ENDING_BEAT + 24
+DUR_BEAT = int(np.ceil((VIDEO_END + TAIL) / BEAT - 1e-9))
+SEC_BEATS = SCENE_BEATS[:9] + [ENDING_BEAT, DUR_BEAT]     # section b0 for each of SECTIONS, + end
+BOUNDS = [b * BEAT for b in SEC_BEATS]
+DUR = DUR_BEAT * BEAT
+N = int(round(SR * DUR))
 TAU = 2 * np.pi
 # instrument bus gains (balanced by measuring per-stem RMS, see main())
 PAD_GAIN = 1.0
@@ -98,17 +134,15 @@ SECTIONS = [
          arp=(0.35, 0.0), grid=1, pattern="broken", span=(0, 6), shift=0, arp_gain=0.80,
          bass="hold", bass_gain=0.65, bell=0.0, width=0.85),
 ]
-# Ending: (chord, beats). 600 s = beat 720; resolves to a long Dmaj9 from 620 s.
-ENDING = [("Bm9", 8), ("Gmaj9", 8), ("Asus4", 4), ("Aadd9", 4), ("Dmaj9", 36)]
+# Ending: (chord, beats). The Dmaj9 starts at RESOLVE_BEAT and rings to the end of the file.
+ENDING = [("Bm9", 8), ("Gmaj9", 8), ("Asus4", 4), ("Aadd9", 4), ("Dmaj9", DUR_BEAT - RESOLVE_BEAT)]
 
 
 def build_timeline():
     """List of chord events {t0, t1, name, sec}."""
     events = []
     for si, sec in enumerate(SECTIONS):
-        b0 = int(round(BOUNDS[si] / BEAT))
-        b1 = int(round(BOUNDS[si + 1] / BEAT))
-        assert abs(b0 * BEAT - BOUNDS[si]) < 1e-9
+        b0, b1 = SEC_BEATS[si], SEC_BEATS[si + 1]
         if sec["prog"] is None:
             lens = [b for _, b in ENDING]
             names = [c for c, _ in ENDING]
@@ -330,7 +364,8 @@ def render():
             d0, d1 = sec["arp"]
             dens = d0 + (d1 - d0) * frac
             if sec["name"] == "ending":
-                dens = max(0.0, 0.35 * (1 - (ts - 600.0) / 30.0))
+                # thin out from the ending start to nothing 10 s after the Dmaj9 arrives
+                dens = max(0.0, 0.35 * (1 - (ts - BOUNDS[9]) / (RESOLVE_BEAT * BEAT + 10.0 - BOUNDS[9])))
             if sec["name"] == "intro" and ts < 6.0:
                 continue
             w = 1.0 if s % 4 == 0 else (0.75 if s % 2 == 0 else 0.5)
@@ -363,8 +398,9 @@ def render():
                 add(bell(mtof(m), rng.uniform(0.75, 0.95), rng), ts, rng.uniform(-0.35, 0.35), BELL_GAIN, 0.75, "bell")
                 note_count["bell"] += 1
 
-    # ---------------- ending: resolved bells on the final Dmaj9 (620 s)
-    for ts, m, v in ((620.0, 74, 0.95), (620.0, 62, 0.60), (626.7, 69, 0.75), (633.3, 66, 0.65)):
+    # ---------------- ending: resolved, falling bells on the final Dmaj9 (D5+D4, A4, F#4; 4 beats apart)
+    tr = RESOLVE_BEAT * BEAT
+    for ts, m, v in ((tr, 74, 0.95), (tr, 62, 0.60), (tr + 4 * BEAT, 69, 0.75), (tr + 8 * BEAT, 66, 0.65)):
         add(bell(mtof(m), v, None), ts, 0.15 if m > 70 else -0.15, BELL_GAIN * 0.9, 0.8, "bell")
         note_count["bell"] += 1
     return events, note_count
@@ -409,8 +445,30 @@ def limiter(x, ceiling, look=0.008, hold=0.12):
     return x * g[None, :], gr_db, frac
 
 
+def print_timeline(events):
+    print(f"video end {VIDEO_END:.2f} s | file {DUR:.2f} s | Dmaj9 resolution {RESOLVE_BEAT * BEAT:.2f} s")
+    for i, sec in enumerate(SECTIONS):
+        evs = [e for e in events if e["sec"] == i]
+        print(f"  {sec['name']:<9} {BOUNDS[i]:7.2f}-{BOUNDS[i + 1]:7.2f}  "
+              + " ".join(f"{e['name']}({e['beats']})" for e in evs))
+
+
+def write_meta():
+    import json
+    meta = dict(_meta=dict(source="src/make_music.py", note="beat-snapped music sections; seconds"),
+                bpm=BPM, sr=SR, dur_s=round(DUR, 4), video_end_s=round(VIDEO_END, 4),
+                resolve_s=round(RESOLVE_BEAT * BEAT, 4),
+                scene_starts_s=[round(b * BEAT, 4) for b in SCENE_BEATS[:9]],
+                sections=[dict(name=s["name"], t0=round(BOUNDS[i], 4), t1=round(BOUNDS[i + 1], 4))
+                          for i, s in enumerate(SECTIONS)])
+    with open(OUT_META, "w") as f:
+        json.dump(meta, f, indent=1)
+    print("wrote", OUT_META, flush=True)
+
+
 def main():
     events, counts = render()
+    print_timeline(events)
     print("chords:", len(events), "notes:", counts, flush=True)
 
     # reverb (decorrelated L/R impulses)
@@ -431,8 +489,8 @@ def main():
     mix[:, :fin] *= rc_ramp(fin)
     mix[:, N - fout:] *= rc_ramp(fout)[::-1]
 
-    # loudness: RMS of the body (10 s .. 640 s) to -24 dBFS, then peak-limit at -6 dBFS
-    body = mix[:, int(10 * SR):int(640 * SR)]
+    # loudness: RMS of the body (10 s .. DUR-10 s) to -24 dBFS, then peak-limit at -6 dBFS
+    body = mix[:, int(10 * SR):int((DUR - 10) * SR)]
     rms = np.sqrt(np.mean(body ** 2))
     gain = 10 ** (-24 / 20) / rms
     mix *= gain
@@ -479,8 +537,12 @@ def encode_m4a():
 
 
 if __name__ == "__main__":
+    if "--timeline" in sys.argv:
+        print_timeline(build_timeline())
+        sys.exit(0)
     if "--m4a-only" in sys.argv:
         encode_m4a()
         sys.exit(0)
     main()
+    write_meta()
     encode_m4a()

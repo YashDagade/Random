@@ -48,9 +48,11 @@ def main(root):
     f = []
     for sig, r in d["results"].items():
         e = r["ebt"]
-        best_e = max(e["curve"], key=lambda c: c["psnr"])
+        best_e = e["curve"][e["best_steps"]]  # best_steps = argmax of the unrounded PSNR (image_export.py)
+        flat_from = next(c["steps"] for c in e["curve"] if best_e["psnr"] - c["psnr"] < 0.05)
         bits = [f"sigma={sig}: EBT (noise start) goes from {e['curve'][1]['psnr']:.1f} dB after 1 step to "
-                f"{e['curve'][4]['psnr']:.1f} dB after 4 and {best_e['psnr']:.1f} dB at its best ({best_e['steps']} steps); "
+                f"{e['curve'][4]['psnr']:.1f} dB after 4 and {best_e['psnr']:.1f} dB at its best ({best_e['steps']} steps; "
+                f"within 0.05 dB of that from step {flat_from} on); "
                 f"one-shot FF gets {r['ff']['psnr']:.1f} dB, DDIM best {r['diff_best']['psnr']:.1f} dB at {r['diff_best']['nfe']} passes."]
         longest = max(r["diff_curve"], key=lambda c: c["nfe"])
         bits.append(f"The longest DDIM chain we ran ({longest['nfe']} passes from t={r['t']}) gets {longest['psnr']:.1f} dB.")
@@ -65,17 +67,22 @@ def main(root):
         f.append(" ".join(bits))
     d["findings"] = f
     r1, r2 = d["results"]["0.1"], d["results"]["0.2"]
+    xpk = sorted({r1["ebtx"]["best_steps"], r2["ebtx"]["best_steps"]})
+    xpk_txt = f"{xpk[0]} to {xpk[-1]}" if len(xpk) > 1 else f"{xpk[0]}"
     d["_meta"]["verdict"] = (
         "In this toy, the baselines win on PSNR: one-shot FF and few-step DDIM beat the EBT at sigma=0.1 and "
         "sigma=0.2, and the gap grows if FF gets the same wall-clock instead of the same number of steps. "
         "What the toy does show: (1) the noise-start EBT's quality rises with thinking steps and then plateaus "
-        "without collapsing (the x-start EBT peaks at 2-4 steps and then drifts down slowly), while the toy "
-        "diffusion model degrades with long chains and collapses at OOD noise; (2) OOD inputs get "
+        f"without collapsing (the x-start EBT peaks at {xpk_txt} steps and then drifts down slowly), while the toy "
+        "diffusion model degrades with long chains and collapses at OOD noise (it was trained only on t <= 100, so "
+        "a long chain from t=200 feeds it timesteps it never saw); (2) OOD inputs get "
         f"higher energy (mean energy after 16 steps {r1['ebt']['curve'][16]['energy_mean']:.0f} at sigma=0.1 vs "
         f"{r2['ebt']['curve'][16]['energy_mean']:.0f} at sigma=0.2); (3) paper-style recursion helps at OOD noise "
         "for both families; the best EBT number at sigma=0.2 (x-start, recursive x3, "
-        f"{max(q['psnr'] for q in r2['ebtx']['recursive_x3']):.1f} dB) beats step-matched FF and direct DDIM but "
-        f"not recursive DDIM ({max(q['psnr'] for q in r2['diff_recursive_x3']):.1f} dB); (4) Best-of-4 by lowest "
+        f"{max(q['psnr'] for q in r2['ebtx']['recursive_x3']):.1f} dB) beats step-matched FF "
+        f"({r2['ff']['psnr']:.1f} dB) and direct DDIM ({r2['diff_best']['psnr']:.1f} dB) but not wall-clock-matched FF "
+        f"({r2['ff_time']['psnr']:.1f} dB) or recursive DDIM "
+        f"({max(q['psnr'] for q in r2['diff_recursive_x3']):.1f} dB); (4) Best-of-4 by lowest "
         f"energy adds only {r1['ebt']['bon'][1]['bon_lowest_energy_psnr'] - r1['ebt']['bon'][1]['single_psnr']:.2f} dB "
         "at 2 steps (all starts fall into the same bowl), but it always beats picking the highest-energy sample. "
         "The paper's real result (EBT beats DiT, Table 4 / Fig 12) is at far larger scale.")
@@ -87,8 +94,13 @@ def main(root):
         "Models are tiny (about 69k parameters) and far from converged; all numbers are toy demonstrations.",
         "diff_best picks the best K on the eval set, which flatters the diffusion baseline.",
         "Recursive x3 follows paper App. D.3 in spirit; the exact recursion details are our interpretation.",
-        "EBT x-start starts from the noisy observation; it peaks after 2-4 steps and then slowly gets worse, "
-        "so more steps are not always better for that variant.",
+        f"EBT x-start starts from the noisy observation; it peaks after {r1['ebtx']['best_steps']} steps (sigma=0.1) "
+        f"or {r2['ebtx']['best_steps']} steps (sigma=0.2) and then slowly gets worse, so more steps are not always "
+        "better for that variant.",
+        "The toy diffusion collapse at sigma=0.2 with long DDIM chains is partly an artifact of our setup: the "
+        "diffusion baseline was trained only on t in 1..100 (sigma <= 0.1), so steps with t > 100 use timestep "
+        "inputs it never saw. The paper's DiT used recursive DDIM and did not collapse (Table 4: 19.56 dB at sigma=0.2).",
+        "T=1000 diffusion steps is assumed (DiT default); the paper gives the beta range but not T.",
         f"Eval set: first {d['_meta']['dataset']['eval_images']} CIFAR-10 test images (one fixed noise draw per sigma).",
     ]
     with open(p, "w") as fh:

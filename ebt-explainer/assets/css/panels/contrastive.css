@@ -1,0 +1,4 @@
+/* contrastive panel: keep wide display math inside the prose column */
+#contrastive .p-intro, #contrastive .p-after, #contrastive .steps { grid-template-columns: minmax(0, 1fr); }
+#contrastive .p-text .eq, #contrastive .p-text .step > div { min-width: 0; }
+#contrastive .ctr-ro { min-height: 2.6em; align-content: flex-start; }
