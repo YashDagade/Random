@@ -1,0 +1,3 @@
+/* energy panel: let display equations scroll instead of widening the prose column */
+#energy .p-intro > *, #energy .p-after > *, #energy .step > div > * { min-width: 0; }
+#energy .energy-eqs .katex-display { margin: 2px 0; }

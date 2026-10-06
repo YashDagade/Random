@@ -2,7 +2,7 @@
 
 An interactive, offline explainer for **Energy-Based Transformers are Scalable Learners and Thinkers** (Gladstone et al., arXiv 2507.02092, 2025).
 
-24 sections, each a panel with a live figure, numbered steps and the text and equations behind it: what an energy is, the energy landscape vs the loss landscape, thinking as gradient descent, Langevin noise and best-of-N self-verification, training by backpropagating through the optimization, the regularizers, the real data (RedPajama-V2, COCO, Something-Something V2, the downstream benchmarks) and how each is evaluated, the scaling laws, the thinking and image results, costs and limitations, and two panels beyond the paper (energy-based planning with MPC, and connections to JEPA world models).
+14 short sections (about 5,000 words in total), each a panel with a live figure, numbered steps and the key equations, focused on intuition for the method and the architecture: how EBTs differ from autoregressive Transformers, RNNs and diffusion; what an energy is; the energy landscape vs the loss landscape; thinking as gradient descent; Langevin noise and best-of-N self-verification; thinking over a vocabulary; training by backpropagating through the optimization; why it trains stably; how the prediction enters the Transformer; what the data and evaluation look like; the results and their costs; and two panels beyond the paper (energy-based planning with MPC steps, and the connection to JEPA world models).
 
 ## Run it
 
