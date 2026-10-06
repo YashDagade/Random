@@ -63,3 +63,4 @@ for name, (d, shift) in RUNS.items():
         row["corr(sigma,mean_curv)"] = round(float(np.corrcoef(sig, cur)[0, 1]), 3)
         out[f"{name} step {s}"] = row
 print(json.dumps(out, indent=1))
+json.dump(out, open(os.path.join(SCR, "toy2d_control_summary.json"), "w"))

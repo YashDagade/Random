@@ -167,7 +167,7 @@ def batches(rng, x, bs):
 HP = {
     "batch": 32,
     "lr": 1e-3,
-    "warmup": 50,
+    "warmup": 80,
     "sigma_train": 0.1,
     "ebt_alpha": 1.0,            # fixed base step size (not learned)
     "ebt_alpha_rand": 2.0,       # alpha * exp(U(-ln2, ln2)), i.e. factor in [1/2, 2]
@@ -202,7 +202,7 @@ def train(mode, npz, run_dir, seconds, est_steps, max_steps=10**9, tag=None):
     rng = np.random.default_rng(0)
     key = jax.random.PRNGKey({"ebt": 1, "ff": 2, "diff": 3}[mode])
     cin = {"ebt": 6, "ff": 3, "diff": 4}[mode]
-    p = init_trunk(key, cin, out_gain=1.0 if mode == "ebt" else 0.1)
+    p = init_trunk(key, cin, out_gain=0.3 if mode == "ebt" else 0.1)
     st = adam_init(p)
     bs = HP["batch"]
     t_tr = t_of_sigma(HP["sigma_train"])

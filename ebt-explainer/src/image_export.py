@@ -67,7 +67,10 @@ def chunks(n, bs=100):
         yield slice(i, min(n, i + bs))
 
 
-def main(npz, run_dir, root):
+def main(npz, run_dir, root, n_eval=None):
+    global N_EVAL
+    if n_eval:
+        N_EVAL = int(n_eval)
     tr, te, raw = M.load_data(npz)
     names = [str(s) for s in raw["label_names"]]
     Y = jnp.asarray(te[:N_EVAL])
@@ -397,4 +400,4 @@ def main(npz, run_dir, root):
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:4])
+    main(*sys.argv[1:5])

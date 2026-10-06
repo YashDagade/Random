@@ -1,0 +1,556 @@
+{
+ "_meta": {
+  "source": "cropped from the paper PDF (Gladstone et al., \"Energy-Based Transformers are Scalable Learners and Thinkers\", arXiv 2507.02092v1) with pymupdf at 200 dpi",
+  "note": "Crops are tight around the figure content (vector paths, embedded images and figure text found inside the figure area). The main \"Figure N:\" caption is never inside an image. Whole-figure crops keep the printed (a)/(b) subcaption lines; panel crops (e.g. fig04a) contain only the panel. White background (paper figures). Captions are the exact caption text from the PDF, with line-break hyphenation removed. Paper colours: orange = Transformer++ / DiT, blue = EBT.",
+  "count": 42
+ },
+ "figures": [
+  {
+   "id": "fig01",
+   "file": "media/paper/fig01.png",
+   "caption": "Figure 1: Autoregressive Architecture Comparison. (a) Autoregressive (AR) Transformer is the most common, with (b) RNNs becoming more popular recently [22, 23]. (c) Diffusion Transformers [26] (which are often bidirectional but can also be autoregressive) are the most similar to EBT, being able to dynamically allocate computation during inference, but predict the noise rather than the energy [27, 28]. Consequently, diffusion models cannot give unnormalized likelihood estimates at each step of the thinking process, and are not trained as explicit verifiers, unlike EBTs.",
+   "page": 2,
+   "panel": null,
+   "parent": null,
+   "kind": "diagram",
+   "width": 1063,
+   "height": 378,
+   "panels": [
+    "fig01a",
+    "fig01b",
+    "fig01c",
+    "fig01d"
+   ],
+   "alt": "Four block diagrams: AR Transformer, RNN, Diffusion Transformer (outputs noise), EBT (takes context and candidate, outputs energy)."
+  },
+  {
+   "id": "fig01a",
+   "file": "media/paper/fig01a.png",
+   "caption": "Figure 1: Autoregressive Architecture Comparison. (a) Autoregressive (AR) Transformer is the most common, with (b) RNNs becoming more popular recently [22, 23]. (c) Diffusion Transformers [26] (which are often bidirectional but can also be autoregressive) are the most similar to EBT, being able to dynamically allocate computation during inference, but predict the noise rather than the energy [27, 28]. Consequently, diffusion models cannot give unnormalized likelihood estimates at each step of the thinking process, and are not trained as explicit verifiers, unlike EBTs.",
+   "page": 2,
+   "panel": "(a) AR Transformer",
+   "parent": "fig01",
+   "kind": "diagram",
+   "width": 176,
+   "height": 288
+  },
+  {
+   "id": "fig01b",
+   "file": "media/paper/fig01b.png",
+   "caption": "Figure 1: Autoregressive Architecture Comparison. (a) Autoregressive (AR) Transformer is the most common, with (b) RNNs becoming more popular recently [22, 23]. (c) Diffusion Transformers [26] (which are often bidirectional but can also be autoregressive) are the most similar to EBT, being able to dynamically allocate computation during inference, but predict the noise rather than the energy [27, 28]. Consequently, diffusion models cannot give unnormalized likelihood estimates at each step of the thinking process, and are not trained as explicit verifiers, unlike EBTs.",
+   "page": 2,
+   "panel": "(b) RNN",
+   "parent": "fig01",
+   "kind": "diagram",
+   "width": 201,
+   "height": 288
+  },
+  {
+   "id": "fig01c",
+   "file": "media/paper/fig01c.png",
+   "caption": "Figure 1: Autoregressive Architecture Comparison. (a) Autoregressive (AR) Transformer is the most common, with (b) RNNs becoming more popular recently [22, 23]. (c) Diffusion Transformers [26] (which are often bidirectional but can also be autoregressive) are the most similar to EBT, being able to dynamically allocate computation during inference, but predict the noise rather than the energy [27, 28]. Consequently, diffusion models cannot give unnormalized likelihood estimates at each step of the thinking process, and are not trained as explicit verifiers, unlike EBTs.",
+   "page": 2,
+   "panel": "(c) Diffusion Transformer",
+   "parent": "fig01",
+   "kind": "diagram",
+   "width": 242,
+   "height": 288
+  },
+  {
+   "id": "fig01d",
+   "file": "media/paper/fig01d.png",
+   "caption": "Figure 1: Autoregressive Architecture Comparison. (a) Autoregressive (AR) Transformer is the most common, with (b) RNNs becoming more popular recently [22, 23]. (c) Diffusion Transformers [26] (which are often bidirectional but can also be autoregressive) are the most similar to EBT, being able to dynamically allocate computation during inference, but predict the noise rather than the energy [27, 28]. Consequently, diffusion models cannot give unnormalized likelihood estimates at each step of the thinking process, and are not trained as explicit verifiers, unlike EBTs.",
+   "page": 2,
+   "panel": "(d) EBT",
+   "parent": "fig01",
+   "kind": "diagram",
+   "width": 242,
+   "height": 288
+  },
+  {
+   "id": "fig02",
+   "file": "media/paper/fig02.png",
+   "caption": "Figure 2: EBT for Autoregressive Modeling. Each blue box corresponds to a different prediction based on the current step of the thinking process, where the initial prediction starts as random. At each step, a new prediction is fed into the model, which gives an energy scalar for the prediction’s current compatibility (unnormalized likelihood) with the context (Facets 2 and 3). Then, the gradient of this energy with respect to the prediction is calculated and used to update the prediction. This gradient descent update is done iteratively to refine the prediction until convergence of the predicted energy, which allows for dynamic use of computation (Facet 1).",
+   "page": 4,
+   "panel": null,
+   "parent": null,
+   "kind": "diagram",
+   "width": 1112,
+   "height": 374,
+   "alt": "EBT thinking for text (next-token distribution) and video (next frame): predictions refined over steps 0-4 by gradient descent on energy."
+  },
+  {
+   "id": "fig03",
+   "file": "media/paper/fig03.png",
+   "caption": "Figure 3: Thinking Process Visualization. A learned energy landscape and its optimization through gradient descent, interpreted as a thinking process. In this example, the model predicts a distribution over text tokens, progressively shifting from an initial random distribution toward the target distribution. At each step, the EBM assigns an energy scalar indicating how compatible the current prediction is with the context, visualized as the landscape’s height (Facet 3). This scalar’s convergence allows the model to determine whether the prediction is adequate or if further thinking is necessary. Uncertainty (Facet 2) can be represented by landscapes that are harder to optimize or by landscapes with many local minima, allowing the model to know when it requires more steps to think (Facet 1). Adapted from [57].",
+   "page": 5,
+   "panel": null,
+   "parent": null,
+   "kind": "diagram",
+   "width": 838,
+   "height": 441,
+   "alt": "3D energy landscape for context \"The dog caught the ___\"; a prediction descends from high to low energy over steps 0-4."
+  },
+  {
+   "id": "fig04",
+   "file": "media/paper/fig04.png",
+   "caption": "Figure 4: Language Learning Scalability—Data, Batch Size, and Depth. A comparison between the scaling of the Transformer++ recipe [87] and EBTs across data, batch size, and depth during pretraining. On all of these axes, EBTs out-scale the Transformer++ recipe significantly, indicating improved data efficiency and suggesting potential benefits for generalization. Additionally, the improved depth scaling offers promise for reasoning, where depth is crucial [96]. These results suggest that if these scaling trends persist, EBTs would likely outperform Transformer++ models at foundation model data scale.",
+   "page": 9,
+   "panel": null,
+   "parent": null,
+   "kind": "plot",
+   "width": 1099,
+   "height": 297,
+   "panels": [
+    "fig04a",
+    "fig04b",
+    "fig04c"
+   ],
+   "alt": "Text pretraining scaling vs data, batch size, depth: EBT vs Transformer++."
+  },
+  {
+   "id": "fig04a",
+   "file": "media/paper/fig04a.png",
+   "caption": "Figure 4: Language Learning Scalability—Data, Batch Size, and Depth. A comparison between the scaling of the Transformer++ recipe [87] and EBTs across data, batch size, and depth during pretraining. On all of these axes, EBTs out-scale the Transformer++ recipe significantly, indicating improved data efficiency and suggesting potential benefits for generalization. Additionally, the improved depth scaling offers promise for reasoning, where depth is crucial [96]. These results suggest that if these scaling trends persist, EBTs would likely outperform Transformer++ models at foundation model data scale.",
+   "page": 9,
+   "panel": "(a) Scaling for data.",
+   "parent": "fig04",
+   "kind": "plot",
+   "width": 366,
+   "height": 250,
+   "digitized": "scaling:fig4a"
+  },
+  {
+   "id": "fig04b",
+   "file": "media/paper/fig04b.png",
+   "caption": "Figure 4: Language Learning Scalability—Data, Batch Size, and Depth. A comparison between the scaling of the Transformer++ recipe [87] and EBTs across data, batch size, and depth during pretraining. On all of these axes, EBTs out-scale the Transformer++ recipe significantly, indicating improved data efficiency and suggesting potential benefits for generalization. Additionally, the improved depth scaling offers promise for reasoning, where depth is crucial [96]. These results suggest that if these scaling trends persist, EBTs would likely outperform Transformer++ models at foundation model data scale.",
+   "page": 9,
+   "panel": "(b) Scaling for batch size.",
+   "parent": "fig04",
+   "kind": "plot",
+   "width": 366,
+   "height": 250,
+   "digitized": "scaling:fig4b"
+  },
+  {
+   "id": "fig04c",
+   "file": "media/paper/fig04c.png",
+   "caption": "Figure 4: Language Learning Scalability—Data, Batch Size, and Depth. A comparison between the scaling of the Transformer++ recipe [87] and EBTs across data, batch size, and depth during pretraining. On all of these axes, EBTs out-scale the Transformer++ recipe significantly, indicating improved data efficiency and suggesting potential benefits for generalization. Additionally, the improved depth scaling offers promise for reasoning, where depth is crucial [96]. These results suggest that if these scaling trends persist, EBTs would likely outperform Transformer++ models at foundation model data scale.",
+   "page": 9,
+   "panel": "(c) Scaling for depth.",
+   "parent": "fig04",
+   "kind": "plot",
+   "width": 362,
+   "height": 251,
+   "digitized": "scaling:fig4c"
+  },
+  {
+   "id": "fig05",
+   "file": "media/paper/fig05.png",
+   "caption": "Figure 5: Language Learning Scalability—Parameters, FLOPs, and Width. Pretraining scaling comparisons between the Transformer++ recipe [87] and EBTs across model size (parameters), compute (FLOPs), and width (embedding dimension). EBTs slightly out-scale the Transformer++ in FLOP and parameter scaling, becoming the first approach to achieve a higher scaling rate without modifying the tokenizer [101] to our knowledge. These results suggest that EBTs offer high promise as a pretraining paradigm in both parameter and FLOP efficiency as scale increases.",
+   "page": 10,
+   "panel": null,
+   "parent": null,
+   "kind": "plot",
+   "width": 1113,
+   "height": 300,
+   "panels": [
+    "fig05a",
+    "fig05b",
+    "fig05c"
+   ],
+   "alt": "Text pretraining scaling vs parameters, FLOPs, embedding width: EBT vs Transformer++."
+  },
+  {
+   "id": "fig05a",
+   "file": "media/paper/fig05a.png",
+   "caption": "Figure 5: Language Learning Scalability—Parameters, FLOPs, and Width. Pretraining scaling comparisons between the Transformer++ recipe [87] and EBTs across model size (parameters), compute (FLOPs), and width (embedding dimension). EBTs slightly out-scale the Transformer++ in FLOP and parameter scaling, becoming the first approach to achieve a higher scaling rate without modifying the tokenizer [101] to our knowledge. These results suggest that EBTs offer high promise as a pretraining paradigm in both parameter and FLOP efficiency as scale increases.",
+   "page": 10,
+   "panel": "(a) Scaling for number of Parameters.",
+   "parent": "fig05",
+   "kind": "plot",
+   "width": 362,
+   "height": 251,
+   "digitized": "scaling:fig5a"
+  },
+  {
+   "id": "fig05b",
+   "file": "media/paper/fig05b.png",
+   "caption": "Figure 5: Language Learning Scalability—Parameters, FLOPs, and Width. Pretraining scaling comparisons between the Transformer++ recipe [87] and EBTs across model size (parameters), compute (FLOPs), and width (embedding dimension). EBTs slightly out-scale the Transformer++ in FLOP and parameter scaling, becoming the first approach to achieve a higher scaling rate without modifying the tokenizer [101] to our knowledge. These results suggest that EBTs offer high promise as a pretraining paradigm in both parameter and FLOP efficiency as scale increases.",
+   "page": 10,
+   "panel": "(b) Scaling for number of FLOPs.",
+   "parent": "fig05",
+   "kind": "plot",
+   "width": 361,
+   "height": 254,
+   "digitized": "scaling:fig5b"
+  },
+  {
+   "id": "fig05c",
+   "file": "media/paper/fig05c.png",
+   "caption": "Figure 5: Language Learning Scalability—Parameters, FLOPs, and Width. Pretraining scaling comparisons between the Transformer++ recipe [87] and EBTs across model size (parameters), compute (FLOPs), and width (embedding dimension). EBTs slightly out-scale the Transformer++ in FLOP and parameter scaling, becoming the first approach to achieve a higher scaling rate without modifying the tokenizer [101] to our knowledge. These results suggest that EBTs offer high promise as a pretraining paradigm in both parameter and FLOP efficiency as scale increases.",
+   "page": 10,
+   "panel": "(c) Scaling for the embed. dimension.",
+   "parent": "fig05",
+   "kind": "plot",
+   "width": 362,
+   "height": 250,
+   "digitized": "scaling:fig5c"
+  },
+  {
+   "id": "fig06",
+   "file": "media/paper/fig06.png",
+   "caption": "Figure 6: EBT Thinking Analysis. (a) Mean performance degradation of the standard Transformer++ recipe [87] and the Energy-Based Transformer (EBT) on four Out of Distribution (OOD) datasets. While the Transformer++ cannot reduce perplexity at a per-token level, EBTs can by performing more forward passes over a single token/sample (Thinking Longer) as well as generating many samples and choosing the minimum energy one (Self-Verifying/BoN in addition to longer thought). (b) The Self-Verification capabilities of EBTs using BoN-5 compared to not doing any self-verification. As data scale increases, the benefit from doing self-verification increases. These results suggest EBTs generalize OOD better than the Transformer++ because of their System 2 Thinking capabilities, and that the thinking capabilities of EBTs scale during training.",
+   "page": 11,
+   "panel": null,
+   "parent": null,
+   "kind": "plot",
+   "width": 1096,
+   "height": 405,
+   "panels": [
+    "fig06a",
+    "fig06b"
+   ],
+   "alt": "(a) OOD perplexity increase vs forward passes; (b) BoN-5 verification gain vs tokens trained."
+  },
+  {
+   "id": "fig06a",
+   "file": "media/paper/fig06a.png",
+   "caption": "Figure 6: EBT Thinking Analysis. (a) Mean performance degradation of the standard Transformer++ recipe [87] and the Energy-Based Transformer (EBT) on four Out of Distribution (OOD) datasets. While the Transformer++ cannot reduce perplexity at a per-token level, EBTs can by performing more forward passes over a single token/sample (Thinking Longer) as well as generating many samples and choosing the minimum energy one (Self-Verifying/BoN in addition to longer thought). (b) The Self-Verification capabilities of EBTs using BoN-5 compared to not doing any self-verification. As data scale increases, the benefit from doing self-verification increases. These results suggest EBTs generalize OOD better than the Transformer++ because of their System 2 Thinking capabilities, and that the thinking capabilities of EBTs scale during training.",
+   "page": 11,
+   "panel": "(a) OOD Thinking Performance Comparison.",
+   "parent": "fig06",
+   "kind": "plot",
+   "width": 519,
+   "height": 344,
+   "digitized": "scaling:fig6a"
+  },
+  {
+   "id": "fig06b",
+   "file": "media/paper/fig06b.png",
+   "caption": "Figure 6: EBT Thinking Analysis. (a) Mean performance degradation of the standard Transformer++ recipe [87] and the Energy-Based Transformer (EBT) on four Out of Distribution (OOD) datasets. While the Transformer++ cannot reduce perplexity at a per-token level, EBTs can by performing more forward passes over a single token/sample (Thinking Longer) as well as generating many samples and choosing the minimum energy one (Self-Verifying/BoN in addition to longer thought). (b) The Self-Verification capabilities of EBTs using BoN-5 compared to not doing any self-verification. As data scale increases, the benefit from doing self-verification increases. These results suggest EBTs generalize OOD better than the Transformer++ because of their System 2 Thinking capabilities, and that the thinking capabilities of EBTs scale during training.",
+   "page": 11,
+   "panel": "(b) Verification Capabilities as Scale Increases.",
+   "parent": "fig06",
+   "kind": "plot",
+   "width": 524,
+   "height": 357,
+   "digitized": "scaling:fig6b"
+  },
+  {
+   "id": "fig07",
+   "file": "media/paper/fig07.png",
+   "caption": "Figure 7: OOD Thinking Performance. As the data becomes more OOD, thinking leads to greater performance improvements, with a roughly linear trend. These findings highlight that EBTs thinking is especially critical for robust generalization to OOD data. Performance is measured on 5 different datasets varying in Out-of-Distribution (OOD) magnitude shift, which is measured as the ratio of downstream dataset perplexity to pretraining perplexity. Max Thinking denotes combining thinking longer and self-verification.",
+   "page": 11,
+   "panel": null,
+   "parent": null,
+   "kind": "plot",
+   "width": 549,
+   "height": 367,
+   "alt": "% perplexity improvement from thinking vs OOD magnitude shift (5 datasets) with a linear trend.",
+   "digitized": "scaling:fig7"
+  },
+  {
+   "id": "fig08",
+   "file": "media/paper/fig08.png",
+   "caption": "Figure 8: Learning Uncertainty on Text Results. EBTs learn to vary uncertainty across text tokens without any explicit supervision. As an example, in both (a) and (b), simple tokens such as “.”, “is”, “a”, “but”, or “the” have lower energies across inference-time optimization (thinking) steps, indicating lower uncertainty. On the other hand, harder to predict tokens such as “quick”, “brown”, “research”, and “problem” have higher energies across optimization steps, and more difficulty in achieving energy convergence, meaning the model is more uncertain. Inspired by [25].",
+   "page": 12,
+   "panel": null,
+   "parent": null,
+   "kind": "heatmap",
+   "width": 1098,
+   "height": 432,
+   "panels": [
+    "fig08a",
+    "fig08b"
+   ],
+   "alt": "Heatmaps of normalized energy per token across 12 thinking iterations for two sentences."
+  },
+  {
+   "id": "fig08a",
+   "file": "media/paper/fig08a.png",
+   "caption": "Figure 8: Learning Uncertainty on Text Results. EBTs learn to vary uncertainty across text tokens without any explicit supervision. As an example, in both (a) and (b), simple tokens such as “.”, “is”, “a”, “but”, or “the” have lower energies across inference-time optimization (thinking) steps, indicating lower uncertainty. On the other hand, harder to predict tokens such as “quick”, “brown”, “research”, and “problem” have higher energies across optimization steps, and more difficulty in achieving energy convergence, meaning the model is more uncertain. Inspired by [25].",
+   "page": 12,
+   "panel": "(a) \"The quick brown fox jumps over the lazy dog.\"",
+   "parent": "fig08",
+   "kind": "heatmap",
+   "width": 530,
+   "height": 432,
+   "digitized": "paper_heatmaps:fig8a",
+   "panel_note": "The paper prints no subcaption for these panels; the caption refers to them as (a) and (b). Panel text written by the explainer."
+  },
+  {
+   "id": "fig08b",
+   "file": "media/paper/fig08b.png",
+   "caption": "Figure 8: Learning Uncertainty on Text Results. EBTs learn to vary uncertainty across text tokens without any explicit supervision. As an example, in both (a) and (b), simple tokens such as “.”, “is”, “a”, “but”, or “the” have lower energies across inference-time optimization (thinking) steps, indicating lower uncertainty. On the other hand, harder to predict tokens such as “quick”, “brown”, “research”, and “problem” have higher energies across optimization steps, and more difficulty in achieving energy convergence, meaning the model is more uncertain. Inspired by [25].",
+   "page": 12,
+   "panel": "(b) \"System 2 Thinking is a challenging but interesting research problem.\"",
+   "parent": "fig08",
+   "kind": "heatmap",
+   "width": 531,
+   "height": 427,
+   "digitized": "paper_heatmaps:fig8b",
+   "panel_note": "The paper prints no subcaption for these panels; the caption refers to them as (a) and (b). Panel text written by the explainer."
+  },
+  {
+   "id": "fig09",
+   "file": "media/paper/fig09.png",
+   "caption": "Figure 9: Video Learning Scalability—Width and Parameters. The minimum validation loss achieved on the Something Something V2 (SSV2) dataset. While EBTs achieve higher validation loss than the Transformer++ at smaller scales, the scaling rate is more than 33% higher, suggesting that at foundation model scale with hundreds of billions of parameters EBTs would perform much better than the Transformer++. Notably, scaling with respect to the embedding dimension behaves more linearly than for the number of parameters, likely due to the embedding dimension serving as a bottleneck for the image representation.",
+   "page": 13,
+   "panel": null,
+   "parent": null,
+   "kind": "plot",
+   "width": 1091,
+   "height": 402,
+   "panels": [
+    "fig09a",
+    "fig09b"
+   ],
+   "alt": "Video (SSV2) scaling vs embedding dimension and non-embedding parameters: EBT vs Transformer++."
+  },
+  {
+   "id": "fig09a",
+   "file": "media/paper/fig09a.png",
+   "caption": "Figure 9: Video Learning Scalability—Width and Parameters. The minimum validation loss achieved on the Something Something V2 (SSV2) dataset. While EBTs achieve higher validation loss than the Transformer++ at smaller scales, the scaling rate is more than 33% higher, suggesting that at foundation model scale with hundreds of billions of parameters EBTs would perform much better than the Transformer++. Notably, scaling with respect to the embedding dimension behaves more linearly than for the number of parameters, likely due to the embedding dimension serving as a bottleneck for the image representation.",
+   "page": 13,
+   "panel": "(a) Scaling for the embedding dimension.",
+   "parent": "fig09",
+   "kind": "plot",
+   "width": 519,
+   "height": 354,
+   "digitized": "scaling:fig9a"
+  },
+  {
+   "id": "fig09b",
+   "file": "media/paper/fig09b.png",
+   "caption": "Figure 9: Video Learning Scalability—Width and Parameters. The minimum validation loss achieved on the Something Something V2 (SSV2) dataset. While EBTs achieve higher validation loss than the Transformer++ at smaller scales, the scaling rate is more than 33% higher, suggesting that at foundation model scale with hundreds of billions of parameters EBTs would perform much better than the Transformer++. Notably, scaling with respect to the embedding dimension behaves more linearly than for the number of parameters, likely due to the embedding dimension serving as a bottleneck for the image representation.",
+   "page": 13,
+   "panel": "(b) Scaling for the Non-Embedding Parameters.",
+   "parent": "fig09",
+   "kind": "plot",
+   "width": 519,
+   "height": 354,
+   "digitized": "scaling:fig9b"
+  },
+  {
+   "id": "fig10",
+   "file": "media/paper/fig10.png",
+   "caption": "Figure 10: Qualitative OOD Image Denoising. EBTs achieve better denoising quality during inference while using one step for every 100 denoising steps of a DiT. The overall image quality of EBT denoised images is less blurry than images denoised by DiT.",
+   "page": 14,
+   "panel": null,
+   "parent": null,
+   "kind": "image grid",
+   "width": 1057,
+   "height": 336,
+   "alt": "OOD image denoising: EBT after 1-3 steps vs DiT after 100-300 steps, with ground truth."
+  },
+  {
+   "id": "fig11",
+   "file": "media/paper/fig11.png",
+   "caption": "Figure 11: Learning Uncertainty on Video Results. In line with cognitive Facet 2, EBTs learn to express uncertainty across continuous video frames without supervision. At the start of the video, uncertainty is high (high energy) because the frame is mostly empty and the scene is highly unpredictable. As a blue garment is placed into the frame, uncertainty decreases (low energy), reflecting the greater predictability of the scene. When the blue garment is removed from the scene, uncertainty increases again, indicating a return to higher unpredictability. Such a capability is significantly more difficult to achieve in continuous spaces with traditional feed-forward transformers without discretization schemes [121].",
+   "page": 14,
+   "panel": null,
+   "parent": null,
+   "kind": "heatmap",
+   "width": 550,
+   "height": 508,
+   "alt": "Heatmap of normalized energy per video frame across thinking iterations, with frame thumbnails.",
+   "digitized": "paper_heatmaps:fig11"
+  },
+  {
+   "id": "fig12",
+   "file": "media/paper/fig12.png",
+   "caption": "Figure 12: Image Denoising Thinking Scalability. A comparison between EBT and DiT on image denoising given a different number of forward passes. EBTs require only 1% of the forward passes used by DiT to achieve comparable or better PSNR. Further, the scaling rate of PSNR improvement given more forward passes is much higher for EBTs than it is for DiTs. These results suggest EBTs have superior thinking capabilities than DiTs on OOD data.",
+   "page": 15,
+   "panel": null,
+   "parent": null,
+   "kind": "plot",
+   "width": 540,
+   "height": 372,
+   "alt": "PSNR vs number of forward passes (log x): EBT at 1-3 passes vs DiT at 100-300 passes.",
+   "digitized": "scaling:fig12"
+  },
+  {
+   "id": "figB1",
+   "file": "media/paper/figB1.png",
+   "caption": "Figure B.1: EBT Thinking Analysis for Data Scaling. (a) Self-verification of BoN-2 compared to BoN-10. EBTs become less adversarial and thus benefit more from verifying an increasing number of samples during training. (b) A projection of the results from Figure 6b to the data scale of Llama3 [84], demonstrating that as data scale increases, improvements from self-verification can lead to potentially massive performance increases from System 2 Thinking.",
+   "page": 28,
+   "panel": null,
+   "parent": null,
+   "kind": "plot",
+   "width": 1106,
+   "height": 402,
+   "panels": [
+    "figB1a",
+    "figB1b"
+   ],
+   "alt": "(a) BoN-10 vs BoN-2 gain vs tokens; (b) Fig 6b trend extrapolated to 15T tokens."
+  },
+  {
+   "id": "figB1a",
+   "file": "media/paper/figB1a.png",
+   "caption": "Figure B.1: EBT Thinking Analysis for Data Scaling. (a) Self-verification of BoN-2 compared to BoN-10. EBTs become less adversarial and thus benefit more from verifying an increasing number of samples during training. (b) A projection of the results from Figure 6b to the data scale of Llama3 [84], demonstrating that as data scale increases, improvements from self-verification can lead to potentially massive performance increases from System 2 Thinking.",
+   "page": 28,
+   "panel": "(a) Self-verification with BoN-10 versus BoN-2.",
+   "parent": "figB1",
+   "kind": "plot",
+   "width": 521,
+   "height": 353,
+   "digitized": "scaling:figB1a"
+  },
+  {
+   "id": "figB1b",
+   "file": "media/paper/figB1b.png",
+   "caption": "Figure B.1: EBT Thinking Analysis for Data Scaling. (a) Self-verification of BoN-2 compared to BoN-10. EBTs become less adversarial and thus benefit more from verifying an increasing number of samples during training. (b) A projection of the results from Figure 6b to the data scale of Llama3 [84], demonstrating that as data scale increases, improvements from self-verification can lead to potentially massive performance increases from System 2 Thinking.",
+   "page": 28,
+   "panel": "(b) Results in Fig. 6b projected to Llama3 scale [84].",
+   "parent": "figB1",
+   "kind": "plot",
+   "width": 512,
+   "height": 349,
+   "digitized": "scaling:figB1b"
+  },
+  {
+   "id": "figB2",
+   "file": "media/paper/figB2.png",
+   "caption": "Figure B.2: Epistemic Uncertainty Comparison. EBTs learn to express epistemic uncertainty (uncertainty related to lack of knowledge) on unseen data. Particularly, the sequence on the left, which is a text sequence likely seen during training, has consistently lower energy (uncertainty) for tokens than the sequence on the right, which is a random text sequence not from the training distribution. This demonstrates that EBTs learn to “know what they don’t know.”",
+   "page": 29,
+   "panel": null,
+   "parent": null,
+   "kind": "heatmap",
+   "width": 1046,
+   "height": 512,
+   "alt": "Energy heatmaps: an in-distribution sentence vs a random OOD token sequence.",
+   "digitized": "paper_heatmaps:figB2_seq1,figB2_seq2"
+  },
+  {
+   "id": "figB3",
+   "file": "media/paper/figB3.png",
+   "caption": "Figure B.3: EBT Larger Scale Data Scaling. (a) Data scaling results from Figure 4a scaled up to a larger model size, higher context length, increased batch size, and a higher number of training steps. (b) Results from (a) zoomed in.",
+   "page": 29,
+   "panel": null,
+   "parent": null,
+   "kind": "plot",
+   "width": 1099,
+   "height": 407,
+   "panels": [
+    "figB3a",
+    "figB3b"
+   ],
+   "alt": "Larger-scale (FineWeb) data scaling: EBT vs Transformer++, full range and zoomed."
+  },
+  {
+   "id": "figB3a",
+   "file": "media/paper/figB3a.png",
+   "caption": "Figure B.3: EBT Larger Scale Data Scaling. (a) Data scaling results from Figure 4a scaled up to a larger model size, higher context length, increased batch size, and a higher number of training steps. (b) Results from (a) zoomed in.",
+   "page": 29,
+   "panel": "(a) Data Scaling Higher Scale.",
+   "parent": "figB3",
+   "kind": "plot",
+   "width": 527,
+   "height": 359,
+   "digitized": "scaling:figB3a"
+  },
+  {
+   "id": "figB3b",
+   "file": "media/paper/figB3b.png",
+   "caption": "Figure B.3: EBT Larger Scale Data Scaling. (a) Data scaling results from Figure 4a scaled up to a larger model size, higher context length, increased batch size, and a higher number of training steps. (b) Results from (a) zoomed in.",
+   "page": 29,
+   "panel": "(b) Data Scaling Zoomed In.",
+   "parent": "figB3",
+   "kind": "plot",
+   "width": 527,
+   "height": 359,
+   "digitized": "scaling:figB3b"
+  },
+  {
+   "id": "figC1",
+   "file": "media/paper/figC1.png",
+   "caption": "Figure C.1: EBT S1 and S2 Scaling Comparison. Scaling rate of System 1 (S1) compared to System 2 (S2) models. System 2 models have a higher Y-intercept but scale slightly faster than System 1 models. Therefore, as the scaling rate ultimately dominates asymptotic scaling behavior, and not the Y-intercept, scaling results in the main paper that hold for S1 models should generally hold for S2 models.",
+   "page": 31,
+   "panel": null,
+   "parent": null,
+   "kind": "plot",
+   "width": 519,
+   "height": 357,
+   "alt": "EBT System 1 vs System 2 hyperparameters: perplexity vs non-embedding parameters.",
+   "digitized": "scaling:figC1"
+  },
+  {
+   "id": "figE1",
+   "file": "media/paper/figE1.png",
+   "caption": "Figure E.1: EBM and Diffusion Comparison. Diffusion models receive supervision at each step of the denoising process (e.g., for one thousand steps), whereas EBMs only receive supervision at the end of the optimization process. This training procedure allows EBMs to learn an entire Energy Landscape over predictions, associating a scalar energy for every prediction according to its likelihood. Learning landscapes in this manner can reduce “error” accumulation throughout the denoising process [67] and makes EBMs more flexible by allowing unnormalized likelihood estimation at each step of the denoising process. Additionally, diffusion models update predictions by predicting the noise at each timestep, meaning they must follow a set denoising schedule. On the other hand, EBMs update predictions by performing gradient descent with respect to the energy scalar, allowing for flexible inference where this optimization process can be performed for any number of steps. x here refers to some condition (e.g., a class or text) whereas y is the generated prediction.",
+   "page": 37,
+   "panel": null,
+   "parent": null,
+   "kind": "diagram",
+   "width": 1112,
+   "height": 430,
+   "panels": [
+    "figE1a",
+    "figE1b"
+   ],
+   "alt": "Diffusion (supervision at every denoising step) vs EBM (supervision only at the end of optimization)."
+  },
+  {
+   "id": "figE1a",
+   "file": "media/paper/figE1a.png",
+   "caption": "Figure E.1: EBM and Diffusion Comparison. Diffusion models receive supervision at each step of the denoising process (e.g., for one thousand steps), whereas EBMs only receive supervision at the end of the optimization process. This training procedure allows EBMs to learn an entire Energy Landscape over predictions, associating a scalar energy for every prediction according to its likelihood. Learning landscapes in this manner can reduce “error” accumulation throughout the denoising process [67] and makes EBMs more flexible by allowing unnormalized likelihood estimation at each step of the denoising process. Additionally, diffusion models update predictions by predicting the noise at each timestep, meaning they must follow a set denoising schedule. On the other hand, EBMs update predictions by performing gradient descent with respect to the energy scalar, allowing for flexible inference where this optimization process can be performed for any number of steps. x here refers to some condition (e.g., a class or text) whereas y is the generated prediction.",
+   "page": 37,
+   "panel": "(a) Diffusion Model",
+   "parent": "figE1",
+   "kind": "diagram",
+   "width": 540,
+   "height": 387
+  },
+  {
+   "id": "figE1b",
+   "file": "media/paper/figE1b.png",
+   "caption": "Figure E.1: EBM and Diffusion Comparison. Diffusion models receive supervision at each step of the denoising process (e.g., for one thousand steps), whereas EBMs only receive supervision at the end of the optimization process. This training procedure allows EBMs to learn an entire Energy Landscape over predictions, associating a scalar energy for every prediction according to its likelihood. Learning landscapes in this manner can reduce “error” accumulation throughout the denoising process [67] and makes EBMs more flexible by allowing unnormalized likelihood estimation at each step of the denoising process. Additionally, diffusion models update predictions by predicting the noise at each timestep, meaning they must follow a set denoising schedule. On the other hand, EBMs update predictions by performing gradient descent with respect to the energy scalar, allowing for flexible inference where this optimization process can be performed for any number of steps. x here refers to some condition (e.g., a class or text) whereas y is the generated prediction.",
+   "page": 37,
+   "panel": "(b) Energy-Based Model (EBM)",
+   "parent": "figE1",
+   "kind": "diagram",
+   "width": 540,
+   "height": 388
+  },
+  {
+   "id": "figH1",
+   "file": "media/paper/figH1.png",
+   "caption": "Figure H.1: Feed-Forward and Energy-Based Model Comparison. Feed-forward models (a), given an input x, directly try to predict ŷ. Instead of just getting x as an input, EBMs receive both x and ŷ as an input and learn the compatibility of all possible values of ŷ with x by outputting a scalar energy value for each combination. Low energy corresponds to high probability, and high energy to low probability. In practice, ŷ is often initialized as random.",
+   "page": 40,
+   "panel": null,
+   "parent": null,
+   "kind": "diagram",
+   "width": 559,
+   "height": 324,
+   "panels": [
+    "figH1a",
+    "figH1b"
+   ],
+   "alt": "Feed-forward model (x to y-hat) vs energy-based model (x and y-hat to energy)."
+  },
+  {
+   "id": "figH1a",
+   "file": "media/paper/figH1a.png",
+   "caption": "Figure H.1: Feed-Forward and Energy-Based Model Comparison. Feed-forward models (a), given an input x, directly try to predict ŷ. Instead of just getting x as an input, EBMs receive both x and ŷ as an input and learn the compatibility of all possible values of ŷ with x by outputting a scalar energy value for each combination. Low energy corresponds to high probability, and high energy to low probability. In practice, ŷ is often initialized as random.",
+   "page": 40,
+   "panel": "(a) Feed Forward Model",
+   "parent": "figH1",
+   "kind": "diagram",
+   "width": 194,
+   "height": 282
+  },
+  {
+   "id": "figH1b",
+   "file": "media/paper/figH1b.png",
+   "caption": "Figure H.1: Feed-Forward and Energy-Based Model Comparison. Feed-forward models (a), given an input x, directly try to predict ŷ. Instead of just getting x as an input, EBMs receive both x and ŷ as an input and learn the compatibility of all possible values of ŷ with x by outputting a scalar energy value for each combination. Low energy corresponds to high probability, and high energy to low probability. In practice, ŷ is often initialized as random.",
+   "page": 40,
+   "panel": "(b) Energy-Based Model",
+   "parent": "figH1",
+   "kind": "diagram",
+   "width": 280,
+   "height": 282
+  }
+ ]
+}

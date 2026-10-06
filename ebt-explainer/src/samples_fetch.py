@@ -7,6 +7,7 @@ Usage:
   python3 -I samples_fetch.py coco-candidates <out_dir>
   python3 -I samples_fetch.py in1k-candidates <out_dir>
   python3 -I samples_fetch.py ssv2-candidates <out_dir>
+  python3 -I samples_fetch.py text-eval <out_dir>      (RPv2 range downloads, tokenizer, eval rows, MMNIST)
   python3 -I samples_fetch.py images <out_dir> <rows_json> <prefix> <idx> [<idx> ...]
       downloads row[idx].row.image.src (or .image) to <out_dir>/<prefix>_<idx>.jpg
 """
@@ -35,12 +36,12 @@ class Resp:
         return json.loads(self.content.decode("utf-8"))
 
 
-def get(url, params=None, tries=4):
+def get(url, params=None, tries=4, headers=None):
     if params:
         url = url + "?" + urllib.parse.urlencode(params)
     for k in range(tries):
         try:
-            req = urllib.request.Request(url, headers=UA)
+            req = urllib.request.Request(url, headers={**UA, **(headers or {})})
             with urllib.request.urlopen(req, timeout=60, context=CTX) as r:
                 return Resp(r.read())
         except urllib.error.HTTPError as e:
@@ -83,6 +84,31 @@ def ssv2_candidates(out_dir):
         fetch_rows(out_dir, f"ssv2grid_{o}", "moondream/ssv2-3x3", "default", "test", o, 12)
 
 
+HF = "https://huggingface.co"
+RPV2 = HF + "/datasets/togethercomputer/RedPajama-Data-V2/resolve/main/sample"
+
+
+def text_eval(out_dir):
+    out = Path(out_dir)
+    # first ~3 MB / ~6 MB of the gzip shards (partial gzip is decoded leniently by build_samples.py)
+    for b in ("en_head", "en_middle"):
+        r = get(f"{RPV2}/documents/2023-06/0003/{b}.json.gz", headers={"Range": "bytes=0-3000000"})
+        (out / f"rpv2_{b}.part.gz").write_bytes(r.content)
+        r = get(f"{RPV2}/quality_signals/2023-06/0003/{b}.signals.json.gz", headers={"Range": "bytes=0-6000000"})
+        (out / f"rpv2_{b}_signals.part.gz").write_bytes(r.content)
+    r = get(HF + "/EleutherAI/gpt-neox-20b/resolve/main/tokenizer.json")
+    (out / "gptneox_tokenizer.json").write_bytes(r.content)
+    fetch_rows(out, "eval_gsm8k", "openai/gsm8k", "main", "test", 0, 20)
+    fetch_rows(out, "eval_squad", "rajpurkar/squad", "plain_text", "validation", 0, 60)
+    for o in (2100, 5300, 8800):
+        fetch_rows(out, f"eval_squad_{o}", "rajpurkar/squad", "plain_text", "validation", o, 6)
+    fetch_rows(out, "eval_dyck", "tasksource/bigbench", "dyck_languages", "validation", 0, 20)
+    fetch_rows(out, "eval_emqa", "tasksource/bigbench", "elementary_math_qa", "validation", 0, 30)
+    for o in (2500, 5000, 7000):
+        fetch_rows(out, f"eval_emqa_{o}", "tasksource/bigbench", "elementary_math_qa", "validation", o, 8)
+    fetch_rows(out, "mmnist_classic_0", "ryushinn/MMNIST", "default", "train", 0, 4)
+
+
 def images(out_dir, rows_json, prefix, idxs):
     d = json.loads(Path(rows_json).read_text())
     rows = d["rows"]
@@ -112,6 +138,8 @@ def main():
         in1k_candidates(sys.argv[2])
     elif cmd == "ssv2-candidates":
         ssv2_candidates(sys.argv[2])
+    elif cmd == "text-eval":
+        text_eval(sys.argv[2])
     elif cmd == "images":
         images(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5:])
     else:

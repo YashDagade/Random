@@ -283,6 +283,16 @@ basin = dict(
          "GD step (alpha0) whose energy is within 1e-3 of E_min.",
 )
 
+_ctrl = os.path.join(os.path.dirname(TRAIN.rstrip("/")), "toy2d_control_summary.json")
+if os.path.exists(_ctrl):
+    basin["control"] = dict(
+        what="Control: a second run (6000 steps) with the noise pattern mirrored (noisy at x=0.25, clean at x=0.75). "
+             "Basin stats at the two mirror-symmetric tips (src/toy2d_control.py).",
+        results=json.load(open(_ctrl)),
+        conclusion="The lower E_min stays at x=0.25 in both runs, so it follows the geometry, not the noise. Curvature "
+                   "differences are a few percent and their correlation with sigma changes sign between runs. The only "
+                   "consistent noise effect is that the argmin is a slightly noisier estimate of mu(x) where targets are noisy.")
+
 # ------------------------------------------------------------------ replay buffer demo
 # A prediction is stored after a short training-style run; when it is drawn again it continues from where it
 # stopped, so short unrolls chain into a long trajectory (Sec 3.3). Shown at a mid checkpoint and at the end.
