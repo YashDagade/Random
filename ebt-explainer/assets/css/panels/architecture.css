@@ -1,5 +1,5 @@
 /* Panel: architecture (inside an EBT) */
-#architecture .arch-ro { font-family: var(--f-mono); font-size: 12px; line-height: 1.55; color: var(--ink2); display: grid; gap: 6px; min-height: 150px; }
+#architecture .arch-ro { font-family: var(--f-mono); font-size: 12px; line-height: 1.55; color: var(--ink2); display: grid; gap: 6px; min-height: 0; }
 #architecture .arch-ro p { margin: 0; }
 #architecture .arch-ro b { color: var(--blue); font-weight: 600; }
 #architecture .arch-ro .bad { color: var(--warn); }
@@ -13,3 +13,9 @@
 #architecture .arch-legend .sw.leak { background: rgba(212, 66, 28, .16); border-color: var(--warn); }
 #architecture .arch-legend .sw.couple { background: repeating-linear-gradient(135deg, #f2f2f4 0 3px, #a3a3a8 3px 4px); }
 #architecture .arch-legend .sw.dot { border: 0; border-radius: 50%; width: 8px; height: 8px; background: var(--blue); }
+#architecture .arch-info { display: grid; gap: 2px; font-size: 12px; }
+#architecture .fig-col > .arch-legend { margin-top: 6px; display: grid; gap: 2px; }
+@media (max-width: 960px) { #architecture .fig-col > .arch-legend { display: flex; gap: 4px 16px; } }
+#architecture .fig-col > .seg { margin-bottom: 2px; }
+/* prose grids: a wide display equation must scroll inside its box, not widen the column */
+#architecture .p-text > div, #architecture .steps { grid-template-columns: minmax(0, 1fr); }

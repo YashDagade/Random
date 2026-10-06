@@ -51,3 +51,11 @@
 #text-data .td-prog { font-family: var(--f-mono); font-size: 12px; color: var(--muted); min-height: 18px; }
 /* keep wide equations from widening the prose grid (they scroll inside .katex-display instead) */
 #text-data .p-intro > *, #text-data .p-after > *, #text-data .steps > * { min-width: 0; }
+#text-data .p-stage > *, #text-data .td-view > *, #text-data .td-view .fig-col { min-width: 0; max-width: 100%; }
+#text-data .td-docrow select { flex: 1 1 0; width: 0; min-width: 0; }
+#text-data .td-t3 th, #text-data .td-t3 td { white-space: nowrap; }
+/* the stage is sticky on wide screens: if it is ever taller than the viewport, let it scroll instead of hiding its controls */
+@media (min-width: 961px) { #text-data .p-stage { max-height: calc(100vh - 24px); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; padding: 14px; margin: -14px; } }
+/* Table 3: row headers sit on hairlines like the cells (base th style draws an ink rule meant for column headers) */
+#text-data .td-t3 tbody th { border-bottom-color: var(--rule); font-size: 10px; }
+@media (max-width: 520px) { #text-data .td-t3 table { font-size: 12px; } #text-data .td-t3 td, #text-data .td-t3 th { padding: 4px 6px; } }

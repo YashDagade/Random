@@ -54,7 +54,7 @@
       <p>Cost is counted in forward passes (NFEs), one per optimization step (p.8), so $M$ chains of $N$ steps cost $M\\!\\cdot\\!N$. A Transformer++ makes exactly one forward pass per token and has no such knob.</p>
       <p>All text results are teacher-forced next-token perplexities, $\\mathrm{PPL}=\\exp\\big(-\\tfrac1T\\sum_t\\log p(x_t\\mid x_{\\lt t})\\big)$, lower is better. Gains are reported as "% perplexity improvement" over a no-thinking or no-verification reference; the exact formula is not printed (the general definition is Def. C.1, p.30). The thinking experiments use one small model pair (xxs, 6.18M non-embedding parameters, batch 128, 1M steps ≈ 33B tokens, p.34).</p>`,
     steps: [
-      { label: 'Transformer++ has no knob', html: '<p>Fig 6a (p.11) averages four downstream datasets that are out of distribution relative to RedPajamaV2 pretraining (GSM8K, SQuAD, BigBench Math QA, BigBench Dyck). Its y axis, "perplexity increase", is lower-is-better; the exact formula is not given. Transformer++ sits at ≈38.4 whatever the budget. EBT with no extra thinking (2 passes, the step count it was trained with) is at ≈44.8: <b>worse</b> than Transformer++.</p>' },
+      { label: 'Transformer++ has no knob', html: '<p>Fig 6a (p.11) averages four downstream datasets that are out of distribution relative to RedPajamaV2 pretraining (GSM8K, SQuAD, BigBench Math QA, BigBench Dyck). Its y axis, "perplexity increase", is lower-is-better; the exact formula is not given. Transformer++ sits at ≈38.4 whatever the budget. EBT with no extra thinking (2 passes, about the 2–3 steps it was trained with) is at ≈44.8: <b>worse</b> than Transformer++.</p>' },
       { label: 'One extra step', html: '<p>Raise the budget to 3 passes: one more descent step drops EBT to ≈35.9, already below Transformer++. Training used 2–3 randomized steps (Table D.4), so this is still inside what the model practised.</p>' },
       { label: 'Several candidates, and the 29%', html: '<p>Points at 6, 15 and 30 passes add self-verification; $M=2,5,10$ candidates of 3 steps each fits the budgets [derived]. EBT reaches ≈31.8, which is $(44.8-31.8)/44.8\\approx29\\%$ below its <em>own</em> no-thinking point: that is the paper\'s 29%. Against Transformer++ the improvement is ≈17% [derived]. Returns fall off fast: going from 6 to 30 passes buys only ≈0.7.</p>' },
       { label: 'Does verification improve with training?', html: '<p>Fig 6b follows one model through training, on BigBench Dyck only; "We did not observe this trend in other benchmarks" (p.34). The fitted line rises from ≈7.9% to ≈10.6%. The text\'s "4%−8%" to "10%−14%" describes the spread of the dots. The faint lines are refits on bootstrap resamples of the 33 points, computed in your browser: the slope is positive in ≈99% of them, but its 95% range spans roughly 0.01 to 0.16 points per billion tokens.</p>' },
@@ -69,7 +69,7 @@
       <h3>Which tokens stay uncertain</h3>
       <p>Fig 8 (p.12, tab <b>8</b>) shows per-token energies over 12 iterations. Almost the whole drop happens at the first update; what differs is where tokens settle. Easy tokens (".", "is", "but") end low, hard ones ("quick", "research", "problem") stay high. See the <a href="#tokens">tokens</a> and <a href="#uncertainty">uncertainty</a> panels for what this does and does not show.</p>
       <h3>How much weight to put on these numbers</h3>
-      <p>One xxs model pair, one seed (33), no error bars, perplexity only, no generated text. Fig 6a, Fig 7 and Table 3 cannot be reconciled from their printed values (paper_facts), so their numbers should not be mixed. The paper also notes that these small models did not benefit from chain-of-thought (footnote 9, p.10): "thinking" here is iterative refinement of one continuous prediction, not a written reasoning trace.</p>
+      <p>One xxs model pair, one seed (33), no error bars, perplexity only, no generated text. Fig 6a, Fig 7 and Table 3 cannot be reconciled from their printed values [derived], so their numbers should not be mixed. The paper also notes that these small models did not benefit from chain-of-thought (footnote 9, p.10): "thinking" here is iterative refinement of one continuous prediction, not a written reasoning trace.</p>
       <p class="note">Paper curves are digitized from the PDF (approx., read from Figs 6a, 6b, 7, B.1a, B.1b, 8, B.2). Bootstrap, leave-one-out and cursor values are computed live from those points. The toy tab uses data/text.json, a 0.27M-parameter character-level EBT trained for this explainer.</p>`,
     source: [{ kind: 'paper', note: 'Figs 6a, 6b, 7, B.1, 8, B.2, Table 2 (digitized, approx.)' }, { kind: 'ext', note: 'bootstrap and leave-one-out refits are ours' }, { kind: 'toy', note: 'char-level text EBT (toy tab)' }],
     figure(stage, ctx) {
@@ -96,14 +96,14 @@
       const tabSeg = lib.segmented({ label: 'Exhibit', options: tabs, value: S.tab, onchange: (v) => setTab(v) }); tabRow.appendChild(tabSeg.el);
       const fr = lib.frame(stage, { label: 'Fig 6a', sub: '&nbsp;' });
       const labEl = fr.wrap.querySelector('.fig-label'), subEl = fr.wrap.querySelector('.fig-sub');
-      const cv = rcanvas(lib, fr.frame, { aspect: (w) => clamp(Math.round(w * 0.58), 300, 380), label: 'Thinking results chart', draw: () => draw() });
+      const cv = rcanvas(lib, fr.frame, { aspect: (w) => w < 520 ? Math.round(w * (S.tab === 'toy' ? 1.3 : S.tab === 't2' || S.tab === '8' ? 0.95 : 0.82)) : clamp(Math.round(w * 0.58), 300, 380), label: 'Thinking results chart', draw: () => draw() });
       const tctl = h('div', { class: 'controls' }); stage.appendChild(tctl);
       const ro = h('div', { class: 'readout tr-ro', 'aria-live': 'polite' }); stage.appendChild(ro);
 
       // ---------- plotting helpers ----------
       let HITS = [];
       function axesBox(g, o) {
-        const W = cv.w, H = cv.h, rect = { x: o.left || 56, y: o.top || 16, w: W - (o.left || 56) - (o.right || 14), h: H - (o.top || 16) - (o.bottom || 44) };
+        const W = o.W || cv.w, H = cv.h, rect = { x: o.left || 56, y: o.top || 16, w: W - (o.left || 56) - (o.right || 14), h: H - (o.top || 16) - (o.bottom || 44) };
         const tx = (v) => o.xlog ? L10(v) : v, ty = (v) => o.ylog ? L10(v) : v;
         const [xa, xb] = o.xlim.map(tx), [ya, yb] = o.ylim.map(ty);
         const X = (v) => rect.x + (tx(v) - xa) / (xb - xa) * rect.w, Y = (v) => rect.y + rect.h - (ty(v) - ya) / (yb - ya) * rect.h;
@@ -145,7 +145,7 @@
       TABS['6a'] = {
         label: 'Fig 6a · OOD thinking performance', sub: 'mean over four OOD text datasets · approx., read from Fig 6a', src: 'paper',
         controls(el) {
-          const sl = lib.slider({ id: 'tr-budget', label: 'forward-pass budget per token', min: 2, max: 30, step: 1, value: S.budget, fmt: v => v + ' passes', oninput: v => { stopSweep(); S.budget = v; draw(); readout(); } });
+          const sl = lib.slider({ id: 'tr-budget', label: 'budget, passes per token', min: 2, max: 30, step: 1, value: S.budget, fmt: v => v + ' passes', oninput: v => { stopSweep(); S.budget = v; draw(); readout(); } });
           S._budgetSl = sl; el.appendChild(sl.el);
           el.appendChild(lib.button('sweep 2 → 30', () => { sweep(2, 30); }));
         },
@@ -156,11 +156,11 @@
           const r = M.rect, k = this.best(), yT = Tp[0][1];
           // EBT-better region
           g.save(); g.fillStyle = 'rgba(47,60,255,0.05)'; g.fillRect(r.x, M.Y(yT), r.w, r.y + r.h - M.Y(yT)); g.restore();
-          T(g, 'below this line: better than Transformer++', r.x + r.w - 6, M.Y(yT) + 6, { align: 'right', color: C.muted, size: 10.5 });
+          T(g, r.w < 400 ? '↓ better than T++' : 'below this line: better than Transformer++', r.x + r.w - 6, M.Y(yT) + 6, { align: 'right', color: C.muted, size: 10.5 });
           // budget line
           const xb = M.X(S.budget); poly(g, [[xb, r.y], [xb, r.y + r.h]], C.ink, { w: 1, dash: [3, 4], alpha: 0.6 });
           const bl = 'budget ' + S.budget, bw = lib.measure(g, bl, { size: 11, kind: 'mono' }).w;
-          T(g, bl, xb + 5 + bw > r.x + r.w ? xb - 5 : xb + 5, r.y + 2, { align: xb + 5 + bw > r.x + r.w ? 'right' : 'left' });
+          T(g, bl, xb + 5 + bw > r.x + r.w ? xb - 5 : xb + 5, r.y + 2, { align: xb + 5 + bw > r.x + r.w ? 'right' : 'left', color: C.muted });
           // Transformer++
           poly(g, [[M.X(Tp[0][0]), M.Y(yT)], [M.X(Tp[Tp.length - 1][0]), M.Y(yT)]], C.ink, { w: 1.4 });
           Tp.forEach(q => { marker(g, 'o', M.X(q[0]), M.Y(q[1]), 3.6, '#fff', C.ink); hit(M.X(q[0]), M.Y(q[1]), ['Transformer++ · ' + q[0] + ' passes', num(q[1], 4) + ' (approx.)', 'same prediction however many passes']); });
@@ -179,21 +179,23 @@
           g.save(); g.strokeStyle = C.ink; g.lineWidth = 1.2; g.beginPath(); g.arc(X, Y, 8, 0, 7); g.stroke(); g.restore();
           const short = ['no thinking', 'thinking longer', 'self-verification'][Math.min(2, k)];
           const right = X < r.x + r.w * 0.6;
-          T(g, `EBT ${short} · ${q[1].toFixed(1)}`, X + (right ? 12 : -12), Y + (k ? 10 : -20), { align: right ? 'left' : 'right', color: C.blue, weight: 600 });
+          const dpct = k ? ` (${sgn(-(1 - q[1] / E[0][1]) * 100)}% vs no thinking)` : '';
+          const lx2 = X + (right ? 12 : -12), al = right ? 'left' : 'right', ly0 = k >= 2 ? Y - (dpct ? 40 : 26) : Y + 8;
+          T(g, `EBT ${short} · ${q[1].toFixed(1)}`, lx2, ly0, { align: al, color: C.blue, weight: 600 });
+          if (dpct) T(g, dpct.trim(), lx2, ly0 + 14, { align: al, color: C.blue });
           if (k > 0) {
-            const y0 = pts[0][1], bx = Math.max(pts[0][0] - 14, r.x + 4);
+            const y0 = pts[0][1], bx = Math.max(pts[0][0] - 12, r.x + 4);
             poly(g, [[bx + 4, y0], [bx, y0], [bx, Y], [bx + 4, Y]], C.blue, { w: 1 });
             poly(g, [[bx, Y], [X - 9, Y]], C.blue, { w: 0.8, dash: [2, 3], alpha: 0.6 });
-            T(g, sgn(-(1 - q[1] / E[0][1]) * 100) + '%', bx + 6, (y0 + Y) / 2, { color: C.blue, baseline: 'middle', weight: 600 });
           }
           // legend
           const lx = r.x + r.w - 8; let ly = r.y + 18;
-          [['o', 'no thinking'], ['star', 'thinking longer'], ['tri', 'self-verification (BoN)']].forEach(([mk, t]) => { const tw = lib.measure(g, t, { size: 10.5, kind: 'mono' }).w; marker(g, mk, lx - tw - 10, ly + 6, 3.4, C.blue, null); T(g, t, lx, ly, { align: 'right', size: 10.5, color: C.muted }); ly += 15; });
+          if (r.w >= 400) [['o', 'no thinking'], ['star', 'thinking longer'], ['tri', 'self-verification (BoN)']].forEach(([mk, t]) => { const tw = lib.measure(g, t, { size: 10.5, kind: 'mono' }).w; marker(g, mk, lx - tw - 10, ly + 6, 3.4, C.blue, null); T(g, t, lx, ly, { align: 'right', size: 10.5, color: C.muted }); ly += 15; });
         },
         readout() {
           const E = ser('fig6a', 1), Tp = ser('fig6a', 0), k = this.best(), q = E[k], labs = P.fig6a.series[1].point_labels || [];
           const vsNo = (1 - q[1] / E[0][1]) * 100, vsT = (1 - q[1] / Tp[0][1]) * 100;
-          return [`budget <b>${S.budget}</b> passes`, `best EBT <b>${q[1].toFixed(2)}</b> (${(labs[k] || '').replace('EBT ', '')}, ${q[0]} passes)`, `vs EBT no thinking <b>${sgn(-vsNo)}%</b>`, `vs Transformer++ <b>${sgn(-vsT)}%</b> (${vsT > 0 ? 'better' : 'worse'})`, k ? `last step: ${sgn(q[1] - E[k - 1][1], 2)} for ${q[0] - E[k - 1][0]} more passes` : 'Transformer++ ≈' + Tp[0][1].toFixed(2) + ' at any budget'];
+          return [`budget <b>${S.budget}</b> passes`, `best EBT <b>${q[1].toFixed(2)}</b> (${(labs[k] || '').replace('EBT ', '').toLowerCase()}, ${q[0]} passes)`, k ? `vs EBT no thinking: <b>${vsNo.toFixed(1)}% lower</b>` : 'this is EBT with no extra thinking', `vs Transformer++: <b>${Math.abs(vsT).toFixed(1)}% ${vsT > 0 ? 'better' : 'worse'}</b>`, k ? `last step: ${sgn(q[1] - E[k - 1][1], 2)} for ${q[0] - E[k - 1][0]} more passes` : 'Transformer++ ≈' + Tp[0][1].toFixed(2) + ' at any budget'];
         },
       };
       // Fig 6b and B.1a share a scatter + bootstrap view
@@ -304,7 +306,6 @@
           const loo = pts.map((_, j) => linfit(pts.filter((__, i) => i !== j)).m);
           return [`slope <b>${f.m.toFixed(2)}</b> points per unit shift`, `r² ${f.r2.toFixed(3)} from ${f.n} datasets`, `at shift 1: ${(f.b + f.m).toFixed(1)}% · at 4: ${(f.b + 4 * f.m).toFixed(1)}%`, `leave-one-out slopes ${Math.min(...loo).toFixed(2)} to ${Math.max(...loo).toFixed(2)}`];
         },
-        click(px, py) { const n = nearestHit(px, py); if (!n) return false; const pts = ser('fig7'); const i = pts.findIndex(q => Math.abs(this._M.X(q[0]) - n.x) < 0.5); return i; },
       };
       // Table 2
       const T2 = [
@@ -395,11 +396,14 @@
           const curves = DS.map(([k]) => tc.datasets[k]).filter(Boolean);
           const all = curves.flatMap(d => d.ebt_fixed_alpha_ce.slice(1).concat([d.baseline_ce]));
           const lo = Math.floor(Math.min(...all) * 2) / 2 - 0.1, hi = 3.6;
-          const save = cv.w; void save;
           // left: CE vs steps
           const split = wide ? Math.round(W * 0.62) : W;
-          const M = (() => { const ow = cv.w; cv.w = split; const m = axesBox(g, { xlim: [0, 16.5], ylim: [lo, hi], xticks: [0, 2, 4, 6, 8, 10, 12, 14, 16], yticks: linTicks(lo, hi, 5), yfmt: v => v.toFixed(1), xlabel: 'thinking steps N', ylabel: 'loss, nats/char (↓)', bottom: wide ? 44 : Math.round(H * 0.42) + 44 }); cv.w = ow; return m; })();
+          const M = axesBox(g, { W: split, xlim: [0, 16.5], ylim: [lo, hi], xticks: [0, 2, 4, 6, 8, 10, 12, 14, 16], yticks: linTicks(lo, hi, 5), yfmt: v => v.toFixed(1), xlabel: 'thinking steps N', ylabel: 'loss, nats/char (↓)', bottom: wide ? 44 : Math.round(H * 0.42) + 44 });
           const r = M.rect;
+          // end labels with simple collision avoidance
+          const labs = DS.filter(([k]) => tc.datasets[k]).map(([k, nm]) => ({ k, nm, y: M.Y(tc.datasets[k].ebt_fixed_alpha_ce[16]) - 12 })).sort((a, b) => a.y - b.y);
+          for (let i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 12) labs[i].y = labs[i - 1].y + 12;
+          const labY = {}; labs.forEach(l => { labY[l.k] = l.y; });
           DS.forEach(([k, nm]) => {
             const d = tc.datasets[k]; if (!d) return; const sel = k === S.toyDs;
             const ys = d.ebt_fixed_alpha_ce; const pts = ys.map((v, i) => [M.X(i), M.Y(Math.min(v, hi + 1))]);
@@ -407,7 +411,7 @@
             poly(g, pts, sel ? C.blue : C.faint, { w: sel ? 2 : 1.2 });
             if (sel) poly(g, [[r.x, M.Y(d.baseline_ce)], [r.x + r.w, M.Y(d.baseline_ce)]], C.ink, { w: 1.2, dash: [5, 4] });
             g.restore();
-            const yl = M.Y(ys[16]); T(g, nm, r.x + r.w - 4, yl - (sel ? 13 : 12), { align: 'right', size: 10.5, color: sel ? C.blue : C.muted });
+            T(g, nm, M.X(16) - 8, labY[k], { align: 'right', size: 10.5, color: sel ? C.blue : C.muted, weight: sel ? 600 : 400 });
             if (sel) { T(g, 'same-size feed-forward ' + d.baseline_ce.toFixed(3), r.x + r.w - 4, M.Y(d.baseline_ce) + 4, { align: 'right', size: 10.5, color: C.ink }); const X = M.X(S.toyN), Y = M.Y(ys[S.toyN]); marker(g, 'o', X, Y, 4.5, C.ink, '#fff'); hit(X, Y, [`${nm}, N = ${S.toyN}`, `${ys[S.toyN].toFixed(3)} nats/char`, `ppl/char ${Math.exp(ys[S.toyN]).toFixed(2)}`]); }
           });
           poly(g, [[M.X(3), r.y], [M.X(3), r.y + r.h]], C.ink, { w: 1, dash: [2, 4], alpha: 0.5 });
@@ -446,7 +450,7 @@
       }
       function readout() { const tb = TABS[S.tab]; ro.innerHTML = (tb.readout ? tb.readout() : []).map(s => `<span>${s}</span>`).join(''); }
       function setTab(v, keepCtl) {
-        if (!TABS[v]) return; S.tab = v; S.hover = null; tabSeg.set(v);
+        if (!TABS[v]) return; S.tab = v; S.hover = null; tabSeg.set(v); cv.fit();
         const tb = TABS[v];
         labEl.textContent = tb.label; subEl.innerHTML = tb.sub;
         if (!keepCtl) { tctl.innerHTML = ''; tb.controls && tb.controls(tctl); }
@@ -477,7 +481,7 @@
         if (S.tab === '7') {
           const n = nearestHit(px, py); if (!n) return; const pts = ser('fig7');
           let bi = -1, bd = 1e9; pts.forEach((q, i) => { const hh = HITS[i]; if (!hh) return; const d = Math.hypot(hh.x - n.x, hh.y - n.y); if (d < bd) { bd = d; bi = i; } });
-          if (bi < 0) return; if (S.drop7.has(bi)) S.drop7.delete(bi); else if (pts.length - S.drop7.size > 2) S.drop7.add(bi);
+          if (bi < 0) return; if (S.drop7.has(bi)) S.drop7.delete(bi); else if (pts.length - S.drop7.size > 2) S.drop7.add(bi); S.hover = null;
           draw(); readout(); return;
         }
         const n = nearestHit(px, py); if (n) { S.hover = n; draw(); }

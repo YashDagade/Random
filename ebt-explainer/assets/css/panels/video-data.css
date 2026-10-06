@@ -1,0 +1,10 @@
+/* Panel 18 (video-data). Scoped to #video-data. */
+#video-data .vd-view[hidden] { display: none !important; }
+#video-data .vd-view { display: grid; gap: 12px; min-width: 0; }
+#video-data .p-stage > *, #video-data .vd-view > *, #video-data .vd-view .fig-col { min-width: 0; max-width: 100%; }
+#video-data .p-intro > *, #video-data .p-after > *, #video-data .steps > * { min-width: 0; }
+#video-data .vd-pipe { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 0; font-family: var(--f-mono); font-size: 11.5px; color: var(--faint); }
+#video-data .vd-pipe li + li::before { content: "→"; margin: 0 7px; color: var(--dash); }
+#video-data .vd-pipe li.on span { color: var(--ink); border-bottom: 1px solid var(--blue); }
+/* the stage is sticky on wide screens: if it is ever taller than the viewport, let it scroll instead of hiding its controls */
+@media (min-width: 961px) { #video-data .p-stage { max-height: calc(100vh - 24px); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; padding: 14px; margin: -14px; } }

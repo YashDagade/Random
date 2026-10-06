@@ -14,5 +14,9 @@
 #planning .planning-more[hidden] { display: none; }
 #planning .planning-tip { font-size: 12px; color: var(--muted); margin-top: 8px; }
 #planning .canvas-box canvas { cursor: default; }
-@media (min-width: 961px) { #planning .p-stage { gap: 10px; } #planning .p-stage .fig-row { gap: 10px 22px; } }
+@media (min-width: 961px) { #planning .p-stage { gap: 10px; } #planning .p-stage .fig-row { gap: 10px 32px; } }
 #planning .fig-col { gap: 4px; }
+/* keep long KaTeX from widening the prose column (implicit grid tracks are 'auto') */
+#planning .p-intro, #planning .p-after, #planning .steps { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 480px) { #planning .eq .katex-display { font-size: .86em; } }
+#planning .planning-dim { opacity: .4; }

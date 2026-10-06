@@ -9,7 +9,7 @@
     id: 'two-landscapes',
     nav: 'Loss vs energy landscape',
     title: 'The loss landscape is not the energy landscape',
-    lede: 'Two bowls, two gradient descents. Learning walks down the training loss over the weights. Thinking walks down the energy over the prediction. Every single point of the first bowl is an entire copy of the second.',
+    lede: 'Two bowls, two gradient descents. Learning walks down the training loss over the weights. Thinking walks down the energy over the prediction. Every point of the first bowl is a full set of weights, and so defines a whole new version of the second.',
     text: `
       <p>Both objects get drawn as bowls, so they are easy to confuse. They are functions on different spaces:</p>
       <div class="eq">$$\\begin{aligned}\\text{energy:}&\\quad E_\\theta(x,\\hat y)\\ \\text{ as a function of } \\hat y\\\\ \\text{loss:}&\\quad \\mathcal L(\\theta)=\\mathbb E_{(x,y)}\\big[J(\\hat y_N(\\theta),\\,y)\\big]\\end{aligned}$$<span class="why">the energy landscape lives over predictions ŷ, the loss landscape over weights θ.</span></div>
@@ -17,21 +17,22 @@
       <p>The <b>loss</b> scores a whole set of weights. $\\hat y_N(\\theta)$ is the prediction after $N$ thinking steps on $E_\\theta$, $J$ is the task loss (squared error in this toy, cross-entropy for text, p.7), and the expectation runs over training pairs. Its domain is weight space: 8,961 parameters here, 6.18M non-embedding parameters in the smallest paper model (Table D.1).</p>
       <div class="eq">$$\\begin{aligned}\\text{think:}&\\quad \\hat y_{i+1}=\\hat y_i-\\alpha\\,\\nabla_{\\hat y}E_\\theta(x,\\hat y_i)\\\\ \\text{learn:}&\\quad \\theta\\leftarrow\\theta-\\eta\\,\\nabla_{\\theta}\\mathcal L(\\theta)\\end{aligned}$$<span class="why">α: thinking step size (Eq. 1, p.7). η: learning rate of the weight optimizer (AdamW in the paper).</span></div>`,
     steps: [
-      { label: 'Two surfaces, two spaces', html: '<p>Left: the toy\'s training loss on a 2-D slice through weight space, around the trained weights $\\theta^*$ (blue dot). Right: the energy over predictions for one context at exactly those weights. The blue path is 4 thinking steps from $\\hat y_0$; it ends on the target mean $\\mu(x)$ (crosshair), so the loss here is at its floor.</p>' },
-      { label: 'A point on the left is a surface on the right', html: '<p>We moved $\\theta$ to $\\theta^*-0.5\\,d_1-0.5\\,d_2$. That changes all 8,768 matrix weights at once, so the right panel is a different function. The minimum (◇) slid from $\\mu(x)$ to about $(0.99,-0.31)$; the dashed contour shows where the basin was at $\\theta^*$. Thinking still converges, but to the wrong place. Drag the dot anywhere: the right panel is recomputed from the new weights.</p>' },
-      { label: 'Thinking moves on the energy landscape', html: '<p>At $\\theta^*-0.8\\,d_1+0.6\\,d_2$ this bowl is misplaced and much steeper: Hessian eigenvalues $\\lambda\\approx 2.5$ and $3.6$ at its minimum (readout) instead of about $0.85$. Near a minimum one step multiplies the error along each eigenvector by $1-\\alpha\\lambda$, here $-1.5$ and $-2.6$. Every step overshoots by more than it corrects, so the path zigzags outward and the energy <em>rises</em>. $\\mathcal L$ grades the whole procedure: the landscape together with the step size and step count it is used with.</p>' },
-      { label: 'Learning moves on the loss landscape', html: '<p>Now descend the left surface: $(a,b)\\leftarrow(a,b)-\\eta\\nabla_{(a,b)}\\mathcal L$, which is the true weight gradient projected onto $d_1,d_2$. As $\\theta$ slides home, the energy landscape is rebuilt at every step, its curvature relaxes and thinking lands on $\\mu(x)$ again. The loss stops at the noise floor of the batch (dashed): no weights can predict the noise in $y$.</p>' },
-      { label: 'Where training starts', html: '<p>The same kind of slice around the initial weights $\\theta_0$ (step 0, shared color scale). The whole neighbourhood is high (minimum 2.65 on this slice), and the energy at $\\theta_0$ is nearly flat, so 4 thinking steps barely move. Real training travels from $\\theta_0$ to $\\theta^*$ along directions that are not in either plane; see <a href="#learning">Watching a landscape learn</a>.</p>' },
-      { label: 'Same picture, different object', html: '<p>In 3-D both are bowls (drag to rotate). The paper only ever talks about energy landscapes. Its Fig 3 is a schematic energy landscape for "The dog caught the ___", "Adapted from [57]", and [57] is Li et al., <i>Visualizing the loss landscape of neural nets</i> (p.5, p.20): the drawing style came from loss landscapes, the object did not.</p>' },
+      { label: 'Two surfaces, two spaces', html: '<p>Left: the toy\'s training loss on a 2-D slice through weight space, centred on the trained weights $\\theta^*$ (blue dot). Right: the energy over predictions for one context, computed from exactly those weights. The blue path is 4 thinking steps from $\\hat y_0$ and ends on the target mean $\\mu(x)$ (crosshair). At $\\theta^*$ that happens for almost every context, which is why $\\mathcal L(\\theta^*)=0.076$ sits close to this batch\'s noise floor of 0.068.</p>' },
+      { label: 'A point on the left is a surface on the right', html: '<p>We moved $\\theta$ to $\\theta^*-0.5\\,d_1-0.5\\,d_2$. That changes all 8,768 matrix weights at once, so the right panel is a different function. Its minimum (◇) slid from $\\mu(x)$ to about $(0.99,-0.30)$; the dashed contour shows where the basin was at $\\theta^*$. Thinking still converges, but to the wrong place, and the loss on the left rises from 0.076 to 0.99. Drag the dot anywhere: the right panel is recomputed from the new weights.</p>' },
+      { label: 'Thinking moves on the energy landscape', html: '<p>At $\\theta^*-0.8\\,d_1+0.6\\,d_2$ the bowl is misplaced and much steeper: Hessian eigenvalues $\\lambda\\approx 2.5$ and $3.6$ at its minimum (readout) instead of about $0.85$. Near a minimum one step with $\\alpha=1$ multiplies the error along each eigenvector by $1-\\alpha\\lambda$, here $-1.5$ and $-2.6$. Every step overshoots by more than it corrects, so the path bounces across the valley and the energy <em>rises</em>. The loss here is 6.98. $\\mathcal L$ grades the whole procedure: the landscape together with the step size and step count it is used with: with $\\alpha<2/\\lambda_{\\max}\\approx 0.56$ this same bowl would converge, though still to the wrong place.</p>' },
+      { label: 'Learning moves on the loss landscape', html: '<p>Now descend the left surface: $(a,b)\\leftarrow(a,b)-\\eta\\,\\nabla_{(a,b)}\\mathcal L$. The two components are $d_1\\!\\cdot\\!\\nabla_\\theta\\mathcal L$ and $d_2\\!\\cdot\\!\\nabla_\\theta\\mathcal L$, the weight gradient projected onto the plane (estimated here from the stored slice). As $\\theta$ slides home, the energy landscape is rebuilt at every step, its curvature relaxes and thinking lands near $\\mu(x)$ again. The loss settles just above the noise floor of this batch (dashed): no weights can predict the noise in $y$.</p>' },
+      { label: 'Where training starts', html: '<p>The same kind of slice around the initial weights $\\theta_0$ (training step 0, same color scale). The whole neighbourhood is high: 2.83 at the centre, 2.65 at best. The energy at $\\theta_0$ is almost flat and knows nothing about the context: its minimum ◇ sits far from $\\mu(x)$, and the 4 thinking steps creep toward it. Real training travels from $\\theta_0$ to $\\theta^*$ along directions that lie in neither plane; see <a href="#learning">Watching a landscape learn</a>.</p>' },
+      { label: 'Same picture, different object', html: '<p>In 3-D both are bowls (drag to rotate). The paper only ever talks about energy landscapes. Its Fig 3 is a schematic energy landscape for "The dog caught the ___", marked "Adapted from [57]", and [57] is Li et al., <i>Visualizing the loss landscape of neural nets</i> (p.5, p.20). Li et al. drew loss over weights; the paper borrowed the look for energy over predictions.</p>' },
     ],
     after: `
       <h3>Why the distinction matters</h3>
       <ul>
         <li>"Convex surrounding the ground truth solution" (p.7) is a claim about $E_\\theta$ over $\\hat y$, a shape that training creates. It says nothing about $\\mathcal L$ over $\\theta$, which for a deep network is non-convex.</li>
         <li>$\\mathcal L$ is defined through the energy. Its gradient must pass through every thinking step, $\\partial\\hat y_N/\\partial\\theta$, which is why training needs Hessian-vector products (p.7; see <a href="#second-order">Gradients of gradients</a>).</li>
+        <li>The two loops nest. Every learning step first runs the $N$ thinking steps on each training example, scores where they ended, and only then moves $\\theta$ (Alg. 1). At test time only the inner loop runs.</li>
         <li>Thinking never sees the target $y$. At test time the energy is the only signal (Alg. 2). Learning is the only place $y$ enters.</li>
       </ul>
-      <p class="note">How the left map is made: Li et al. (2018) filter-normalized random directions. Each row of a Gaussian direction is rescaled to the norm of the same row of θ; biases are not moved. Height: the Algorithm 1 loss on a fixed batch of 512 pairs, N = 4 steps, per-sample α ∈ [0.5, 2], Langevin σ = 0.05, no replay (toy2d.param_landscape). A 2-D slice of an 8,768-D function can hide every other direction. "live" re-runs the same objective on a new random batch of 512 in your browser; away from θ* a few contexts fail badly, so it can differ from the slice by batch noise (for example 1.26 to 1.80 at one point).</p>`,
+      <p class="note">How the left map is made: Li et al. (2018) filter-normalized random directions. Each row of a Gaussian direction is rescaled to the norm of the same row of θ, so a = 1 means a perturbation as large as each unit's own weights; biases are not moved. Height: the Algorithm 1 loss on a fixed batch of 512 pairs, N = 4 steps, per-sample α ∈ [0.5, 2], Langevin σ = 0.05, no replay (toy2d.param_landscape). A 2-D slice of a function of 8,961 weights can hide every other direction. "live" re-runs the same objective on a new random batch of 512 in your browser; away from θ* a few contexts fail badly, so it can differ from the slice by batch noise (for example 1.26 to 1.80 at one point).</p>`,
     source: [{ kind: 'toy', note: 'toy 2-D EBT: weights, loss slice param_landscape, energies recomputed live' }, { kind: 'paper', note: 'Eq. 1, Alg. 1 (p.7), Fig 3 (p.5)' }],
 
     figure(stage, ctx) {
@@ -151,13 +152,13 @@
       const CTXS = [0, 1, 2, 4].map(i => M.contexts[i]);
       const S = { slice: 'final', a: 0, b: 0, ci: 0, y0: [-1.6, 1.4], view: 'map', k: NSTEP, learn: [], live: null, liveFor: '' };
       const view3 = { yaw: -0.62, pitch: 0.95 };
-      const row = h('div', { class: 'fig-row' }); stage.appendChild(row);
-      const FL = lib.frame(row, { label: 'Loss landscape · learning', sub: 'ℒ(θ* + a·d<sub>1</sub> + b·d<sub>2</sub>) over weights · drag θ' });
-      FL.wrap.style.flex = '1 1 280px';
+      const row = h('div', { class: 'fig-row', style: { columnGap: '18px' } }); stage.appendChild(row);
+      const FL = lib.frame(row, { label: 'Loss landscape · learning', sub: 'over weights: ℒ(θ*+a·d₁+b·d₂) · drag' });
+      FL.wrap.style.flex = '1 1 225px';
       const cvL = lib.canvas(FL.frame, 300, 332, { label: 'Training loss over a two-dimensional slice of weight space. Drag the blue point to choose the weights.' });
       const roL = h('div', { class: 'readout' }); FL.wrap.appendChild(roL);
-      const FE = lib.frame(row, { label: 'Energy landscape · thinking', sub: 'E<sub>θ</sub>(x, ŷ) over predictions · click to set ŷ<sub>0</sub>' });
-      FE.wrap.style.flex = '1 1 280px';
+      const FE = lib.frame(row, { label: 'Energy landscape · thinking', sub: 'over predictions: E<sub>θ</sub>(x, ŷ) · click' });
+      FE.wrap.style.flex = '1 1 225px';
       const cvE = lib.canvas(FE.frame, 300, 332, { label: 'Energy over the two-dimensional prediction at the chosen weights, with a thinking path.' });
       const roE = h('div', { class: 'readout' }); FE.wrap.appendChild(roE);
       const row2 = h('div', { class: 'fig-row' }); stage.appendChild(row2);
@@ -188,13 +189,16 @@
       let net = null, c0 = null, G = null, P = null, B = null, refBasin = {}, busyT = null;
       function recompute(fast) {
         net = makeNet(S.slice, S.a, S.b); const x = CTXS[S.ci].x; c0 = ctxConst(net, x);
-        G = grid(net, c0, fast ? 34 : 60); G.q = lib.quantile(G.E, 0.55);
+        G = grid(net, c0, fast ? 30 : 60); G.q = lib.quantile(G.E, 0.55); energyLayer = null;
         P = think(net, c0, S.y0, NSTEP, ALPHA); B = basinMin(net, c0, G);
         draw();
         if (!fast) scheduleLive();
       }
+      let livePending = false;
       function scheduleLive() {
         clearTimeout(busyT);
+        if (!ctx.visible()) { livePending = true; return; }
+        livePending = false;
         const key = S.slice + S.a.toFixed(4) + S.b.toFixed(4);
         if (S.liveFor === key && S.live != null) return;
         busyT = setTimeout(() => { S.live = liveLoss(net); S.liveFor = key; readouts(); }, 120);
@@ -207,6 +211,21 @@
 
       // ---------------- drawing ----------------
       const BOX = { x: 30, y: 6, w: 262, h: 262 };
+      function offscreen(dpr, paint) { // cached layer at the canvas' pixel density, drawn in box-local coordinates
+        const o = document.createElement('canvas'); o.width = Math.round(BOX.w * dpr); o.height = Math.round(BOX.h * dpr);
+        const g = o.getContext('2d'); g.scale(dpr, dpr); paint(g); return o;
+      }
+      const lossLayers = {};
+      let energyLayer = null;
+      function buildEnergyLayer() {
+        energyLayer = offscreen(cvE.dpr, (g) => {
+          lib.heatmap(g, G.E, 0, 0, BOX.w, BOX.h, { range: [G.lo, G.q], gamma: 0.7 });
+          const levels = Array.from({ length: 10 }, (_, i) => G.lo + (G.q - G.lo) * Math.pow((i + 1) / 10, 1.4));
+          lib.contours(g, G.E, 0, 0, BOX.w, BOX.h, levels, { color: 'rgba(17,17,17,0.22)', width: 0.8 });
+          const moved = S.slice !== 'final' || Math.hypot(S.a, S.b) > 1e-6;
+          if (moved) { const rb = basinAtStar(S.ci); g.save(); g.setLineDash([2, 2.6]); lib.contours(g, rb.E, 0, 0, BOX.w, BOX.h, [rb.level], { color: 'rgba(17,17,17,0.9)', width: 1.3 }); g.restore(); }
+        });
+      }
       function colorbar(c, x, y, w, hh, lo, hi, ticks, fmt, label) {
         for (let i = 0; i < w; i++) { const col = lib.cmap(i / (w - 1)); c.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`; c.fillRect(x + i, y, 1.2, hh); }
         c.strokeStyle = C.faint; c.lineWidth = 0.6; c.strokeRect(x + 0.5, y + 0.5, w - 1, hh - 1);
@@ -227,9 +246,12 @@
       }
       function drawLossMap() {
         const c = cvL.ctx, Gs = SL[S.slice];
-        lib.heatmap(c, Gs, BOX.x, BOX.y, BOX.w, BOX.h, { key: 'tl-loss-' + S.slice, range: [LLO, LHI], flipY: true, gamma: 0.9 });
-        const lev = []; for (let v = -1; v <= 1.75; v += 0.25) lev.push(v);
-        lib.contours(c, Gs, BOX.x, BOX.y, BOX.w, BOX.h, lev, { flipY: true, color: 'rgba(17,17,17,0.22)', width: 0.8 });
+        if (!lossLayers[S.slice]) lossLayers[S.slice] = offscreen(cvL.dpr, (g) => {
+          lib.heatmap(g, Gs, 0, 0, BOX.w, BOX.h, { range: [LLO, LHI], flipY: true, gamma: 0.9 });
+          const lev = []; for (let v = -1; v <= 1.75; v += 0.25) lev.push(v);
+          lib.contours(g, Gs, 0, 0, BOX.w, BOX.h, lev, { flipY: true, color: 'rgba(17,17,17,0.22)', width: 0.8 });
+        });
+        c.drawImage(lossLayers[S.slice], BOX.x, BOX.y, BOX.w, BOX.h);
         c.strokeStyle = C.ink; c.lineWidth = 1; c.strokeRect(BOX.x + 0.5, BOX.y + 0.5, BOX.w - 1, BOX.h - 1);
         frameTicks(c, [-1, 0, 1], (v) => abToPx(v, v), (v) => v === 0 ? '0' : (v < 0 ? '−1' : '1'));
         lib.text(c, 'a (along d₁) →', BOX.x + BOX.w, BOX.y + BOX.h + 18, { size: 10.5, kind: 'mono', color: C.ink, align: 'right' });
@@ -245,11 +267,8 @@
       function drawEnergyMap() {
         const c = cvE.ctx;
         c.save(); c.beginPath(); c.rect(BOX.x, BOX.y, BOX.w, BOX.h); c.clip();
-        lib.heatmap(c, G.E, BOX.x, BOX.y, BOX.w, BOX.h, { range: [G.lo, G.q], gamma: 0.7 });
-        const levels = Array.from({ length: 10 }, (_, i) => G.lo + (G.q - G.lo) * Math.pow((i + 1) / 10, 1.4));
-        lib.contours(c, G.E, BOX.x, BOX.y, BOX.w, BOX.h, levels, { color: 'rgba(17,17,17,0.22)', width: 0.8 });
-        const moved = S.slice !== 'final' || Math.hypot(S.a, S.b) > 1e-6;
-        if (moved) { const rb = basinAtStar(S.ci); c.save(); c.setLineDash([2, 2.6]); lib.contours(c, rb.E, BOX.x, BOX.y, BOX.w, BOX.h, [rb.level], { color: 'rgba(17,17,17,0.9)', width: 1.3 }); c.restore(); }
+        if (!energyLayer) buildEnergyLayer();
+        c.drawImage(energyLayer, BOX.x, BOX.y, BOX.w, BOX.h);
         const mu = muOf(CTXS[S.ci].x); crosshair(c, yToPx(mu));
         const pm = yToPx(B.y); c.save(); c.strokeStyle = C.ink; c.fillStyle = '#fff'; c.lineWidth = 1.3; c.beginPath(); c.moveTo(pm[0], pm[1] - 6); c.lineTo(pm[0] + 6, pm[1]); c.lineTo(pm[0], pm[1] + 6); c.lineTo(pm[0] - 6, pm[1]); c.closePath(); c.fill(); c.stroke(); c.restore();
         if (Math.hypot(B.y[0] - mu[0], B.y[1] - mu[1]) > 0.25) lib.text(c, 'min', pm[0] + 8, pm[1] - 6, { size: 10.5, kind: 'mono', color: C.ink });
@@ -323,7 +342,7 @@
         const live = (S.live != null && S.liveFor === key) ? S.live.toFixed(3) : '…';
         roL.innerHTML = `<span>a <b>${S.a.toFixed(2)}</b> b <b>${S.b.toFixed(2)}</b></span><span>ℒ slice <b>${Ls < 1 ? Ls.toFixed(3) : Ls.toFixed(2)}</b></span><span>ℒ live, new batch <b>${live}</b></span>`;
         const k = Math.min(S.k, P.path.length - 1), y = P.path[k], mu = muOf(CTXS[S.ci].x), d = Math.hypot(y[0] - mu[0], y[1] - mu[1]);
-        roE.innerHTML = `<span>ŷ${sub(k)} <b>(${y[0].toFixed(2)}, ${y[1].toFixed(2)})</b></span><span>‖ŷ${sub(k)}−μ‖ <b>${d.toFixed(3)}</b></span><span>E <b>${P.Es[k].toFixed(3)}</b></span><span>min ◇ <b>(${B.y[0].toFixed(2)}, ${B.y[1].toFixed(2)})</b></span><span>λ at min <b>${B.lam[0].toFixed(2)}, ${B.lam[1].toFixed(2)}</b></span>`;
+        roE.innerHTML = `<span>ŷ${sub(k)} <b>(${y[0].toFixed(2)}, ${y[1].toFixed(2)})</b></span><span>‖ŷ${sub(k)}−μ‖ <b>${d.toFixed(3)}</b></span><span>E <b>${P.Es[k].toFixed(3)}</b></span><span>min ◇ <b>(${B.y[0].toFixed(2)}, ${B.y[1].toFixed(2)})</b></span><span>Hessian λ at ◇ <b>${B.lam[0].toFixed(2)}, ${B.lam[1].toFixed(2)}</b></span>`;
       }
       function draw() {
         if (S.view === '3d') draw3D();
@@ -340,17 +359,21 @@
       };
       function moveTheta(ev, fast) { const [px, py] = cvL.toLocal(ev); const [a, b] = pxToAb(px, py); S.a = a; S.b = b; S.k = NSTEP; recompute(fast); }
       let rafPending = false, lastEv = null;
-      cvL.canvas.addEventListener('pointerdown', (ev) => { cvL.canvas.setPointerCapture && cvL.canvas.setPointerCapture(ev.pointerId); onDownL(ev); });
+      const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) { /* synthetic or stale pointer */ } };
+      cvL.canvas.addEventListener('pointerdown', (ev) => { capture(cvL.canvas, ev); onDownL(ev); });
       cvL.canvas.addEventListener('pointermove', (ev) => {
         if (rot) { rotate(ev); return; }
         if (!drag) return; lastEv = ev; if (rafPending) return; rafPending = true;
         requestAnimationFrame(() => { rafPending = false; if (drag && lastEv) moveTheta(lastEv, true); });
       });
-      const up = () => { if (drag) { drag = null; recompute(false); } rot = null; };
+      const up = () => {
+        if (drag) { drag = null; if (lastEv) { const [px, py] = cvL.toLocal(lastEv); [S.a, S.b] = pxToAb(px, py); } lastEv = null; recompute(false); }
+        rot = null;
+      };
       cvL.canvas.addEventListener('pointerup', up); cvL.canvas.addEventListener('pointercancel', up);
       function rotate(ev) { view3.yaw = rot.yaw + (ev.clientX - rot.x) * 0.01; view3.pitch = Math.max(0.3, Math.min(1.35, rot.pitch + (ev.clientY - rot.y) * 0.006)); draw(); }
       cvE.canvas.addEventListener('pointerdown', (ev) => {
-        if (S.view === '3d') { cvE.canvas.setPointerCapture && cvE.canvas.setPointerCapture(ev.pointerId); rot = { x: ev.clientX, y: ev.clientY, yaw: view3.yaw, pitch: view3.pitch }; return; }
+        if (S.view === '3d') { capture(cvE.canvas, ev); rot = { x: ev.clientX, y: ev.clientY, yaw: view3.yaw, pitch: view3.pitch }; return; }
         const [px, py] = cvE.toLocal(ev); if (px < BOX.x || px > BOX.x + BOX.w || py < BOX.y || py > BOX.y + BOX.h) return;
         S.y0 = M.fromPx(px, py, BOX); P = think(net, c0, S.y0, NSTEP, ALPHA); animateThink();
       });
@@ -368,20 +391,32 @@
       function animateLearn() {
         stopAll(); S.k = NSTEP;
         if (!S.learn.length || Math.hypot(S.learn[S.learn.length - 1][0] - S.a, S.learn[S.learn.length - 1][1] - S.b) > 1e-9) S.learn = [[S.a, S.b]];
-        const eta = 0.02, hstep = 0.01; let it = 0;
+        const eta = 0.12, hstep = 0.01; let it = 0; // plain GD on the plane; each step capped at 0.05 in (a, b)
         const tick = () => {
           const L = (a, b) => sliceL(S.slice, a, b);
           const ga = (L(S.a + hstep, S.b) - L(S.a - hstep, S.b)) / (2 * hstep), gb = (L(S.a, S.b + hstep) - L(S.a, S.b - hstep)) / (2 * hstep);
           let da = -eta * ga, db = -eta * gb; const n = Math.hypot(da, db), cap = 0.05;
           if (n > cap) { da *= cap / n; db *= cap / n; }
           S.a = Math.max(-1, Math.min(1, S.a + da)); S.b = Math.max(-1, Math.min(1, S.b + db)); S.learn.push([S.a, S.b]); it++;
-          const done = Math.hypot(da, db) < 0.0015 || it >= 140;
+          const done = Math.hypot(da, db) < 0.001 || it >= 160;
           recompute(!done);
           return done;
         };
         if (lib.reducedMotion) { while (!tick()); return; }
-        tLearn = setInterval(() => { if (tick()) { clearInterval(tLearn); tLearn = null; } }, 70);
+        tLearn = setInterval(() => { if (tick()) { clearInterval(tLearn); tLearn = null; } }, 60);
       }
+
+      // The stage is sticky (base.css). When it is taller than the window, stick it higher so that everything down to
+      // the step bar stays on screen while the reader works through the steps; a stacked (very tall) stage just scrolls.
+      function fitSticky() {
+        const bar = stage.querySelector('.stepbar'); if (!bar) return;
+        const need = bar.getBoundingClientRect().bottom - stage.getBoundingClientRect().top + 14, room = window.innerHeight;
+        if (need + 24 <= room) { stage.style.position = ''; stage.style.top = ''; }
+        else if (need > room * 1.45) { stage.style.position = 'static'; stage.style.top = ''; }
+        else { stage.style.position = ''; stage.style.top = Math.round(room - need) + 'px'; }
+      }
+      window.addEventListener('resize', () => requestAnimationFrame(fitSticky));
+      setTimeout(fitSticky, 0);
 
       recompute(false);
       const presets = {
@@ -401,6 +436,7 @@
           if (i === 2) animateThink();
           if (i === 3) animateLearn();
         },
+        show() { fitSticky(); if (livePending) scheduleLive(); },
         hide() { stopAll(); },
       };
     },

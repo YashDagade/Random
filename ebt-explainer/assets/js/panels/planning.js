@@ -272,8 +272,8 @@
       this.g = []; this.c = []; this.gFE = 0; this.cFE = 0; this.gIt = 0; this.cIt = 0; this.gBest = Infinity; this.gE = this.cands.map(cd => Core.energyOnly(world, s0, cd, this.P));
       this.budget = 6000; this.done = false;
     }
-    advance(fe) { // spend up to `fe` forward-pass equivalents on each planner
-      const tg = Math.min(this.budget, this.gFE + fe), tc = Math.min(this.budget, this.cFE + fe);
+    advance(fe) { // advance a shared compute clock by `fe` forward-pass equivalents; each planner spends up to the clock
+      this.clock = Math.min(this.budget, (this.clock || 0) + fe); const tg = this.clock, tc = this.clock;
       while (this.gFE + 3 * this.M <= tg) {
         this.gE = this.cands.map(cd => Core.gdStep(this.world, this.s0, cd, this.P, this.cfg.alphaS, 0, this.r1));
         this.gFE += 3 * this.M; this.gIt++; this.gBest = Math.min(this.gBest, ...this.gE); this.g.push([this.gFE, this.gBest, this.gIt]);
@@ -281,7 +281,7 @@
       while (this.cFE + this.cfg.pop <= tc) {
         this.cFE += Core.cemIter(this.world, this.s0, this.cem, this.P, this.cfg, this.r2); this.cIt++; this.c.push([this.cFE, this.cem.bestE, this.cIt]);
       }
-      if (this.gFE + 3 * this.M > this.budget && this.cFE + this.cfg.pop > this.budget) this.done = true;
+      if (this.clock >= this.budget) this.done = true;
     }
     gPlan() { let b = 0; const E = this.cands.map(cd => Core.energyOnly(this.world, this.s0, cd, this.P)); E.forEach((e, j) => { if (e < E[b]) b = j; }); return { plan: this.cands[b], E: E[b], all: this.cands, Es: E }; }
     cPlan() { const A = (this.cem.best || this.cem.mu); return { A, S: null }; }
@@ -300,26 +300,28 @@
     title: 'Planning and MPC with an energy',
     lede: 'Make the prediction ŷ a plan and the same machinery plans: thinking bends a trajectory downhill on an energy, Best-of-M chooses between routes, and model predictive control thinks again after every move. The paper only sketches this (App. A.3); everything here is our extension, computed live.',
     text: `
-      <p>The paper runs no planning experiments. Its one passage on control (App. A.3, p.26) imagines a world model of "the current context, future, as well as future actions" that acts as a policy by "holding the current context (past states) constant, and minimizing the energy by propagating the gradient back to the action inputs and future state predictions". This panel does exactly that, with a hand-written energy in place of a learned one.</p>
-      <p>The context is $x=(s_0,g,\\text{map})$: robot position, goal, obstacles. The prediction is a plan over $H=12$ steps, $\\hat y=(a_{0:H-1},\\,\\hat s_{1:H})$: velocity commands and the imagined positions they should reach (48 numbers). Its energy is a sum of simple terms:</p>
-      <div class="eq">$$\\begin{aligned}E(x,\\hat y)=\\;&w_g\\,\\rho(\\hat s_H-g)+w_o{\\textstyle\\sum_t}\\,\\phi(\\hat s_t)\\\\&+{\\textstyle\\sum_t}\\big(w_e\\|a_t\\|^2+w_s\\|a_t-a_{t-1}\\|^2\\big)\\\\&+w_d{\\textstyle\\sum_t}\\|\\hat s_{t+1}-\\hat s_t-a_t\\|^2\\end{aligned}$$<span class="why">ρ(d) = √(‖d‖²+1) − 1 is a smooth distance to the goal g. φ(s) = Σ max(0, r + m − ‖s − c‖)² penalizes entering a margin m around each obstacle (centre c, radius r). The last term asks imagined states to follow from the actions.</span></div>
-      <p>Planning is the paper's inference procedure, unchanged: draw $M$ random plans $\\hat y_0\\sim\\mathcal N(0,I)$, step $\\hat y_{i+1}=\\hat y_i-\\alpha\\nabla_{\\hat y}E+\\eta_i$ (Eq. 1, and Eq. 2 when Langevin noise $\\eta_i$ is on), and keep $\\arg\\min_j E(x,\\hat y_{N,j})$ (Alg. 2, p.7). <b>Model predictive control</b> (MPC) wraps this in a loop: execute only $a_0$, observe where the robot really is, shift the plan one step forward (a warm start), think a little, repeat.</p>`,
+      <p>The paper runs no planning experiments. Its one passage on control (App. A.3, p.26) imagines a world model of "the current context, future, as well as future actions" that acts as a policy by "holding the current context (past states) constant, and minimizing the energy by propagating the gradient back to the action inputs and future state predictions". This panel does exactly that, with a hand-written energy standing in for a learned one.</p>
+      <p>The context is $x=(s_0,g,\\text{map})$: robot position, goal, obstacles. The prediction is a plan over $H=12$ steps, $\\hat y=(a_{0:H-1},\\,\\hat s_{1:H})$: velocity commands $a_t$ and the imagined positions $\\hat s_t$ they should reach, 48 numbers in all. Its energy sums simple terms:</p>
+      <div class="eq">$$\\begin{aligned}E(x,\\hat y)=\\;&w_g\\,\\rho(\\hat s_H-g)+w_o{\\textstyle\\sum_t}\\,\\phi(\\hat s_t)\\\\&+{\\textstyle\\sum_t}\\big(w_e\\|a_t\\|^2+w_s\\|a_t-a_{t-1}\\|^2\\big)\\\\&+w_d{\\textstyle\\sum_t}\\|\\hat s_{t+1}-\\hat s_t-a_t\\|^2\\end{aligned}$$<span class="why">ρ(d) = √(‖d‖²+1) − 1 is a smooth distance to the goal g. φ(s) = Σ max(0, r + m − ‖s − c‖)² penalizes entering a margin m = 0.3 around each obstacle (centre c, radius r). The middle line prices effort and jerky steering; the last asks imagined states to follow from the actions, with ŝ₀ = s₀ fixed. Also in E but not written out: a weak pull of every ŝ_t toward g (weight 0.04), φ at segment midpoints and at the walls, and a speed limit ‖a_t‖ ≤ 0.8 counted as effort. Weights: w_g = 4, w_o = 12, w_e = 0.1, w_s = 0.6, w_d = 4.</span></div>
+      <p>Planning is the paper's inference procedure: $M$ random plans (actions $a_t\\sim\\mathcal N(0,I)$, imagined states initialized where those actions lead), steps $\\hat y_{i+1}=\\hat y_i-\\alpha\\nabla_{\\hat y}E+\\eta_i$ (Eq. 1; Eq. 2 adds Langevin noise $\\eta_i$), and the plan with the lowest final energy wins (Alg. 2, p.7). One safety change: no point of the plan moves more than 0.5 per step. The paper mentions clamping prediction gradients as a stabilizer but never uses it in its experiments (p.42). <b>Model predictive control</b> (MPC) wraps this in a loop: execute only $a_0$, observe where the robot really is, shift the plan one step forward as a warm start, think a little, repeat.</p>`,
     steps: [
-      { label: 'A plan is a prediction', html: '<p>Six random plans $\\hat y_0$, drawn faintly. Nothing about the map has been used yet, so they wander and cut through the pillar. The bars split the best plan\'s energy into its terms; the obstacle term dominates.</p>' },
-      { label: 'Thinking bends the plans', html: '<p>Each iteration is one forward pass for $E$ and one backward pass for $\\nabla_{\\hat y}E$ over all 48 numbers. The plans slide off the pillar and straighten toward the goal, and the curve tracks every candidate\'s energy. This is Eq. 1 with a trajectory as $\\hat y$.</p>' },
-      { label: 'Verification picks a route', html: '<p>Eight candidates split above and below the pillar: two valleys of $E$. Alg. 2 keeps the lowest. The dashed line averages the best plan from each valley and runs through the pillar. A regressor trained on both routes would predict that average. The paper reports the same averaging for its convex-basin training on multi-modal data (blur, p.29; Limitations, p.17).</p>' },
-      { label: 'Imagined states must be reachable', html: '<p>A.3 optimizes "future state predictions" alongside actions. With the dynamics weight lowered to $w_d=0.3$, the imagined positions (blue) still go around the pillar, but the real effect of the actions (dotted) falls short. Press <b>[ play ]</b>: the robot follows its actions, not its imagination, and hits the pillar. The consistency term is what makes imagination executable; in a learned world model it is the learned compatibility of states and actions.</p>' },
-      { label: 'Act, shift, think again', html: '<p>MPC executes $a_0$, shifts every candidate one step forward in time and spends $K=25$ more iterations from there. The bars count thinking per move: hundreds before the first move, a few dozen after. The paper\'s replay buffer uses the same idea in training: keep optimizing earlier predictions instead of restarting from noise (Sec 3.3).</p>' },
-      { label: 'Re-planning absorbs model error', html: '<p>A wind pushes the robot down 0.06 per step, and the planner\'s model does not include it. The gray robot plans once and executes blindly (open loop), so it drifts into an obstacle or misses. The blue robot re-plans from where it really is after each move. A world model only has to be right a few steps ahead if you re-plan.</p>' },
-      { label: 'Gradient vs CEM: compute', html: '<p>Same energy, same start, equal compute. CEM (gray) samples 64 action sequences per iteration, keeps the 8 best and refits its Gaussian. Gradient descent (blue) moves $M$ plans, each costing a forward and a backward pass, about 3 forward-pass equivalents. Both search over actions only here (shooting), so the race is fair. Read the counters under the plot.</p>' },
-      { label: 'Traps: imagined states escape', html: '<p>A cup opens toward the robot. CEM over actions (gray) settles inside it. Gradient descent over actions <em>and</em> imagined states with eight candidates can move positions around the rim first and let the dynamics term pull the actions along. Trajectory optimization calls this collocation, as opposed to shooting.</p>' },
+      { label: 'A plan is a prediction', html: '<p>Six random plans $\\hat y_0$, drawn faintly, bold for the lowest energy. Each is 12 velocity commands; the dots are the imagined positions $\\hat s_t$. The map has not been consulted yet, so they wander and cut through the pillar. The bars split the bold plan\'s energy into its terms.</p>' },
+      { label: 'Thinking bends the plans', html: '<p>Each iteration costs one forward pass for $E$ and one backward pass for $\\nabla_{\\hat y}E$ over all 48 numbers. The plans slide off the pillar and straighten toward the goal, and the plot tracks every candidate\'s energy. This is Eq. 1 with a trajectory as $\\hat y$. The line under the bars estimates $\\lambda_{\\max}$, the sharpest curvature of $E$ at the bold plan: plain gradient descent is stable only for $\\alpha<2/\\lambda_{\\max}$, which is why $\\alpha$ is small here and 600 iterations are spent before the first move.</p>' },
+      { label: 'Verification picks a route', html: '<p>Eight candidates split above and below the pillar: two valleys of $E$. Alg. 2 keeps the lowest. The dashed line averages the best plan of each valley. It runs through the pillar at about 25 times the best plan\'s energy, and it is what a regressor trained on both routes would predict, since squared error is minimized by the mean. The paper reports the same averaging for its convex-basin training on multi-modal data (blurry images, p.29; Limitations, p.17).</p>' },
+      { label: 'Imagined states must be reachable', html: '<p>A.3 optimizes "future state predictions" alongside actions. Here the dynamics weight is lowered to $w_d=0.3$: the imagined positions (blue) still bend around the pillar, but the real effect of the actions (dotted) does not. The loop is open, so <b>[ play ]</b> executes all 12 actions without re-planning, and the robot follows them into the pillar (10 of 10 draws). Switch the loop to MPC and it arrives anyway, in about 16 moves instead of 12: re-planning from the true position corrects the bad imagination one move at a time. In a learned world model, this consistency term is the learned compatibility of states and actions.</p>' },
+      { label: 'Act, shift, think again', html: '<p>MPC executes $a_0$, shifts every candidate one step forward in time and spends $K=25$ iterations from there. The bars count thinking per move: 600 iterations before the first move, 25 after each. The shift (a warm start) is what makes 25 enough. Turn it off under <b>[ more ]</b> and each move starts from fresh random plans: on this slalom the robot then reached the goal in only 4 of 10 draws, against 10 of 10 with the shift, which still succeeds with $K=5$. The paper\'s replay buffer is a training-time cousin: restarting from earlier predictions simulates longer optimization trajectories than the 2 or 3 steps actually run (Sec 3.3).</p>' },
+      { label: 'Re-planning absorbs model error', html: '<p>A wind pushes the robot down 0.06 per step, and the planner\'s model does not include it. The gray robot plans once and executes blindly (open loop): it drifts by about 12 × 0.06 = 0.72 and misses (or crashes, in 2 of 10 draws). The black robot re-plans from where it really is after every move and reaches the goal in 10 of 10 draws; re-planning every 5 moves (under <b>[ more ]</b>) does too. Feedback lets an imperfect model work: it only has to be right until the next re-plan, not over the whole horizon.</p>' },
+      { label: 'Gradient vs CEM: compute', html: '<p>Same energy, same start, equal compute. CEM (black, dashed) samples 64 action sequences per iteration, keeps the 8 best and refits its Gaussian. Gradient descent (blue) moves $M=2$ plans, each step a forward and a backward pass, charged as 3 forward-pass equivalents. Both search over actions only here (shooting), so the race is fair. The counters show who first gets within 10% of the best plan either method found.</p>' },
+      { label: 'Traps: imagined states escape', html: '<p>A cup opens toward the robot. CEM over actions (gray) heads straight for the goal and stalls in front of the cup (10 of 10 draws). Gradient descent over actions <em>and</em> imagined states, with eight candidates, can move positions around the rim first and let the dynamics term pull the actions along: it escapes in 10 of 10. Trajectory optimization calls this collocation, as opposed to shooting. The win is not gradients alone: with the same 8 candidates over actions only, gradient descent crashed into the cup in 9 of 10 draws, and a single collocation plan ($M=1$) got stuck in 9 of 10. Both toggles are below.</p>' },
     ],
     after: `
       <h3>What the race shows</h3>
-      <p>On this toy (24 action numbers), gradient descent reaches a near-best plan with roughly 3 to 10 times fewer forward-pass equivalents than CEM, but it needs 2 to 4 times more sequential iterations, because this hand-written energy is stiff and forces a small α. CEM needs no gradient and samples in parallel, so on a GPU its latency is set by its few iterations. The balance tips toward gradients as plans get longer and higher-dimensional, where a fixed sample budget covers less of the space: the curse of dimensionality the paper raises against contrastive training (p.6–7).</p>
+      <p>Over ten draws on the slalom with $M=2$, CEM needed 2.8 to 8.9 times more forward-pass equivalents than gradient descent to get within 10% of the best plan in nine of them; in the tenth it settled on a worse route and never got there. Gradient descent needed 1.2 to 3.8 times more sequential iterations. With $M=6$ the compute gap shrinks to 1.5 to 3 times, because every candidate pays for its own gradient. Two caveats pull in opposite directions. Charging 3 forward passes per gradient step (F ≈ 2N, B ≈ 4N FLOPs per token, p.35) is conservative for gradients: a backward pass to the input alone skips the weight gradients and costs about one forward pass. But CEM needs no gradient and its 64 samples run in parallel, so on a GPU its latency is set by its fewer iterations.</p>
+      <h3>Why shooting needs short horizons</h3>
+      <p>Over actions alone, the first action moves every later state, so the curvature of $E$ grows with the horizon. At converged slalom plans, $\\lambda_{\\max}\\approx$ 190, 530 and 830 for $H=$ 6, 12 and 24; over actions and imagined states it stays near 40 to 60. A step size that is stable at $H=12$ is not at $H=24$, and in our runs gradient shooting with $M=2$ then stalled at high energy while CEM still found a good plan. Optimizing the imagined states too (collocation) is what keeps gradient planning well conditioned here. Try <b>horizon H</b> under <b>[ more ]</b> and watch the $\\lambda_{\\max}$ line. The familiar argument that gradients beat sampling in high dimensions, the curse of dimensionality the paper raises against contrastive training (p.6–7), concerns how many samples a search needs; this toy does not test it.</p>
       <h3>Replacing the hand-written energy</h3>
-      <p>A learned planner would train $E_\\theta(x,\\hat y)$ with Alg. 1 on logged trajectories: $x$ the encoded past, $\\hat y$ future states and actions, $J$ the distance from $\\hat y_N$ to the logged future. The goal enters as one more additive energy term, the composability of Facet 4 (p.38), or as context. Three lessons transfer from the paper. Training shapes the landscape to be descended in 2 to 3 steps (p.26), not the hundreds needed here. The convex-basin bias merges alternative routes (p.29). And a planner is an adversary of its verifier: at small data scale Best-of-10 sometimes picked low-energy wrong answers (p.28), and an optimizer searches harder than random sampling.</p>
-      <p class="note">Beyond the paper: all of this panel extends App. A.3. The energy is written by hand, its gradients are analytic and checked against finite differences, and every number is computed live in your browser. Forward-pass equivalents assume a backward pass costs about two forward passes (F ≈ 2N, B ≈ 4N FLOPs per token, p.35).</p>`,
+      <p>A learned planner would train $E_\\theta(x,\\hat y)$ with Alg. 1 on logged trajectories: $x$ the encoded past, $\\hat y$ the future states and actions, $J$ the distance from $\\hat y_N$ to the logged future. Trained this way it scores what the logged behavior would do; the goal is what turns imitation into planning. It can enter as an extra additive energy term, as here (EBM energies compose, Facet 4, p.38), or as context, where the state a logged trajectory actually reached can serve as its goal (hindsight relabeling). Three lessons carry over. EBTs train with only 2 or 3 descent steps (p.26), so a learned landscape is shaped for a few large steps, not the hundreds needed here. The convex-basin bias merges alternative routes (step 3, p.29). And a planner is an adversary of its verifier: at small data scale, Best-of-10 sometimes picked low-energy wrong answers (p.28), and an optimizer searches harder than random samples do.</p>
+      <p class="note">Beyond the paper: this whole panel extends App. A.3. The energy is hand-written; its gradients are analytic and checked against finite differences; every number is computed live in your browser. The draw counts quoted above come from running this same code over 10 seeds.</p>`,
     source: [{ kind: 'ext', note: 'hand-written energy' }, { kind: 'paper', note: 'A.3, Eq. 1–2, Alg. 2' }],
     figure(stage, ctx) {
       const { lib } = ctx, h = lib.h, C = lib.C, X = Core;
@@ -341,7 +343,7 @@
       const cw = autoCanvas(wrapW.frame, { aspect: 0.5, minH: 170, label: 'Planning world: start, goal, obstacles, candidate plans and the executed trail', draw: () => draw() });
       const ro = h('div', { class: 'readout', 'aria-live': 'off' }); wrapW.wrap.appendChild(ro);
       const row = h('div', { class: 'fig-row' }); stage.appendChild(row);
-      const Fp = lib.frame(row, { label: 'Energy while thinking', sub: 'E of every candidate, log scale' });
+      const Fp = lib.frame(row, { label: 'Energy while thinking', sub: 'E of every candidate, log scale' }); const fpSub = Fp.wrap.querySelector('.fig-sub');
       Fp.wrap.style.flex = '1 1 300px';
       const cp = autoCanvas(Fp.frame, { aspect: 0.5, minH: 172, maxH: 180, label: 'Energy of each candidate plan per thinking iteration, and thinking spent per move', draw: () => draw() });
       const Ft = lib.frame(row, { label: 'Energy terms', sub: 'of the chosen plan' });
@@ -358,12 +360,12 @@
       const bThink = lib.button('think ×1', () => { stopPlay(); clearRace(); sim.think(); if (ghost && ghostKind) ghost.think(); draw(); });
       const bThink20 = lib.button('×20', () => { stopPlay(); clearRace(); for (let i = 0; i < 20; i++) { sim.think(); if (ghost) ghost.think(); } draw(); });
       const bAct = lib.button('act', () => { stopPlay(); clearRace(); doAct(); kick(); });
-      const bPlay = lib.button('play', () => { if (race) { if (race.done) startRace(); kick(); return; } if (playing) { stopPlay(); draw(); return; } if (sim.terminal) { resetSims(); } playing = true; autoThink = false; kick(); }, { primary: true });
+      const bPlay = lib.button('play', () => { if (race) { if (race.done) startRace(); kick(); return; } if (playing && autoThink) { autoThink = false; kick(); draw(); return; } if (playing) { stopPlay(); draw(); return; } if (sim.terminal) { resetSims(); } playing = true; autoThink = false; kick(); }, { primary: true });
       const bReset = lib.button('reset', () => { stopPlay(); resetSims(); draw(); });
       const bNew = lib.button('new draw', () => { stopPlay(); cfg.seed = (cfg.seed % 97) + 1 + Math.floor(Math.random() * 40); resetSims(); if (race) startRace(); draw(); });
       c1.append(bThink, bThink20, bAct, bPlay, bReset, bNew);
       const c2 = h('div', { class: 'controls' }); stage.appendChild(c2);
-      const segPlanner = lib.segmented({ label: 'Planner', options: [['grad', 'gradient'], ['cem', 'CEM']], value: cfg.planner, onchange: (v) => { cfg.planner = v; clearRace(); restart(); } });
+      const segPlanner = lib.segmented({ label: 'Planner', options: [['grad', 'gradient'], ['cem', 'CEM']], value: cfg.planner, onchange: (v) => { cfg.planner = v; segVars.el.classList.toggle('planning-dim', v === 'cem'); clearRace(); restart(); } });
       const segVars = lib.segmented({ label: 'Plan variables', options: [['joint', 'a + ŝ'], ['shoot', 'a only']], value: cfg.vars, onchange: (v) => { cfg.vars = v; clearRace(); restart(); } });
       const segLoop = lib.segmented({ label: 'Control loop', options: [['mpc', 'MPC'], ['open', 'open']], value: cfg.loop, onchange: (v) => { cfg.loop = v; clearRace(); restart(); } });
       c2.append(h('span', { class: 'fig-label' }, 'planner'), segPlanner.el, h('span', { class: 'fig-label' }, 'ŷ'), segVars.el, h('span', { class: 'fig-label' }, 'loop'), segLoop.el);
@@ -378,7 +380,11 @@
       const c4 = h('div', { class: 'controls' }); det.appendChild(c4);
       const segScen = lib.segmented({ label: 'World', options: Object.keys(SCEN).map(k => [k, SCEN[k].label]), value: scen, onchange: (v) => { stopPlay(); clearRace(); loadScen(v); draw(); } });
       const segR = lib.segmented({ label: 'Replan every', options: [[1, '1 move'], [5, '5 moves']], value: cfg.R, onchange: (v) => { cfg.R = v; restart(); } });
+      const segWarm = lib.segmented({ label: 'Warm start', options: [[true, 'shift plan'], [false, 'fresh random']], value: cfg.warm, onchange: (v) => { cfg.warm = v; restart(); } });
+      const segH = lib.segmented({ label: 'Horizon H', options: [[6, '6'], [12, '12'], [24, '24']], value: cfg.H, onchange: (v) => { cfg.H = v; if (race) { startRace(); draw(); return; } restart(); } });
       c4.append(h('span', { class: 'fig-label' }, 'world'), segScen.el, h('span', { class: 'fig-label' }, 'replan every'), segR.el);
+      const c4b = h('div', { class: 'controls' }); det.appendChild(c4b);
+      c4b.append(h('span', { class: 'fig-label' }, 'warm start'), segWarm.el, h('span', { class: 'fig-label' }, 'horizon H'), segH.el);
       const c5 = h('div', { class: 'controls' }); det.appendChild(c5);
       const slSig = lib.slider({ id: 'planning-sigma', label: 'Langevin noise σ', min: 0, max: 0.05, step: 0.005, value: cfg.sigma, fmt: (v) => v.toFixed(3), oninput: (v) => { cfg.sigma = v; } });
       const slWd = lib.slider({ id: 'planning-wd', label: 'dynamics weight w_d', min: 0, max: 8, step: 0.1, value: cfg.wd, fmt: (v) => v.toFixed(1), oninput: (v) => { cfg.wd = v; sim.evalAll(); draw(); } });
@@ -388,7 +394,7 @@
 
       // ---------- world / sims ----------
       function loadScen(id) { scen = id; segScen.set(id); world = cloneW(SCEN[id].world); fieldDirty = true; resetSims(); }
-      function resetSims() { sim = new Sim(world, cfg); if (ghostKind) makeGhost(ghostKind); anim = ganim = null; }
+      function resetSims() { sim = new Sim(world, cfg); if (ghostKind) makeGhost(ghostKind); else ghost = null; anim = ganim = null; }
       function restart() { stopPlay(); resetSims(); draw(); }
       function makeGhost(kind) {
         ghostKind = kind;
@@ -397,7 +403,8 @@
         ghost = new Sim(world, gc);
       }
       function syncControls() {
-        segPlanner.set(cfg.planner); segVars.set(cfg.vars); segLoop.set(cfg.loop); segR.set(cfg.R); segScen.set(scen);
+        segVars.el.classList.toggle('planning-dim', cfg.planner === 'cem');
+        segPlanner.set(cfg.planner); segVars.set(cfg.vars); segLoop.set(cfg.loop); segR.set(cfg.R); segScen.set(scen); segWarm.set(cfg.warm); segH.set(cfg.H);
         slM.set(cfg.M); slWind.set(cfg.wind); slSig.set(cfg.sigma); slWd.set(cfg.wd); slK.set(cfg.K);
       }
       function startRace() { race = new Race(world, sim.s, cfg, cfg.seed); view.plotX = 'fe'; }
@@ -528,7 +535,7 @@
           if (S.status === 'stuck') return `${who}stuck: a local minimum of E`;
           return null;
         };
-        if (race) return race.done ? 'equal budget spent: ' + nf(race.budget) + ' forward-pass equivalents each' : 'race: ' + nf(Math.min(race.gFE, race.cFE)) + ' / ' + nf(race.budget) + ' FE each';
+        if (race) return race.done ? 'equal budget spent: ' + nf(race.budget) + ' forward-pass equivalents each' : 'race: ' + nf(race.clock || 0) + ' / ' + nf(race.budget) + ' FE each';
         const a = ex(sim, ghost ? (cfg.planner === 'cem' ? 'CEM: ' : 'MPC: ') : ''), b = ghost ? ex(ghost, ghostKind === 'open' ? 'open loop: ' : 'CEM: ') : null;
         if (ghostKind === 'cem' && a) return a.replace('MPC: ', 'gradient: ') + (b ? ' · ' + b : '');
         return [a, b].filter(Boolean).join(' · ') || (s === 'ready' ? null : null);
@@ -547,6 +554,8 @@
         g.save(); g.setTransform(cp.dpr, 0, 0, cp.dpr, 0, 0); g.fillStyle = '#fff'; g.fillRect(0, 0, w, hh);
         const strip = race ? 0 : 46, b = { x: 46, y: 10, w: w - 58, h: hh - 44 - strip };
         let series = [], ghostSeries = null, xmax = 1, xlog = true, xlabel = 'thinking iteration, this move (log)';
+        const subTxt = race ? 'lowest E found so far, by compute spent' : ghostKind === 'cem' ? 'lowest E, by compute this move' : cfg.planner === 'cem' ? 'lowest E sampled so far, log scale' : 'E of every candidate, log scale';
+        if (fpSub.textContent !== subTxt) fpSub.textContent = subTxt;
         if (race) {
           xmax = race.budget; xlabel = 'forward-pass equivalents (log)';
         } else if (ghostKind === 'cem') {
@@ -581,7 +590,7 @@
         } else if (series.length || (ghostSeries && ghostSeries.length)) {
           const xOf = ghostKind === 'cem' ? (p) => XS(p.fe) : (p, i) => XS(i + 1);
           if (ghostKind !== 'cem' && series.length) { const M = series[series.length - 1].E.length, stride = Math.max(1, Math.floor(series.length / 400)); for (let j = 0; j < M && M > 1; j++) { const pts = []; for (let i = 0; i < series.length; i += stride) if (j < series[i].E.length) pts.push([xOf(series[i], i), YS(series[i].E[j])]); poly(pts, BLUE, 1, null, 0.28); } }
-          if (ghostSeries && ghostSeries.length) poly(ghostSeries.map((p) => [XS(p.fe), YS(p.min)]), INK, 2, [6, 4]);
+          if (ghostSeries && ghostSeries.length) poly(ghostSeries.map((p) => [XS(p.fe), YS(p.min)]), GRAY, 2, [6, 4]);
           if (series.length) { const stride = Math.max(1, Math.floor(series.length / 600)), pts = []; for (let i = 0; i < series.length; i += stride) pts.push([xOf(series[i], i), YS(series[i].min)]); pts.push([xOf(series[series.length - 1], series.length - 1), YS(series[series.length - 1].min)]); poly(pts, BLUE, 2.4); const lp = pts[pts.length - 1]; lib.dot(g, lp[0], lp[1], 3.5, BLUE); }
         } else {
           sim.E.forEach(v => lib.dot(g, b.x + 4, YS(v), 3, BLUE, { alpha: 0.6 }));
@@ -590,15 +599,15 @@
         // legend for comparisons
         if (race || ghostKind === 'cem') {
           g.font = `400 11px ${lib.F ? lib.F.mono : 'monospace'}`; g.textAlign = 'right'; g.textBaseline = 'top';
-          g.fillStyle = BLUE; g.fillText(race ? 'gradient, M = ' + race.M : 'gradient (Alg. 2)', b.x + b.w - 4, b.y + 2); g.fillStyle = INK; g.fillText('CEM, 64 samples', b.x + b.w - 4, b.y + 16);
+          g.fillStyle = BLUE; g.fillText(race ? 'gradient, M = ' + race.M : 'gradient, a + ŝ, M = ' + cfg.M, b.x + b.w - 4, b.y + 2); g.fillStyle = race ? INK : GRAY; g.fillText(race ? 'CEM, 64 samples' : 'CEM over a, 64 samples', b.x + b.w - 4, b.y + 16);
         } else if (!series.length) {
           g.font = `400 11.5px ${lib.F ? lib.F.mono : 'monospace'}`; g.fillStyle = MUTED; g.textAlign = 'center'; g.textBaseline = 'middle';
-          g.fillText(sim.frozen ? 'open loop: executing, no more thinking' : sim.terminal ? 'episode over' : 'iteration 0: press think or play', b.x + b.w / 2, b.y + b.h / 2);
+          g.fillText(sim.frozen ? 'open loop: executing, no more thinking' : sim.terminal ? 'episode over' : playing ? (cfg.R > 1 && sim.since > 0 ? 'executing the plan, no re-planning' : 'moving') : 'iteration 0: press think or play', b.x + b.w / 2, b.y + b.h / 2);
         }
         // strip: thinking per move
         if (strip) {
           const sy = hh - strip + 8, sh = strip - 22, steps = sim.log.slice(); const live = !sim.terminal && !sim.frozen && sim.since === 0 ? { iters: sim.itDec, live: true } : null; if (live) steps.push(live);
-          const N = Math.max(cfg.loop === 'open' ? cfg.H : 16, steps.length), bw = b.w / N, maxI = Math.max(10, cfg.N0, cfg.cem0, ...steps.map(s => s.iters));
+          const N = Math.max(cfg.loop === 'open' ? cfg.H : 16, steps.length), bw = b.w / N, maxI = Math.max(10, cfg.planner === 'cem' ? cfg.cem0 : cfg.N0, ...steps.map(s => s.iters));
           const yl = (v) => sy + sh - Math.log10(1 + v) / Math.log10(1 + maxI) * sh;
           g.strokeStyle = RULE; g.beginPath(); g.moveTo(b.x, sy + sh + 0.5); g.lineTo(b.x + b.w, sy + sh + 0.5); g.stroke();
           steps.forEach((s, i) => { const y = yl(s.iters); g.fillStyle = s.live ? lib.rgba(BLUE, 0.4) : BLUE; g.fillRect(b.x + i * bw + bw * 0.18, y, Math.max(1, bw * 0.64), sy + sh - y); });
@@ -650,7 +659,7 @@
           if (anim && anim.t >= 1) anim = null; if (ganim && ganim.t >= 1) ganim = null; draw(); return true;
         }
         if (drag) { if (!playing && !race && !sim.terminal && !sim.frozen) { for (let i = 0; i < 6; i++) sim.think(); } draw(); return true; }
-        if (race && !race.done) { race.advance(lib.reducedMotion ? race.budget : 40 + race.gFE * 0.06); draw(); return true; }
+        if (race && !race.done) { race.advance(lib.reducedMotion ? race.budget : 8 + (race.clock || 0) * 0.012); draw(); return true; }
         if (!playing) { draw(); return false; }
         const t0 = performance.now();
         const busy = (S) => S && !S.terminal && S.wantsThink();
@@ -717,7 +726,7 @@
       ];
       loadScen('pillar');
       (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => draw());
-      ctx.setCaption('Shading: cost of one position, darker = lower. FE: forward-pass equivalents.');
+      ctx.setCaption('Shading: energy one position would get from the goal and obstacle terms (darker = lower); dashed rings: obstacle margins. FE: forward-pass equivalents, 3 per gradient step per plan, 1 per CEM sample. ŝ gap: imagined end vs where the actions really lead.');
       return {
         step(i) { (STEPS[i] || STEPS[0])(); },
         show() { visible = true; [cw, cp].forEach(o => o.fit()); draw(); if (playing || (race && !race.done)) loop.start(); },

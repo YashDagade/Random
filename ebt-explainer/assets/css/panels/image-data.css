@@ -1,0 +1,14 @@
+/* Panel 17 (image-data). Scoped to #image-data. */
+#image-data .id-view[hidden] { display: none !important; }
+#image-data .id-view { display: grid; gap: 12px; min-width: 0; }
+#image-data .p-stage > *, #image-data .id-view > *, #image-data .id-view .fig-col { min-width: 0; max-width: 100%; }
+#image-data .p-intro > *, #image-data .p-after > *, #image-data .steps > * { min-width: 0; }
+#image-data .id-pick { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+#image-data .id-pick button { appearance: none; background: #fff; border: 1px solid var(--rule); padding: 2px; cursor: pointer; display: grid; gap: 1px; justify-items: center; font: 10.5px var(--f-mono); color: var(--muted); }
+#image-data .id-pick button img { display: block; width: 38px; height: 38px; }
+#image-data .id-pick button[aria-pressed="true"] { border-color: var(--blue); color: var(--blue); box-shadow: inset 0 -2px 0 var(--blue); }
+#image-data .id-pipe { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 0; font-family: var(--f-mono); font-size: 11.5px; color: var(--faint); }
+#image-data .id-pipe li + li::before { content: "→"; margin: 0 7px; color: var(--dash); }
+#image-data .id-pipe li.on span { color: var(--ink); border-bottom: 1px solid var(--blue); }
+/* the stage is sticky on wide screens: if it is ever taller than the viewport, let it scroll instead of hiding its controls */
+@media (min-width: 961px) { #image-data .p-stage { max-height: calc(100vh - 24px); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; padding: 14px; margin: -14px; } }

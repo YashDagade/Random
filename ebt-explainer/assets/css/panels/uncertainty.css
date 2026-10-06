@@ -1,0 +1,3 @@
+/* uncertainty: keep display math from widening the prose column */
+#uncertainty .p-intro, #uncertainty .p-after, #uncertainty .step > div { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+#uncertainty .p-text .katex-display { max-width: 100%; }

@@ -1,0 +1,21 @@
+/* second-order: keep wide math inside the prose column; cost bars */
+#second-order .p-text > * { min-width: 0; }
+#second-order .p-text .eq { min-width: 0; overflow-x: auto; overflow-y: hidden; }
+#second-order .p-stage { gap: 10px; }
+#second-order .so-cost { display: grid; gap: 7px; font-family: var(--f-mono); font-size: 12px; color: var(--ink2); border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); padding: 10px 0 10px; }
+#second-order .so-r { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) 7.6em; gap: 8px; align-items: center; }
+#second-order .so-l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#second-order .so-x { text-align: right; color: var(--ink); font-weight: 600; white-space: nowrap; }
+#second-order .so-b { display: flex; height: 12px; }
+#second-order .so-b i, #second-order .so-k i { display: inline-block; height: 12px; box-sizing: border-box; }
+#second-order .so-b i.f, #second-order .so-k i.f { background: #fff; border: 1px solid var(--ink); }
+#second-order .so-b i.g, #second-order .so-k i.g { background: var(--blue3); border: 1px solid var(--blue3); }
+#second-order .so-b i.hv, #second-order .so-k i.hv { background: var(--blue); border: 1px solid var(--blue); }
+#second-order .so-b i + i { margin-left: 1px; }
+#second-order .so-k { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 11.5px; color: var(--muted); padding-top: 4px; }
+#second-order .so-k span { display: inline-flex; align-items: center; gap: 6px; }
+#second-order .so-k i { width: 14px; }
+@media (max-width: 480px) { #second-order .so-r { grid-template-columns: 7.6em minmax(0, 1fr) 6.6em; font-size: 11px; } }
+#second-order .so-code { margin: 0; padding: 10px 12px; background: var(--tint); border-left: 1px solid var(--ink); overflow-x: auto; font-size: 12.5px; line-height: 1.55; }
+#second-order .so-code code { background: none; padding: 0; font-size: 12.5px; white-space: pre; }
+#second-order .step p + p { margin-top: 8px; }

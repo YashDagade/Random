@@ -50,22 +50,23 @@
       <p>All language models are pretrained from scratch on the RedPajama-V2 "100B sample" with the GPT-NeoX tokenizer, on a manual split of 66 million training and 33 thousand validation samples (p.8). The context is 256 tokens and the vocabulary has 50,277 entries (Tables D.2 to D.4). None of this is specific to EBTs. What changes is what the model does at each position.</p>
       <p>A Transformer++ maps the context to logits in one pass. An EBT keeps a candidate for the next token as an extra <em>input</em>, a full logit vector, and improves it by descending its own energy:</p>
       <div class="eq">$$\\hat y^{(i+1)} = \\hat y^{(i)} - \\alpha\\,\\nabla_{\\hat y}E_\\theta\\big(x_{\\le t},\\,\\hat y^{(i)}\\big)$$<span class="why">ŷ is the guess for token t+1, a logit vector in ℝ^50,277 that starts as ŷ⁽⁰⁾ ~ N(0, I) and is softmaxed and linearly projected before entering the Transformer (p.43–44). i counts thinking steps: 2 in pretraining (Table D.3), 2–3 in the thinking runs (Table D.4).</span></div>
-      <p>Both models are trained with the same loss, the cross-entropy of the token that actually came next, $J=-\\ln p(x_{t+1})$ with $p=\\mathrm{softmax}(\\hat y^{(N)})$ for the EBT, and both are scored the same way. The steps build that shared yardstick from raw text up.</p>`,
+      <p>Both models are trained with the same loss, the cross-entropy of the token that actually came next, $J=-\\ln p(x_{t+1})$. For the EBT, $p=\\mathrm{softmax}(\\hat y^{(N)})$, taken after the last step in the S2 models and after every step in the S1 models (p.30, p.36). Both are scored the same way too. The steps build that shared yardstick from raw text up.</p>`,
     steps: [
-      { label: 'Web text becomes token ids', html: '<p>Pick a document. GPT-NeoX\'s byte-level BPE cuts it into pieces: a frequent word with its leading space is one token (<code>·the</code> is id 253), a rare word splits (<code>Enceladus</code> becomes <code>En</code> <code>cel</code> <code>ad</code> <code>us</code>). Hover or tap a chip for its id and raw BPE string. Over our 12 documents a token covers about 4.2 characters.</p>' },
+      { label: 'Web text becomes token ids', html: '<p>Pick a document. GPT-NeoX\'s byte-level BPE cuts it into pieces: a frequent word with its leading space is one token (<code>·the</code> is id 253), a rare word splits (<code>Enceladus</code> becomes <code>En</code> <code>cel</code> <code>ad</code> <code>us</code>). Hover or tap a chip for its id and raw BPE string. Over our 12 documents a token covers about 4.2 characters. Perplexity appears even before training: RedPajama-V2 sorts documents into quality buckets by the perplexity a Wikipedia-trained 5-gram model gives them (readout under the chips).</p>' },
       { label: 'Every position is a training example', html: '<p>A sequence of $S$ tokens holds $S$ training pairs: position $t$ reads $x_{\\le t}$ and is scored on $x_{t+1}$. The causal mask (triangle) lets all of them train in one pass. In the EBT each row also carries its own guess $\\hat y_{t+1}$, optimized for a few steps before the loss is taken, "enabling each prediction (e.g., a token for LLMs) to have its own thinking process" (p.5). Drag the position.</p>' },
-      { label: 'Batches and token budgets', html: '<p>An optimizer step consumes a $B\\times S$ block of token ids. The paper changes $B$ and the number of steps from experiment to experiment (p.34); the figure multiplies them out. The longest text run, 1M steps of $128\\times256$ tokens, sees about 33B tokens, a third of the 100B sample, so "models see each sample only once" (p.12). Video is the opposite regime (panel 18).</p>' },
-      { label: 'Perplexity, computed live', html: '<p>A small character-level EBT (toy, trained for this explainer) scores the start of the document. A token\'s probability is the product of its characters\' probabilities, so its loss is the sum of their $-\\ln p$. Drag $N$, the number of thinking steps: every probability is read off $\\mathrm{softmax}(\\hat y^{(N)})$, so the EBT\'s perplexity moves with thinking. A Transformer++ has no such dial. Click a bar to see its characters.</p>' },
+      { label: 'Batches and token budgets', html: '<p>An optimizer step consumes a $B\\times S$ block of token ids. The paper changes $B$ and the number of steps from experiment to experiment (p.34); the figure multiplies them out. The longest RedPajama run, 1M steps of $128\\times256$ tokens, sees about 33B tokens, a third of the 100B sample; in the paper\'s words, the text models "see each sample only once due to the dataset size" (p.12). Video is the opposite regime (panel 18).</p>' },
+      { label: 'Perplexity, computed live', html: '<p>A small character-level EBT (toy, trained for this explainer) scores the first 20 tokens in your browser. A token\'s probability is the product of its characters\' probabilities, so its loss is the sum of theirs: each bar is stacked from its characters (click one to open it). Drag $N$: every probability is read off $\\mathrm{softmax}(\\hat y^{(N)})$, so the EBT\'s perplexity drops as it thinks, most of it in the first two steps. A Transformer++ has no such dial. The toy is weak, though: a same-size one-pass network reaches 4.95 per character on held-out text, against 10.3 for the toy EBT at $N=3$. Read it for the mechanism, not for the paper\'s result. Then switch the unit to tokens.</p>' },
       { label: 'Four downstream benchmarks', html: '<p>GSM8K, SQuAD, BIG-bench Elementary Math QA and BIG-bench Dyck Languages, "ordered roughly by increasing perplexity difficulty" (p.9). They are scored by perplexity because these small models "do not achieve high accuracies" and "perplexity often functions as a more linear metric than accuracy" (p.9). Step through a Dyck example: the closing brackets need a stack, which a next-token predictor has to keep implicitly.</p>' },
-      { label: 'Reading Table 3 honestly', html: '<p>EBT has the worse pretraining perplexity (33.43 vs 31.36, +6.6%) and still the better downstream perplexity on GSM8K (−12.7%), BB Math QA (−9.0%) and BB Dyck (−4.7%). On SQuAD it is slightly worse (+1.5%). The claim is "most downstream tasks", not all, from one seed per model. Dividing by each model\'s own pretraining perplexity gives the paper\'s measure of distribution shift (p.11).</p>' },
+      { label: 'Reading Table 3 honestly', html: '<p>EBT has the worse pretraining perplexity (33.43 vs 31.36, +6.6%) and still the better downstream perplexity on GSM8K (−12.7%), BB Math QA (−9.0%) and BB Dyck (−4.7%). On SQuAD it is slightly worse (+1.5%). The paper\'s claim is lower perplexity "on most downstream tasks" (p.12), not all, from one seed per model. Dividing by each model\'s own pretraining perplexity gives the paper\'s measure of distribution shift (p.11). These ratios do not reproduce the x-values of Fig 7, whose points are unlabeled, so do not map Fig 7 onto these benchmarks (derived).</p>' },
     ],
     after: `
       <h3>Perplexity, precisely</h3>
       <div class="eq">$$\\mathrm{PPL}=\\exp\\Big(-\\frac1T\\sum_{t=1}^{T}\\ln p_\\theta(x_t\\mid x_{\\lt t})\\Big)$$<span class="why">T scored tokens; p is the probability the model gave to the token that actually came next.</span></div>
-      <p>Perplexity is the exponential of the mean cross-entropy, which makes it the geometric mean of $1/p$. A perplexity of 31.36 means the model is, on average, as unsure as a fair pick among about 31 tokens. The logarithm makes one confident mistake cost more than many mild ones. The number also depends on the unit being predicted: a text has one total loss whether you count tokens or characters, so $\\mathrm{PPL}_{\\text{tok}}=\\mathrm{PPL}_{\\text{char}}^{\\,C/T}$, with $C/T$ the characters per token. That is why the toy's per-character numbers cannot be compared with the paper's per-token ones.</p>
-      <p>For an EBT, $p=\\mathrm{softmax}(\\hat y^{(N)})$, so perplexity is a function of the thinking budget $N$. The paper's thinking curves (Fig 6a) are that function measured on the four benchmarks, and Table 3 is one point on it.</p>
+      <p>Perplexity is the exponential of the mean cross-entropy, which makes it the geometric mean of $1/p$. A perplexity of 31.36 means the model is, on average, as unsure as a fair pick among about 31 tokens. Because of the logarithm, a single token given near-zero probability can dominate the average.</p>
+      <p>The number also depends on the unit being predicted. A text has one total loss whether you divide it by tokens or by characters, so $\\mathrm{PPL}_{\\text{tok}}=\\mathrm{PPL}_{\\text{char}}^{\\,C/T}$, with $C/T$ the characters per token. At our 4.17 characters per token, Transformer++'s 31.36 is about 2.3 per character (derived; the paper's validation text may differ), against about 11 for the toy. The toy is far weaker than even the paper's smallest models, which is why its numbers are never set beside the paper's.</p>
+      <p>For an EBT, $p=\\mathrm{softmax}(\\hat y^{(N)})$, so perplexity is a function of the thinking budget. Fig 6a plots how the mean perplexity increase on the four benchmarks falls as the EBT spends more forward passes, first on longer thinking and then on best-of-$M$ verification. Table 3 reports a single setting, and the paper does not say which.</p>
       <p class="note">Not specified in the paper: which tokens of each benchmark are scored (question and answer, or the answer only), the prompt format and split, how documents are cut into 256-token windows, whether Table 3's EBT numbers use extra thinking, and how the "best checkpoints" were chosen (p.9, p.34). All text evaluation is teacher-forced next-token scoring; no generated text is evaluated.</p>`,
-    source: [{ kind: 'paper', note: 'p.8–9, p.12 Table 3, p.34, Tables D.2–D.4' }, { kind: 'ext', note: 'real RedPajama-V2 documents, GPT-NeoX tokens, benchmark rows' }, { kind: 'toy', note: 'char-level EBT scores the text in step 4' }],
+    source: [{ kind: 'paper', note: 'p.8–9, Table 3, p.34, Tables D.2–D.4' }, { kind: 'ext', note: 'real documents, tokens, benchmark rows' }, { kind: 'toy', note: 'char-level EBT scores text (step 4)' }],
     figure(stage, ctx) {
       const { lib } = ctx, h = lib.h, C = lib.C;
       const S = lib.data('samples');
@@ -78,7 +79,7 @@
       const fmtPpl = (v) => !isFinite(v) ? '–' : v >= 1e5 ? v.toExponential(1).replace('e+', 'e') : v >= 100 ? fmtN(v) : v.toFixed(2);
       const pct = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v * 100).toFixed(1) + '%';
       const tokShow = (t) => t.replace(/\n/g, '↵').replace(/^ /, '·');
-      const st = { doc: docs.find(d => d.id === 'rpv2_12') || docs[0], tv: 'text', hover: 5, pos: 6, exp: 'think', expIdx: { data: 13, batch: 3, params: 0 }, N: 3, mode: 'ebt', sel: 13, bench: 'bb_dyck', ex: 1, dk: null, t3: 1, view: 'tokens' };
+      const st = { doc: docs.find(d => d.id === 'rpv2_12') || docs[0], tv: 'text', hover: 5, pos: 6, exp: 'think', expIdx: { data: 13, batch: 3, params: 0 }, N: 3, mode: 'ebt', unit: 'char', sel: 13, bench: 'bb_dyck', ex: 1, dk: null, t3: 1, view: 'tokens' };
       const canv = [];
 
       // responsive canvas: logical width = CSS width so text stays at true pixel size on phones
@@ -147,7 +148,7 @@
         const d = st.doc, txt = d.tokens.text; let words = 0, split = 0;
         for (let i = 0; i < txt.length; i++) { if (isCont(i) || !/[A-Za-z]/.test(txt[i])) continue; words++; let j = i + 1; while (j < txt.length && isCont(j)) j++; if (j > i + 1) split++; }
         const cpt = d.snippet.length / d.snippet_tokens_total;
-        stats1.innerHTML = `<span><b>${fmtN(d.snippet.length)}</b> chars → <b>${d.snippet_tokens_total}</b> tokens</span><span><b>${cpt.toFixed(2)}</b> chars / token</span><span><b>${split}</b> of ${words} words split</span><span>bucket <b>${d.bucket}</b> (CCNet ppl ${d.signals.ccnet_perplexity})</span>`;
+        stats1.innerHTML = `<span><b>${fmtN(d.snippet.length)}</b> chars → <b>${d.snippet_tokens_total}</b> tokens</span><span><b>${cpt.toFixed(2)}</b> chars / token</span><span><b>${split}</b> of ${words} words split</span><span title="RedPajama-V2 sorts documents into head, middle and tail by the perplexity a Wikipedia-trained 5-gram model (CCNet) assigns them; head is the most Wikipedia-like">quality bucket <b>${d.bucket}</b> (5-gram perplexity ${fmtN(d.signals.ccnet_perplexity)})</span>`;
       }
       function drawRuler(g, w) {
         const x0 = 8, x1 = w - 8, y = 30, L = Math.log10(VOCAB), X = (id) => x0 + Math.log10(Math.max(1, id)) / L * (x1 - x0), d = st.doc;
@@ -162,7 +163,7 @@
         const id = d.tokens.ids[st.hover], xs = X(id);
         g.strokeStyle = C.blue; g.lineWidth = 2; g.beginPath(); g.moveTo(xs, y - 18); g.lineTo(xs, y); g.stroke();
         T(g, `"${tokShow(d.tokens.text[st.hover])}" = id ${fmtN(id)}`, clamp(xs, x0 + 70, x1 - 70), y - 30, { color: C.blue, align: 'center' });
-        T(g, 'token id, log scale (low ids = early BPE merges = frequent strings)', x0, y + 24, { size: 11, color: C.muted, kind: 'mono' });
+        T(g, w < 520 ? 'token id, log scale (low = frequent)' : 'token id, log scale (low ids: single characters and the earliest, most frequent merges)', x0, y + 24, { size: 11, color: C.muted, kind: 'mono' });
       }
 
       // =============== view 2: pairs ===============
@@ -175,7 +176,7 @@
       const posSl = lib.slider({ id: 'td-pos', label: 'position t', min: 0, max: 78, step: 1, value: st.pos, oninput: (v) => { st.pos = v; updPairs(); } });
       v2.appendChild(h('div', { class: 'controls' }, posSl.el));
       const ebtBox = h('div', { class: 'td-ebtbox' }); v2.appendChild(ebtBox);
-      function gLay(w) { const n = w >= 560 ? 10 : 6, LM = 50, cw = Math.floor((w - LM - 6) / (n + 1)), rh = Math.min(26, cw), HH = 44; return { n, LM, cw, rh, HH, H: HH + n * rh + 34 }; }
+      function gLay(w) { const n = w >= 560 ? 8 : 6, LM = 50, cw = Math.floor((w - LM - 6) / (n + 1)), rh = Math.min(26, cw), HH = 44; return { n, LM, cw, rh, HH, H: HH + n * rh + 34 }; }
       const winStart = (n) => clamp(st.pos - (n - 3), 0, Math.max(0, st.doc.tokens.ids.length - 1 - n));
       function drawGrid(g, w) {
         const L = gLay(w), s = winStart(L.n), d = st.doc, t = d.tokens.text, NT = t.length;
@@ -229,7 +230,7 @@
       const expSeg = lib.segmented({ label: 'Experiment', options: Object.entries(EXP).map(([k, e]) => [k, e.label]), value: st.exp, onchange: (v) => { st.exp = v; syncExpSlider(); updBatch(); } });
       v3.appendChild(h('div', { class: 'controls' }, expSeg.el));
       const F3 = lib.frame(v3, { label: 'One optimizer step', sub: 'a B × S block of token ids (texture: ids of our 12 documents, repeated)' });
-      const bat = rcanvas(F3.frame, (w) => w < 520 ? 330 : 318, 'A batch drawn as a matrix of token ids, and the total tokens seen on a log axis', drawBatch);
+      const bat = rcanvas(F3.frame, (w) => 330, 'A batch drawn as a matrix of token ids, and the total tokens seen on a log axis', drawBatch);
       const expSl = lib.slider({ id: 'td-exp', label: 'setting', min: 0, max: 13, step: 1, value: 13, fmt: (v) => String(v + 1), oninput: (v) => { st.expIdx[st.exp] = v; updBatch(); } });
       const bro = h('div', { class: 'readout' }), bnote = h('p', { class: 'note' });
       v3.appendChild(h('div', { class: 'controls' }, expSl.el)); v3.appendChild(bro); v3.appendChild(bnote);
@@ -250,9 +251,9 @@
         const rowH = mh / B; g.strokeStyle = C.blue; g.lineWidth = 1.5; g.strokeRect(mx + 0.5, my + 0.5, mw - 1, Math.max(2, rowH));
         T(g, `S = ${Sx} tokens per sequence (the context)`, mx, 8, { size: 11, color: C.muted });
         g.save(); g.translate(14, my + mh / 2); g.rotate(-Math.PI / 2); T(g, `B = ${B}`, 0, 0, { size: 11, align: 'center', baseline: 'middle', color: C.muted }); g.restore();
-        T(g, '← one row = one sequence', mx + mw - 4, my + Math.max(2, rowH) + 4, { size: 11, color: C.blue, align: 'right' });
+        T(g, 'blue outline = one row = one sequence', mx, my + mh + 6, { size: 11, color: C.blue });
         // budget axis
-        const ay = my + mhMax + 64, ax0 = 12, ax1 = w - 12, lo = 8, hi = 13.4, X = (v) => ax0 + (Math.log10(v) - lo) / (hi - lo) * (ax1 - ax0);
+        const ay = my + mhMax + 76, ax0 = 22, ax1 = w - 22, lo = 8, hi = 13.4, X = (v) => ax0 + (Math.log10(v) - lo) / (hi - lo) * (ax1 - ax0);
         T(g, 'total tokens seen in training (log scale)', ax0, ay - 46, { size: 11, color: C.muted });
         g.strokeStyle = C.ink; g.lineWidth = 1; g.beginPath(); g.moveTo(ax0, ay); g.lineTo(ax1, ay); g.stroke();
         [[1e8, '100M'], [1e9, '1B'], [1e10, '10B'], [1e11, '100B'], [1e12, '1T'], [1e13, '10T']].forEach(([v, s]) => { g.beginPath(); g.moveTo(X(v), ay); g.lineTo(X(v), ay + 4); g.stroke(); T(g, s, X(v), ay + 8, { size: 11, color: C.muted, align: 'center' }); });
@@ -271,25 +272,27 @@
 
       // =============== view 4: perplexity, scored live ===============
       const v4 = mkView('ppl');
+      const TXT = lib.data('text'), VAL = (TXT && TXT.thinking_curve && TXT.thinking_curve.datasets && TXT.thinking_curve.datasets.val) || {};
+      const CPT = ((S.text._meta || {}).chars_per_token) || 4.167;          // chars per GPT-NeoX token over our 12 documents
+      const TPP_CHAR = Math.pow(31.36, 1 / CPT);                              // Table 3's 31.36 per token, re-expressed per character [derived]
+      const TOY_BASE = VAL.baseline_ppl || 4.95, TOY_SYMS = model ? model.V : 54;
       const nSl = lib.slider({ id: 'td-n', label: 'thinking steps N', min: 0, max: 12, step: 1, value: st.N, oninput: (v) => { st.N = v; updPpl(); } });
       const modeSeg = lib.segmented({ label: 'Scoring model', options: [['ebt', 'toy EBT, N steps'], ['tpp', 'every p = 1/31.36'], ['uni', 'uniform 1/50,277']], value: st.mode, onchange: (v) => { st.mode = v; updPpl(); } });
-      v4.appendChild(h('div', { class: 'controls' }, modeSeg.el));
-      v4.appendChild(h('div', { class: 'controls' }, nSl.el));
-      const F4 = lib.frame(v4, { label: 'Scoring the start of the document', sub: 'bars: −ln p(true token) · line: perplexity so far' });
-      const pplC = rcanvas(F4.frame, (w) => w < 520 ? 384 : 372, 'Per-token loss bars and running perplexity for the start of the document', drawPpl);
+      const unitSeg = lib.segmented({ label: 'Perplexity unit', options: [['char', 'per character'], ['tok', 'per token']], value: st.unit, onchange: (v) => { st.unit = v; updPpl(); } });
+      v4.appendChild(h('div', { class: 'controls' }, nSl.el, modeSeg.el));
+      v4.appendChild(h('div', { class: 'controls' }, h('span', { class: 'fig-label' }, 'perplexity per'), unitSeg.el));
+      const F4 = lib.frame(v4, { label: 'Scoring the first 20 tokens · click a bar' });
+      const pplC = rcanvas(F4.frame, (w) => pLay(w).H, 'Per-token loss bars split into characters, running perplexity with reference levels, and the characters of the selected token', drawPpl);
       pplC.c.style.cursor = 'pointer';
       const prog = h('div', { class: 'td-prog', 'aria-live': 'polite' }); v4.appendChild(prog);
-      const F4b = lib.frame(v4, { label: 'Inside one token', sub: 'a token\'s probability is the product of its characters\' probabilities' });
-      const charC = rcanvas(F4b.frame, () => 104, 'Per-character loss inside the selected token', drawChars);
       const pro = h('div', { class: 'readout' }); v4.appendChild(pro);
       const NMAX = 12;
-      let score = null; // {docId, toks:[{text, chars:[{c, k}]}], nll[N][k], status}
+      let score = null; // {docId, toks:[{text, chars:[{c, k}]}], str, nll[N][k], done}
       function prepScore() {
         if (!model) return null;
-        const d = st.doc, toks = [], nchar = []; let s = '';
+        const d = st.doc, toks = []; let s = '';
         const nT = Math.min(20, d.tokens.text.length);
         for (let i = 0; i < nT; i++) { const t = d.tokens.text[i], ch = []; for (const c of t) { const n = normChar(c, model.stoi); for (const cc of n) { ch.push({ c: cc, k: s.length }); s += cc; } } toks.push({ text: t, id: d.tokens.ids[i], chars: ch }); }
-        for (let k = 0; k < s.length; k++) nchar.push(k);
         return { docId: d.id, toks, str: s, nll: Array.from({ length: NMAX + 1 }, () => new Float32Array(s.length)), done: 0 };
       }
       let job = null, jobScore = null;
@@ -303,86 +306,108 @@
         const work = () => {
           job = null; if (sc !== score) return;
           const t0 = performance.now();
-          while (sc.done < sc.str.length && performance.now() - t0 < 14) {
+          while (sc.done < sc.str.length && performance.now() - t0 < 8) {
+            // one character: encode its 40-character context, draw ŷ⁽⁰⁾ ~ N(0, I), take NMAX gradient steps, record −ln p(true char) after every step
             const k = sc.done, trueId = model.stoi[sc.str[k]], hv = model.encode(model.ids(sc.str.slice(0, k)));
             const r = lib.rng(9001 + k * 7919); let y = new Float32Array(model.V); for (let v = 0; v < model.V; v++) y[v] = r.normal();
             for (let i = 0; i <= NMAX; i++) { const o = model.energyGrad(hv, y); sc.nll[i][k] = -Math.log(Math.max(1e-12, o.p[trueId])); if (i === NMAX) break; const nx = new Float32Array(model.V); for (let v = 0; v < model.V; v++) nx[v] = y[v] - model.alpha * o.grad[v]; y = nx; }
             sc.done++;
           }
-          prog.textContent = sc.done < sc.str.length ? `scoring with the toy EBT in your browser… ${sc.done} / ${sc.str.length} characters` : `scored ${sc.str.length} characters × ${NMAX + 1} thinking steps live (toy char-level EBT, context 40 characters, α = ${model.alpha}, ŷ⁽⁰⁾ ~ N(0, I) with a fixed seed per character)`;
+          prog.textContent = sc.done < sc.str.length ? `scoring with the toy EBT in your browser… ${sc.done} / ${sc.str.length} characters` : `scored live: ${sc.str.length} characters × N = 0…${NMAX} (α = ${model.alpha}, ŷ⁽⁰⁾ ~ N(0, I) seeded per character)`;
           updPpl();
           if (sc.done < sc.str.length && st.view === 'ppl') job = setTimeout(work, 0);
         };
         job = setTimeout(work, 0);
       }
+      // −ln p of one character / one token under the current scorer (NaN while not yet scored)
+      const charNll = (c) => score && c.k < score.done ? score.nll[st.N][c.k] : NaN;
       function tokNll(tk) {
         if (st.mode === 'tpp') return Math.log(31.36);
         if (st.mode === 'uni') return Math.log(VOCAB);
         if (!score) return NaN; let s = 0;
-        for (const c of tk.chars) { if (c.k >= score.done) return NaN; s += score.nll[st.N][c.k]; }
+        for (const c of tk.chars) { const v = charNll(c); if (!isFinite(v)) return NaN; s += v; }
         return s;
       }
       function pplStats() {
-        const toks = score ? score.toks : [], nl = toks.map(tokNll); let s = 0, n = 0, cs = 0; const run = [];
-        nl.forEach((v, i) => { if (!isFinite(v)) { run.push(NaN); return; } s += v; n++; cs += toks[i].chars.length; run.push(Math.exp(s / n)); });
-        return { toks, nl, run, sum: s, n, chars: cs };
+        const toks = score ? score.toks : [], nl = toks.map(tokNll); let s = 0, n = 0, cs = 0; const runTok = [], runChar = [];
+        nl.forEach((v, i) => { if (!isFinite(v)) { runTok.push(NaN); runChar.push(NaN); return; } s += v; n++; cs += toks[i].chars.length; runTok.push(Math.exp(s / n)); runChar.push(cs ? Math.exp(s / cs) : NaN); });
+        return { toks, nl, run: st.unit === 'tok' ? runTok : runChar, sum: s, n, chars: cs };
       }
-      function pLay(w) { const LM = 46, RM = 8; return { LM, RM, y0: 22, bh: w < 520 ? 120 : 132, lab: w < 520 ? 58 : 48, rh: 120 }; }
+      function pLay(w) { const LM = 46, RM = 8, y0 = 20, bh = 76, lab = 52, rh = 98, cy = y0 + bh + 6 + lab + 10 + rh + 4; return { LM, RM, y0, bh, lab, rh, cy, H: cy + 92 }; }
       function drawPpl(g, w) {
         if (!score) score = prepScore();
         const L = pLay(w), P = pplStats(), n = P.toks.length, bw = (w - L.LM - L.RM) / Math.max(1, n);
         const maxNl = Math.max(12, ...P.nl.filter(isFinite)), top = Math.ceil(maxNl / 4) * 4;
-        const Yb = (v) => L.y0 + L.bh - v / top * L.bh;
+        const Yb = (v) => L.y0 + L.bh - v / top * L.bh, base = L.y0 + L.bh;
         g.strokeStyle = C.rule; g.lineWidth = 1;
         [0, top / 2, top].forEach(v => { g.beginPath(); g.moveTo(L.LM, Yb(v)); g.lineTo(w - L.RM, Yb(v)); g.stroke(); T(g, String(v), L.LM - 6, Yb(v), { size: 11, align: 'right', baseline: 'middle', color: C.muted }); });
-        T(g, '−ln p, nats per token', L.LM, 4, { size: 11, color: C.muted });
+        T(g, '−ln p, nats per token (stacked: its characters)', L.LM, 2, { size: 11, color: C.muted });
         P.nl.forEach((v, i) => {
-          const x = L.LM + i * bw + bw * 0.16, ww = bw * 0.68;
-          if (!isFinite(v)) { g.strokeStyle = C.rule; g.setLineDash([2, 2]); g.strokeRect(x, Yb(top * 0.15), ww, L.y0 + L.bh - Yb(top * 0.15)); g.setLineDash([]); return; }
-          g.fillStyle = i === st.sel ? C.blue : st.mode === 'ebt' ? C.blue2 : 'rgba(17,17,17,0.55)'; g.fillRect(x, Yb(v), ww, L.y0 + L.bh - Yb(v));
+          const x = L.LM + i * bw + bw * 0.16, ww = bw * 0.68, on = i === st.sel;
+          if (!isFinite(v)) { g.strokeStyle = C.rule; g.setLineDash([2, 2]); g.strokeRect(x, Yb(top * 0.15), ww, base - Yb(top * 0.15)); g.setLineDash([]); return; }
+          if (st.mode !== 'ebt') { g.fillStyle = on ? C.ink : 'rgba(17,17,17,0.45)'; g.fillRect(x, Yb(v), ww, base - Yb(v)); return; }
+          // one segment per character: the token's loss is literally the sum of its characters' losses
+          g.fillStyle = on ? C.blue : C.blue2; g.fillRect(x, Yb(v), ww, base - Yb(v));
+          let acc = 0; g.strokeStyle = '#fff'; g.lineWidth = 1; P.toks[i].chars.forEach((c, j) => { acc += charNll(c); if (j < P.toks[i].chars.length - 1) { g.beginPath(); g.moveTo(x, Yb(acc)); g.lineTo(x + ww, Yb(acc)); g.stroke(); } });
         });
-        // token labels
-        const ly = L.y0 + L.bh + 6;
+        const ly = base + 6;
         P.toks.forEach((tk, i) => {
-          const x = L.LM + (i + 0.5) * bw; let s = tokShow(tk.text); if (s.length > 9) s = s.slice(0, 8) + '…';
-          g.save(); g.translate(x + 3, ly); g.rotate(-Math.PI / 3.2); T(g, s, 0, 0, { size: 11, align: 'right', color: i === st.sel ? C.blue : C.ink2 || C.ink, weight: i === st.sel ? 700 : 400 }); g.restore();
+          const x = L.LM + (i + 0.5) * bw; let s = tokShow(tk.text); if (s.length > 8) s = s.slice(0, 7) + '…';
+          g.save(); g.translate(x + 3, ly); g.rotate(-Math.PI / 3.2); T(g, s, 0, 0, { size: 11, align: 'right', color: i === st.sel ? C.blue : C.ink, weight: i === st.sel ? 700 : 400 }); g.restore();
         });
-        // running perplexity, log axis
-        const ry = ly + L.lab + 12, rh = L.rh - 26;
-        const vals = P.run.filter(isFinite), hiExp = Math.max(5, Math.ceil(Math.log10(Math.max(10, ...vals)))), Yr = (v) => ry + rh - Math.log10(Math.max(1, v)) / hiExp * rh;
-        T(g, 'perplexity of the tokens so far (log scale)', L.LM, ry - 14, { size: 11, color: C.muted });
-        for (let e = 0; e <= hiExp; e += hiExp > 6 ? 2 : 1) { g.strokeStyle = C.rule; g.beginPath(); g.moveTo(L.LM, Yr(Math.pow(10, e))); g.lineTo(w - L.RM, Yr(Math.pow(10, e))); g.stroke(); T(g, e === 0 ? '1' : e < 4 ? String(Math.pow(10, e)) : '1e' + e, L.LM - 6, Yr(Math.pow(10, e)), { size: 11, align: 'right', baseline: 'middle', color: C.muted }); }
-        const refl = (v, s, col) => { g.save(); g.strokeStyle = col; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(L.LM, Yr(v)); g.lineTo(w - L.RM, Yr(v)); g.stroke(); g.restore(); T(g, s, w - L.RM - 2, Yr(v) - 13, { size: 11, align: 'right', color: col }); };
-        refl(31.36, 'T++ 31.36 (Table 3)', C.ink); refl(VOCAB, 'uniform 50,277', C.muted);
+        // running perplexity on a log axis, in the chosen unit, with reference levels in the same unit
+        const ry = ly + L.lab + 12, rh = L.rh - 22, tok = st.unit === 'tok';
+        const refs = tok ? [[31.36, 'Transformer++ 31.36 (Table 3)', C.ink, 'left'], [VOCAB, 'uniform over 50,277 tokens', C.muted, 'right']]
+          : [[TPP_CHAR, `Transformer++ ≈ ${TPP_CHAR.toFixed(2)} (derived)`, C.ink, 'left'], [TOY_BASE, `toy one-pass baseline ${TOY_BASE.toFixed(2)} (held-out)`, C.muted, 'right'], [TOY_SYMS, `uniform over ${TOY_SYMS} symbols`, C.muted, 'right']];
+        const vals = P.run.filter(isFinite), hiExp = Math.max(2, Math.ceil(Math.log10(Math.max(10, ...vals, ...refs.map(r => r[0]))) + 0.05)), Yr = (v) => ry + rh - Math.log10(Math.max(1, v)) / hiExp * rh;
+        T(g, `perplexity ${tok ? 'per token' : 'per character'} of the text so far (log scale)`, L.LM, ry - 14, { size: 11, color: C.muted });
+        const stepE = hiExp > 6 ? 2 : 1;
+        for (let e = 0; e <= hiExp; e += stepE) { g.strokeStyle = C.rule; g.beginPath(); g.moveTo(L.LM, Yr(Math.pow(10, e))); g.lineTo(w - L.RM, Yr(Math.pow(10, e))); g.stroke(); T(g, e === 0 ? '1' : e < 4 ? String(Math.pow(10, e)) : '1e' + e, L.LM - 6, Yr(Math.pow(10, e)), { size: 11, align: 'right', baseline: 'middle', color: C.muted }); }
+        refs.forEach(([v, s, col, al]) => {
+          g.save(); g.strokeStyle = col; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(L.LM, Yr(v)); g.lineTo(w - L.RM, Yr(v)); g.stroke(); g.restore();
+          const tw = s.length * 6.7 + 6, tx = al === 'left' ? L.LM + 4 : w - L.RM - tw - 2; g.fillStyle = 'rgba(255,255,255,0.9)'; g.fillRect(tx, Yr(v) + 1, tw + 2, 13);
+          T(g, s, al === 'left' ? tx + 2 : w - L.RM - 2, Yr(v) + 2, { size: 10.5, align: al, color: col });
+        });
         const pts = []; P.run.forEach((v, i) => { if (isFinite(v)) pts.push([L.LM + (i + 0.5) * bw, Yr(v)]); });
-        if (pts.length > 1) lib.line(g, pts, { color: st.mode === 'ebt' ? C.blue : C.ink, width: 2 });
-        pts.forEach((p, i) => lib.dot(g, p[0], p[1], i === pts.length - 1 ? 4 : 2.2, st.mode === 'ebt' ? C.blue : C.ink));
+        const lc = st.mode === 'ebt' ? C.blue : C.ink;
+        if (pts.length > 1) lib.line(g, pts, { color: lc, width: 2 });
+        pts.forEach((p, i) => lib.dot(g, p[0], p[1], i === pts.length - 1 ? 4 : 2.2, lc));
+        g.strokeStyle = C.rule; g.beginPath(); g.moveTo(0, L.cy - 2); g.lineTo(w, L.cy - 2); g.stroke();
+        const tk = P.toks[st.sel]; T(g, `inside "${tk ? tokShow(tk.text) : ''}": p(token) = product of its characters' p`, 6, L.cy + 3, { size: 11, color: C.muted, maxWidth: w - 12 });
+        g.save(); g.translate(0, L.cy + 16); drawChars(g, w); g.restore();
       }
       function drawChars(g, w) {
         const P = pplStats(), tk = P.toks[st.sel];
         if (!tk) return;
-        if (st.mode !== 'ebt') { T(g, st.mode === 'tpp' ? 'This reference scorer assigns p = 1/31.36 to every token: −ln p = 3.45 nats each,' : 'This reference scorer spreads p evenly over all 50,277 tokens: −ln p = 10.83 nats each,', 6, 10, { size: 12, color: C.muted, maxWidth: w - 12 }); T(g, 'so its perplexity is that constant, whatever the text.', 6, 46, { size: 12, color: C.muted, maxWidth: w - 12 }); return; }
+        if (st.mode !== 'ebt') { T(g, st.mode === 'tpp' ? 'This reference scorer gives every true token p = 1/31.36: −ln p = 3.45 nats per token,' : 'This reference scorer spreads p evenly over all 50,277 tokens: −ln p = 10.83 nats per token,', 6, 10, { size: 12, color: C.muted, maxWidth: w - 12 }); T(g, 'so its per-token perplexity is that constant, whatever the text.', 6, 46, { size: 12, color: C.muted, maxWidth: w - 12 }); return; }
         if (!tk.chars.length) { T(g, 'This token has no characters the toy model can score.', 6, 10, { size: 12, color: C.muted }); return; }
-        const n = tk.chars.length, cw = Math.min(64, (w - 12) / Math.max(n, 4)), x0 = 6, top = 8, bh = 40;
-        const vals = tk.chars.map(c => score && c.k < score.done ? score.nll[st.N][c.k] : NaN), mx = Math.max(4, ...vals.filter(isFinite));
+        const n = tk.chars.length, cw = Math.min(64, (w - 12) / Math.max(n, 4)), x0 = 6, top = 14, bh = 28;
+        const vals = tk.chars.map(charNll), mx = Math.max(4, ...vals.filter(isFinite));
         tk.chars.forEach((c, i) => {
           const v = vals[i], x = x0 + i * cw, y1 = top + bh;
-          if (isFinite(v)) { g.fillStyle = C.blue2; const hh = v / mx * bh; g.fillRect(x + cw * 0.2, y1 - hh, cw * 0.6, hh); T(g, v.toFixed(1), x + cw / 2, y1 - (v / mx * bh) - 13, { size: 10, align: 'center', color: C.muted }); }
+          if (isFinite(v)) { g.fillStyle = C.blue2; const hh = v / mx * bh; g.fillRect(x + cw * 0.2, y1 - hh, cw * 0.6, hh); T(g, v.toFixed(1), x + cw / 2, y1 - hh - 13, { size: 10, align: 'center', color: C.muted }); }
           g.strokeStyle = C.rule; g.strokeRect(x + 1.5, y1 + 4.5, cw - 3, 22);
           T(g, c.c === ' ' ? '·' : c.c === '\n' ? '↵' : c.c, x + cw / 2, y1 + 9, { size: 13, align: 'center' });
-          if (isFinite(v)) T(g, 'p ' + Math.exp(-v).toFixed(2), x + cw / 2, y1 + 32, { size: 10, align: 'center', color: C.muted });
+          if (isFinite(v)) T(g, (cw >= 46 ? 'p ' : '') + Math.exp(-v).toFixed(2).replace(/^0/, ''), x + cw / 2, y1 + 31, { size: 10, align: 'center', color: C.muted });
         });
         const tot = vals.reduce((a, b) => a + b, 0), xr = x0 + n * cw + 12;
         if (isFinite(tot) && xr < w - 120) T(g, `Σ = ${tot.toFixed(2)} nats\np(token) = ${Math.exp(-tot).toExponential(1)}`, xr, top + 10, { size: 12, color: C.blue, lh: 1.5 });
       }
       pplC.c.addEventListener('click', (ev) => { const [x] = pplC.toLocal(ev), L = pLay(pplC.w), n = score ? score.toks.length : 0, bw = (pplC.w - L.LM - L.RM) / Math.max(1, n), i = Math.floor((x - L.LM) / bw); if (i >= 0 && i < n) { st.sel = i; updPpl(); } });
+      const CAP4 = {
+        char: 'Bars: −ln p per token; hairlines split it by character. Line: perplexity per character, the toy\'s unit. Dashed: uniform guess, the toy\'s one-pass baseline, and Transformer++\'s 31.36 per token at 4.17 characters per token (derived).',
+        tok: 'Same losses divided by tokens instead of characters. The toy spreads probability over every string of characters, not only the 50,277 tokens, so a weak character model can land above the uniform-token line.',
+      };
       function updPpl() {
         if (!score || score.docId !== st.doc.id) { score = prepScore(); if (st.view === 'ppl') startScoring(); }
         if (score) st.sel = clamp(st.sel, 0, score.toks.length - 1);
-        const P = pplStats(), mean = P.n ? P.sum / P.n : NaN, pplT = Math.exp(mean), pplC2 = P.chars ? Math.exp(P.sum / P.chars) : NaN, cpt = P.n ? P.chars / P.n : NaN;
+        const P = pplStats(), pplT = Math.exp(P.sum / P.n), pplCh = Math.exp(P.sum / P.chars), cpt = P.chars / P.n;
         nSl.el.style.opacity = st.mode === 'ebt' ? '1' : '0.4';
-        pro.innerHTML = P.n ? `<span>Σ −ln p = <b>${P.sum.toFixed(1)}</b> nats over T = <b>${P.n}</b> tokens</span><span>per-token PPL = e<sup>${mean.toFixed(2)}</sup> = <b>${fmtPpl(pplT)}</b></span>` + (st.mode === 'ebt' ? `<span>C = ${P.chars} chars · per-char PPL <b>${pplC2.toFixed(2)}</b></span><span>check: ${pplC2.toFixed(2)}<sup>${cpt.toFixed(2)}</sup> = <b>${fmtPpl(Math.pow(pplC2, cpt))}</b></span>` : '') : '<span>waiting for the first scores…</span>';
-        pplC.redraw(); charC.redraw();
+        let byN = '';
+        if (st.mode === 'ebt' && score && score.done >= score.str.length) { const Lc = score.str.length; byN = '<span>per-char PPL by N: ' + [0, 1, 2, 3, 6, 12].map(n => { let t = 0; for (let k = 0; k < Lc; k++) t += score.nll[n][k]; return `${n} → <b${n === st.N ? '' : ' style="color:var(--ink2)"'}>${Math.exp(t / Lc).toFixed(1)}</b>`; }).join(' · ') + '</span>'; }
+        pro.innerHTML = P.n ? `<span>Σ −ln p = <b>${P.sum.toFixed(1)}</b> nats over T = <b>${P.n}</b> tokens, C = <b>${P.chars}</b> characters</span><span>per token e<sup>${(P.sum / P.n).toFixed(2)}</sup> = <b>${fmtPpl(pplT)}</b></span><span>per character e<sup>${(P.sum / P.chars).toFixed(2)}</sup> = <b>${pplCh.toFixed(2)}</b></span><span>check ${pplCh.toFixed(2)}<sup>C/T = ${cpt.toFixed(2)}</sup> = ${fmtPpl(Math.pow(pplCh, cpt))}</span>` + byN : '<span>waiting for the first scores…</span>';
+        if (st.view === 'ppl') ctx.setCaption(CAP4[st.unit]);
+        pplC.redraw();
       }
 
       // =============== view 5: benchmarks ===============
@@ -399,7 +424,7 @@
       const F5 = lib.frame(v5, { label: 'A real row of the benchmark', sub: '&nbsp;', pad: 12 });
       const exBox = h('div', { class: 'td-ex' }); F5.frame.appendChild(exBox);
       const dyckCtl = h('div', { class: 'controls' }); v5.appendChild(dyckCtl);
-      const benchBars = rcanvas(v5, () => 74, 'Table 3 perplexity of this benchmark for Transformer++ and EBT', drawBenchBars);
+      const benchBars = rcanvas(v5, () => 92, 'Table 3 perplexity of this benchmark for Transformer++ and EBT', drawBenchBars);
       function renderBench() {
         const B = BENCH.find(b => b.key === st.bench), rows = EV[st.bench] || [], r = rows[st.ex] || rows[0];
         const src = ((EV._meta || {}).sources || {})[st.bench] || {};
@@ -451,13 +476,13 @@
           const y = 22 + i * 24; T(g, nm, LM - 8, y + 7, { size: 12, align: 'right', baseline: 'middle', color: col });
           g.fillStyle = col; g.fillRect(LM, y, X(v) - LM, 14); T(g, v.toFixed(1), X(v) + 6, y + 7, { size: 12, baseline: 'middle', color: col, weight: 700 });
         });
-        const d = (b - a) / a; T(g, `EBT ${pct(d)} (${d < 0 ? 'better' : 'worse'})`, w, 22 + 31, { size: 12, align: 'right', baseline: 'middle', color: d < 0 ? C.blue : C.bad });
+        const d = (b - a) / a; T(g, `EBT vs Transformer++: ${pct(d)} (${d < 0 ? 'better' : 'worse'})`, w < 520 ? 0 : LM, 74, { size: 12, color: d < 0 ? C.blue : C.bad });
       }
 
       // =============== view 6: Table 3 ===============
       const v6 = mkView('table');
       const F6 = lib.frame(v6, { label: 'Table 3 · perplexity, lower is better', sub: 'Transformer++ (ink) vs EBT (blue) · same training setup (p.11) · click a column' });
-      const t3c = rcanvas(F6.frame, (w) => w < 520 ? 250 : 236, 'Table 3: pretraining and downstream perplexity for Transformer++ and EBT', drawT3);
+      const t3c = rcanvas(F6.frame, (w) => w < 520 ? 286 : 250, 'Table 3: pretraining and downstream perplexity for Transformer++ and EBT', drawT3);
       t3c.c.style.cursor = 'pointer';
       const t3tbl = h('div', { class: 'tbl td-t3' }); v6.appendChild(t3tbl);
       function t3Lay(w) { return { LM: 34, y0: 30, ph: w < 520 ? 150 : 140 }; }
@@ -472,9 +497,10 @@
           g.fillStyle = C.blue; g.fillRect(gx + gw / 2 + 2, Y(b), bw, L.y0 + L.ph - Y(b));
           T(g, pct(d), gx + gw / 2, Math.min(Y(a), Y(b)) - 16, { size: 11, align: 'center', color: d < 0 ? C.blue : C.bad, weight: 700 });
           T(g, c, gx + gw / 2, L.y0 + L.ph + 6, { size: w < 520 ? 10 : 11, align: 'center', color: on ? C.ink : C.muted, maxWidth: gw - 2 });
-          T(g, `÷pre ${(a / T3.tpp[0]).toFixed(2)} / ${(b / T3.ebt[0]).toFixed(2)}`, gx + gw / 2, L.y0 + L.ph + (w < 520 ? 40 : 24), { size: 10, align: 'center', color: C.faint, maxWidth: gw - 2 });
+          if (w < 520) { T(g, (a / T3.tpp[0]).toFixed(2), gx + gw / 2, L.y0 + L.ph + 36, { size: 10.5, align: 'center', color: C.ink }); T(g, (b / T3.ebt[0]).toFixed(2), gx + gw / 2, L.y0 + L.ph + 50, { size: 10.5, align: 'center', color: C.blue }); }
+          else T(g, `÷pre ${(a / T3.tpp[0]).toFixed(2)} / ${(b / T3.ebt[0]).toFixed(2)}`, gx + gw / 2, L.y0 + L.ph + 24, { size: 10, align: 'center', color: C.muted, maxWidth: gw - 2 });
         });
-        T(g, 'EBT vs T++ above each pair (blue = EBT better) · ÷pre = ratio to the model\'s own pretraining perplexity, T++ / EBT', L.LM, w < 520 ? L.y0 + L.ph + 66 : L.y0 + L.ph + 46, { size: 10.5, color: C.muted, maxWidth: w - L.LM - 4 });
+        T(g, w < 520 ? 'above: EBT vs T++ (blue = EBT better) · below: ratio to own pretraining perplexity, T++ (ink) and EBT (blue)' : 'EBT vs T++ above each pair (blue = EBT better) · ÷pre = ratio to the model\'s own pretraining perplexity, T++ / EBT', w < 520 ? 4 : L.LM, w < 520 ? L.y0 + L.ph + 68 : L.y0 + L.ph + 46, { size: 10.5, color: C.muted, maxWidth: w - (w < 520 ? 8 : L.LM + 4) });
       }
       t3c.c.addEventListener('click', (ev) => { const [x] = t3c.toLocal(ev), L = t3Lay(t3c.w), gw = (t3c.w - L.LM - 4) / T3.cols.length, j = Math.floor((x - L.LM) / gw); if (j >= 0 && j < T3.cols.length) { st.t3 = j; updT3(); } });
       function updT3() {
@@ -493,12 +519,12 @@
       // ---------- wiring ----------
       docSel.addEventListener('change', () => { st.doc = docs.find(d => d.id === docSel.value) || docs[0]; st.hover = Math.min(st.hover, st.doc.tokens.ids.length - 1); st.pos = Math.min(st.pos, st.doc.tokens.ids.length - 2); posSl.set(st.pos); renderChips(); updPairs(); score = null; st.sel = 0; updPpl(); });
       const CAPS = [
-        'Real RedPajama-V2 text split by the real GPT-NeoX tokenizer. Joined chips are pieces of one word; "·" marks a leading space and "↵" a newline. The ruler places every id of this document in the 50,277-entry vocabulary.',
-        'Rows are positions, columns are tokens. Shaded cells are what a row may read; the dashed cell is the token it is scored on. Every row is trained at once.',
-        'The batch matrix is drawn to scale in B (rows) and S (columns). The axis below shows the tokens a whole run sees; ticks mark every run listed in the selector.',
-        'Bars: the loss of each real GPT-NeoX token, summed over its characters as scored by the toy EBT after N thinking steps. Line: perplexity of the tokens so far. Dashed: Table 3\'s Transformer++ value and the uniform guess, for scale.',
-        'A real row of each benchmark the paper evaluates on, with its Table 3 perplexities. The paper does not say which part of each row is scored.',
-        'Table 3 (p.12) redrawn, with derived conversions: relative difference, nats per token, geometric-mean probability of the true token, and the ratio to each model\'s own pretraining perplexity.',
+        'Real RedPajama-V2 text cut by the real GPT-NeoX tokenizer. Joined chips are pieces of one word; "·" is a leading space, "↵" a newline.',
+        'Rows are positions, columns are tokens. Shaded: what a row reads. Dashed: the token it is scored on. All rows train at once.',
+        'The batch matrix is drawn to scale in B and S. The axis shows the tokens a whole run sees; ticks mark every run in the selector.',
+        CAP4.char,
+        'A real row of each benchmark, with its Table 3 perplexities. The paper does not say which part of each row is scored.',
+        'Table 3 (p.12) with derived conversions: relative difference, nats per token, geometric-mean p of the true token, ratio to own pretraining perplexity.',
       ];
       const VIEW_OF = ['tokens', 'pairs', 'batch', 'ppl', 'bench', 'table'];
       function go(i) {
@@ -514,7 +540,7 @@
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => canv.forEach(R => R.redraw()));
       go(0);
       return {
-        step(i) { go(i); if (i === 1) { st.pos = 6; posSl.set(6); updPairs(); } if (i === 3) { st.mode = 'ebt'; modeSeg.set('ebt'); updPpl(); } },
+        step(i) { go(i); if (i === 1) { st.pos = 6; posSl.set(6); updPairs(); } if (i === 3) { st.mode = 'ebt'; modeSeg.set('ebt'); st.unit = 'char'; unitSeg.set('char'); updPpl(); } },
         show() { if (st.view === 'ppl') startScoring(); },
         hide() { if (job) { clearTimeout(job); job = null; } },
       };

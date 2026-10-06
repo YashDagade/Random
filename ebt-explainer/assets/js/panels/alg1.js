@@ -19,24 +19,24 @@ EBT.panel({
   steps: [
     { label: 'One iteration at a glance', html: '<p>The graph is Algorithm 1 for the highlighted example: noise in, N blue forward steps, one loss, and the ink backward pass returning through every step to the shared weights θ. The heatmap shows the same model for every context at once: each vertical slice is the energy landscape over $\\hat y$ for one $x$, and the panel on its right is the slice at the highlighted $x$.</p>' },
     { label: 'Sample ŷ₀', html: '<p>Line 1: the prediction starts as noise, $\\hat y_0\\sim\\mathcal N(0,I)$, whatever the context. For text, $\\hat y$ is a vector of 50,277 logits per position (p.43); here it is one number, a hollow dot in its column. Click the heatmap to start from any $(x,\\hat y_0)$.</p>' },
-    { label: 'Unroll N thinking steps', html: '<p>Lines 2 and 3. Each box runs a forward pass for $E_\\theta(x,\\hat y_i)$ and a backward pass to the input for $\\nabla_{\\hat y}E$, then moves the prediction. Every box reads the same θ (dashed lines). PyTorch takes this gradient with <code>create_graph=True</code> (Listing 1, p.44), which keeps the gradient\'s own graph so the loss can later be differentiated through it. The paper trains with 2 or 3 steps (p.26).</p>' },
-    { label: 'Score only the end', html: '<p>Line 4: $L=J(\\hat y_N,y)$, here $(\\hat y_N-y)^2$. Intermediate guesses are not scored in this recipe (the S2 setting, below). The backward pass starts from one vector, $\\partial J/\\partial\\hat y_N$, written under $\\hat y_N$; everything modality-specific lives in it.</p>' },
-    { label: 'Backpropagate through every step', html: '<p>The error $a_i=\\partial L/\\partial\\hat y_i$ returns right to left and does two things at each box. It deposits a piece of the weight gradient, $c_i=-\\alpha\\,[\\partial_\\theta\\nabla_{\\hat y}E(\\hat y_{i-1})]^{\\top}a_i$ (its share is on each dashed line), and it steps back, $a_{i-1}=(1-\\alpha H)\\,a_i$ with $H=\\partial^2E/\\partial\\hat y^2$ (factor under each arc; red when it amplifies). Because θ is shared, $\\nabla_\\theta L=\\sum_i c_i$, as in backprop through time. Both pieces differentiate a gradient; the next panel derives them.</p>' },
-    { label: 'Update θ, then repeat', html: '<p>Each update averages $\\nabla_\\theta L$ over a fresh batch of 16 examples, each with its own noise start, and takes an Adam step. Watch three things: the valley slides onto the data ($u\\to1.6$), the bumps that trapped the descent flatten ($c\\to0$), and the curvature $a$ settles where N steps of size α reach the floor.</p>' },
-    { label: 'What the landscape learned', html: '<p>Nothing told the model which energies to output, yet the floor of its landscape now traces $\\mathbb E[y\\mid x]$ and its curvature is tuned to the optimizer. With N = 1 one step must land exactly, which forces $\\alpha a=1$. With more steps any $a$ with $|1-\\alpha a|^N\\approx0$ works (shaded band). Change N or α, then <b>[ reset θ ]</b> and <b>[ train ×60 ]</b>: the landscape adapts to how it will be used. This is the implicit regularization of Sec. 3.2: the landscape is shaped where the optimizer travels.</p>' },
+    { label: 'Unroll N thinking steps', html: '<p>Lines 2 and 3. Each box runs a forward pass for $E_\\theta(x,\\hat y_i)$ and a backward pass to the input for $\\nabla_{\\hat y}E$, then moves the prediction. Every box reads the same θ (dashed lines). PyTorch takes this gradient with <code>create_graph=True</code> (Listing 1, p.44), which keeps the gradient\'s own graph so the loss can later be differentiated through it. The paper trains with 2 or 3 steps (p.26).</p><p>Read the energies above the nodes: before training they do not fall. The untrained bumps curve more sharply than this step size can handle, so the highlighted path overshoots and its energy rises. A gradient step is only guaranteed to lower the energy when the step is small for the local curvature, roughly $\\alpha H&lt;2$. Training will have to fix this too.</p>' },
+    { label: 'Score only the end', html: '<p>Line 4: $L=J(\\hat y_N,y)$, here $(\\hat y_N-y)^2$. Intermediate guesses are not scored in Algorithm 1 as written, nor in the paper\'s S2 models (below). The backward pass starts from one number per output entry, $\\partial J/\\partial\\hat y_N=2(\\hat y_N-y)$, written under $\\hat y_N$. Everything modality-specific lives in this starting error (table below).</p>' },
+    { label: 'Backpropagate through every step', html: '<p>The error $a_i=\\partial L/\\partial\\hat y_i$ travels right to left and does two things at each box. It deposits a piece of the weight gradient, $c_i=-\\alpha\\,[\\partial_\\theta\\nabla_{\\hat y}E_\\theta(\\hat y_{i-1})]^{\\top}a_i$, whose share is printed on that box\'s θ link. And it moves one step back, $a_{i-1}=(1-\\alpha H_{i-1})\\,a_i$ with $H_{i-1}=\\partial^2E/\\partial\\hat y^2$ at $\\hat y_{i-1}$: the factor under each arc, red when it amplifies. Because every box shares θ, $\\nabla_\\theta L=\\sum_i c_i$, as in backpropagation through time. Both pieces differentiate a gradient; the next panel derives them.</p><p>Before training the chain amplifies: the red ×3.53 on the arc from $\\hat y_3$ back to $\\hat y_2$ makes the error arriving at the middle box 3.5 times the one the loss sent, so most of the learning signal (64%) comes from the middle step, not the last. The faint arc back to the noise $\\hat y_0$ carries an error nobody uses, since no weights sit upstream of $\\hat y_0$.</p>' },
+    { label: 'Update θ, then repeat', html: '<p>Each update averages $\\nabla_\\theta L$ over a fresh batch of 16 examples, each with its own noise start, and takes an Adam step. Watch three things in the outer-loop chart: the valley slides onto the data ($u\\to1.6$), the bumps that trapped the descent or threw it off course flatten ($c\\to0$), and the curvature settles where N steps of size α reach the floor ($\\alpha a$ enters the shaded band). The loss falls to the noise floor: $y$ itself is noisy, so no prediction can do better than $\\sigma^2=0.15^2$ on average.</p>' },
+    { label: 'What the landscape learned', html: '<p>Nothing told the model which energies to output, yet the floor of its landscape now traces $\\mathbb E[y\\mid x]$, every step lowers the energy, and the curvature is tuned to the optimizer. With N = 1 one step must land exactly, which forces $\\alpha a=1$. With more steps any $a$ with $|1-\\alpha a|^N\\approx0$ works (shaded band), because the start is forgotten at rate $(1-\\alpha a)^N$. A side effect shows on the graph: every factor under the arcs is now about $1-\\alpha a\\approx0.1$, so the error dies on its way back and over 90% of $\\nabla_\\theta L$ comes from the last step.</p><p>Change N or α, then <b>[ reset θ ]</b> and <b>[ train ×60 ]</b>: the landscape adapts to how it will be used. Not every setting trains. With N = 6 and α = 1, or N = 3 and α = 1.5, red factors multiply, the gradient becomes erratic and the loss stalls far above the floor. That is the "longer gradient chains" instability that kept the paper at 2 or 3 steps (p.26, p.42); the next panel takes it apart. Shaping the landscape only where the optimizer travels is what Sec. 3.2 calls implicitly regularizing it (p.7).</p>' },
   ],
   after: `
     <h3>Only the loss is modality-specific</h3>
     <div class="tbl"><table>
-      <tr><th>modality</th><th>ŷ and J</th><th>seed ∂J/∂ŷ<sub>N</sub></th></tr>
+      <tr><th>modality</th><th>ŷ and J</th><th>starting error ∂J/∂ŷ<sub>N</sub></th></tr>
       <tr><td>text (p.7, p.43)</td><td>50,277 logits per position; cross-entropy</td><td>$\\mathrm{softmax}(\\hat y_N)-e_y$</td></tr>
       <tr><td>images (p.7)</td><td>denoised image; MSE</td><td>$\\tfrac2D(\\hat y_N-y)$</td></tr>
       <tr><td>video (p.12)</td><td>3136-d latent of the next frame; Smooth L1, β = 1</td><td>$\\tfrac1D\\,\\mathrm{clip}(\\hat y_N-y,\\pm1)$</td></tr>
     </table></div>
     <p>The paper reuses each field's standard loss "to simplify experiments" (p.7); $D$ is the number of entries and $e_y$ the one-hot target. For text the logits are softmaxed and linearly projected into the Transformer's embedding space at every step (p.44). The unroll and the backward pass are identical across modalities.</p>
     <h3>What the paper actually runs</h3>
-    <p>"Backpropagated through the entire optimization process" (p.7) is the idealized version. S1 models (many scaling runs) detach $\\hat y$ between steps and put the loss on every step; S2 models (the thinking results) keep the chain, truncate backpropagation and score only the last step (p.30, p.36, p.43). Training used N = 2 (Table D.3) or 2 to 3 random steps (Table D.4).</p>
-    <p class="note">Toy: $E_\\theta(x,\\hat y)=\\tfrac a2(\\hat y-u\\sin2\\pi x)^2+c\\cos3\\hat y$, θ = (a, u, c), trained in your browser on 72 points $y=1.6\\sin2\\pi x+0.15\\,\\varepsilon$ with Adam (learning rate 0.05, gradient norm clipped at 1 as in Table D.4). Gradients are exact and checked against central finite differences of the batch loss after every update (readout).</p>`,
+    <p>"Backpropagated through the entire optimization process" (p.7) is the idealized version, and it is what the toy above does. S1 models (many of the scaling runs) detach $\\hat y$ between steps and put the loss on every step. S2 models (the thinking results) keep the chain, truncate backpropagation and score only the last step (p.30, p.36, p.43). Training used N = 2 (Table D.3) or 2 to 3 random steps (Table D.4); the next panel shows what detaching and truncating do to the gradient.</p>
+    <p class="note">Toy: $E_\\theta(x,\\hat y)=\\tfrac a2(\\hat y-u\\sin2\\pi x)^2+c\\cos3\\hat y$, θ = (a, u, c), trained in your browser on 72 points $y=1.6\\sin2\\pi x+0.15\\,\\varepsilon$ with $\\varepsilon\\sim\\mathcal N(0,1)$. Full backpropagation through all N steps, loss on the last step only, Adam with learning rate 0.05 and the gradient clipped to norm 1 (the paper lists a gradient clip value of 1, Table D.4). Gradients are exact and checked against central finite differences of the batch loss after every update (readout).</p>`,
   source: [{ kind: 'paper', note: 'Algorithm 1, Eq. 1, p.7; losses p.7, p.12' }, { kind: 'toy', note: '3-parameter EBT trained live, exact gradients' }],
   figure(stage, ctx) {
     const { lib } = ctx, h = lib.h, C = lib.C;
@@ -45,6 +45,8 @@ EBT.panel({
     const SUBS = '₀₁₂₃₄₅₆₇₈₉', sub = (n) => String(n).split('').map((d) => SUBS[+d] || d).join('');
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
     const fv = (v, d = 2) => (!isFinite(v) ? '–' : (Math.abs(v) >= 1000 ? v.toExponential(1) : v.toFixed(d)).replace('-', '−'));
+    // like fv, but tiny non-zero values keep their sign and size (−8e−5) instead of collapsing to −0.00
+    const fs = (v) => { if (!isFinite(v)) return '–'; const a = Math.abs(v); if (a === 0) return '0'; if (a < 0.005) return v.toExponential(0).replace('e-', 'e−').replace('-', '−'); return fv(v); };
     const ease = (t) => lib.ease(t);
     const T = (g, s, x, y, o = {}) => lib.text(g, s, x, y, Object.assign({ size: 12, kind: 'mono', color: INK, baseline: 'middle' }, o));
 
@@ -95,6 +97,7 @@ EBT.panel({
       S.batch = Array.from({ length: B }, () => { const d = DATA[Math.floor(r() * DATA.length)]; return { x: d.x, y: d.y, y0: r.normal() }; });
     }
     newBatch();
+    let played = false; // the one-time autoplay on first view has happened (or the reader acted first)
     let R = null, BL = null, grid = null, heat = null, floor = null, floor0 = null;
     const LAST = () => 2 * S.N + 1;
     function recompute() { R = trace(S.th, S.sel, S.N, S.alpha); BL = batchLG(S.th, S.batch, S.N, S.alpha); S.fd = fdCheck(S.th, S.batch, S.N, S.alpha, BL.G); buildHeat(); }
@@ -155,7 +158,7 @@ EBT.panel({
     const row = h('div', { class: 'fig-row' }); stage.appendChild(row);
     const F2 = lib.frame(row, { label: 'Energy over context and prediction', sub: 'E<sub>θ</sub>(x, ŷ) · click to start a path' });
     F2.wrap.style.flex = '1 1 100%';
-    const heatC = rcv(F2.frame, { label: 'Heatmap of the toy energy over context x (horizontal) and prediction y-hat (vertical), with the data, the valley floor, the unrolled paths of the batch, and a slice of the energy at the highlighted context.', height: (w) => (w >= 540 ? 230 : Math.round(w * 0.86)), draw: drawHeat });
+    const heatC = rcv(F2.frame, { label: 'Heatmap of the toy energy over context x (horizontal) and prediction y-hat (vertical), with the data, the valley floor, the unrolled paths of the batch, and a slice of the energy at the highlighted context.', height: (w) => (w >= 540 ? 204 : Math.round(w * 0.86)), draw: drawHeat });
     const row2 = h('div', { class: 'fig-row' }); stage.appendChild(row2);
     const F3 = lib.frame(row2, { label: 'Outer loop', sub: 'θ ← θ − η∇<sub>θ</sub>L · batch of 16 per update' });
     F3.wrap.style.flex = '1 1 330px';
@@ -165,13 +168,13 @@ EBT.panel({
     // ---------------- drawing: computation graph ----------------
     function graphLayout(w, N) {
       if (w >= 540) {
-        const cy = 100, x0 = 32, xJ = w - 40, dx = (xJ - 62 - x0) / N;
+        const cy = 97, x0 = 32, xJ = w - 40, dx = (xJ - 62 - x0) / N;
         const nodes = [], ops = [null];
         for (let i = 0; i <= N; i++) nodes.push([x0 + i * dx, cy]);
         for (let i = 1; i <= N; i++) ops.push([(nodes[i - 1][0] + nodes[i][0]) / 2, cy]);
         const ow = Math.min(58, dx - 40), oh = 24;
         return {
-          horiz: true, h: 178, nodes, ops, ow, oh, r: 15, J: [xJ, cy], Y: [xJ, cy + 58],
+          horiz: true, h: 174, nodes, ops, ow, oh, r: 15, J: [xJ, cy], Y: [xJ, cy + 58],
           thetaBox: [12, 8, w - 24, 30], link: (i) => [[ops[i][0], 38], [ops[i][0], cy - oh / 2]], shareAt: (i) => [ops[i][0] + 5, 50, 'left'],
           fwd: (i) => [[nodes[i - 1][0] + 16, cy], [ops[i][0] - ow / 2 - 2, cy], [ops[i][0] + ow / 2 + 2, cy], [nodes[i][0] - 17, cy]],
           arc: (i) => [[nodes[i][0], cy + 16], [(nodes[i][0] + nodes[i - 1][0]) / 2, cy + 50], [nodes[i - 1][0], cy + 16]],
@@ -215,11 +218,11 @@ EBT.panel({
       if (L.horiz) {
         T(g, 'θ', bx + 10, by + bh / 2, { kind: 'display', size: 17, weight: 600 });
         T(g, 'shared weights  ' + thTxt, bx + 26, by + bh / 2, { color: MUTED });
-        if (done) T(g, '∂L/∂θ  ' + fv(R.G[0]) + ', ' + fv(R.G[1]) + ', ' + fv(R.G[2]), bx + bw - 10, by + bh / 2, { align: 'right', weight: 700 });
+        if (done) T(g, '∂L/∂θ  ' + fs(R.G[0]) + ', ' + fs(R.G[1]) + ', ' + fs(R.G[2]), bx + bw - 10, by + bh / 2, { align: 'right', weight: 700 });
       } else {
         T(g, 'θ', bx + bw / 2, by + 13, { kind: 'display', size: 15, weight: 600, align: 'center' });
         T(g, 'θ shared: ' + thTxt, 8, 14, { color: MUTED, size: 11.5 });
-        if (done) T(g, '∂L/∂θ = (' + fv(R.G[0]) + ', ' + fv(R.G[1]) + ', ' + fv(R.G[2]) + ')', 8, L.legendY, { weight: 700, size: 11.5 });
+        if (done) T(g, '∂L/∂θ = (' + fs(R.G[0]) + ', ' + fs(R.G[1]) + ', ' + fs(R.G[2]) + ')', 8, L.legendY, { weight: 700, size: 11.5 });
       }
       // θ links: each step reads the same weights; on the way back each step deposits its piece
       for (let i = 1; i <= N; i++) {
@@ -245,8 +248,9 @@ EBT.panel({
       // backward arcs with the Jacobian factor 1 − αH
       for (let i = N; i >= 1; i--) {
         const kk = N - i + 1; if (k < kk) continue;
-        const pr = k === kk ? p : 1; arcLine(g, L.arc(i), pr, INK, 1.3);
-        if (pr >= 1) { const [fx, fy, al] = L.facAt(i), f = R.fac[i]; T(g, '×' + fv(f), fx, fy, { size: 11, align: al, color: Math.abs(f) > 1 ? WARN : INK }); }
+        // the arc back to ŷ0 is faint: ŷ0 is noise with no weights upstream, so its error is never used
+        const pr = k === kk ? p : 1, toNoise = i === 1; arcLine(g, L.arc(i), pr, toNoise ? FAINT : INK, toNoise ? 1 : 1.3);
+        if (pr >= 1) { const [fx, fy, al] = L.facAt(i), f = R.fac[i]; T(g, '×' + fv(f), fx, fy, { size: 11, align: al, color: toNoise ? FAINT : Math.abs(f) > 1 ? WARN : INK }); }
       }
       // loss
       const lossVis = st >= N + 1, lp = st === N + 1 ? p : 1, J = L.J, Y = L.Y;
@@ -270,7 +274,7 @@ EBT.panel({
         g.restore();
         if (vis && (!fresh || p > 0.7)) { const [ex, ey, a2] = L.eAt(i); T(g, 'E ' + fv(R.E[i]), ex, ey, { size: 11, align: a2, color: MUTED }); }
         const known = k >= N - i && !(k === N - i && anim && i < N);
-        if (known) { const [ax, ay, a2] = L.aAt(i); T(g, (L.horiz ? '' : '∂L/∂ŷ ') + fv(R.adj[i]), ax, ay, { size: 11, align: a2, weight: 600 }); }
+        if (known) { const [ax, ay, a2] = L.aAt(i); T(g, (L.horiz ? '' : '∂L/∂ŷ ') + fs(R.adj[i]), ax, ay, { size: 11, align: a2, weight: i === 0 ? 400 : 600, color: i === 0 ? FAINT : INK }); }
       }
     }
 
@@ -352,9 +356,9 @@ EBT.panel({
       [0.01, 0.1, 1, 10].forEach((v) => { g.beginPath(); g.moveTo(lb.x, Y(v) + 0.5); g.lineTo(lb.x + lb.w, Y(v) + 0.5); g.stroke(); T(g, String(v), lb.x - 6, Y(v), { size: 10.5, align: 'right', color: MUTED }); });
       g.strokeStyle = FAINT; g.beginPath(); g.moveTo(lb.x + 0.5, lb.y); g.lineTo(lb.x + 0.5, lb.y + lb.h + 0.5); g.lineTo(lb.x + lb.w, lb.y + lb.h + 0.5); g.stroke();
       g.strokeStyle = INK; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(lb.x, Y(NOISE * NOISE)); g.lineTo(lb.x + lb.w, Y(NOISE * NOISE)); g.stroke(); g.restore();
-      T(g, 'noise floor σ²', lb.x + lb.w - 4, Y(NOISE * NOISE) - 8, { size: 10.5, align: 'right', color: MUTED });
-      T(g, 'update ' + S.t, lb.x + lb.w, lb.y + lb.h + 12, { size: 10.5, align: 'right', color: MUTED });
-      T(g, 'batch loss · log scale', lb.x + lb.w - 4, lb.y + 6, { size: 11, color: MUTED, align: 'right' });
+      T(g, 'noise floor σ²', lb.x + 6, Y(NOISE * NOISE) + 9, { size: 10.5, color: MUTED });
+      T(g, 'update ' + S.t + ' · L ' + fv(S.hist.length ? S.hist[S.hist.length - 1][1] : BL.L, 3), lb.x + lb.w, lb.y + lb.h + 12, { size: 10.5, align: 'right', color: INK });
+      T(g, 'batch loss (log)', lb.x, lb.y + lb.h + 12, { size: 10.5, color: MUTED });
       const pts = S.hist.length ? S.hist.map(([t, v]) => [X(t), Y(v)]) : [[X(0), Y(BL.L)]];
       if (pts.length > 1) lib.line(g, pts, { color: BLUE, width: 1.6 });
       const lp = pts[pts.length - 1]; lib.dot(g, lp[0], lp[1], 3.2, BLUE);
@@ -385,21 +389,20 @@ EBT.panel({
 
     // ---------------- controls and readouts ----------------
     const ctl1 = h('div', { class: 'controls' }); ctlCol.appendChild(ctl1);
-    const bNew = lib.button('new ŷ₀', () => { stopAnim(); S.sel.y0 = lib.rng(31 + S.seed++ * 17).normal() * 1.1; recompute(); S.stage = 0; S.prog = 1; drawAll(); });
-    const bFwd = lib.button('forward', () => { stopTrain(); playTo(S.N + 1, 0); }, { primary: true });
-    const bBwd = lib.button('backward', () => { stopTrain(); playTo(LAST(), S.stage >= S.N + 1 && S.stage < LAST() ? S.stage : S.N + 1); });
-    const bTrain1 = lib.button('train step', () => { stopAnim(); adamStep(); recompute(); S.stage = LAST(); S.prog = 1; drawAll(); });
-    const bTrainN = lib.button('train ×60', () => { stopAnim(); startTrain(60); });
-    const bReset = lib.button('reset θ', () => { stopAnim(); resetTheta(); recompute(); S.stage = LAST(); S.prog = 1; drawAll(); });
+    const bNew = lib.button('new ŷ₀', () => { act(); S.sel.y0 = lib.rng(31 + S.seed++ * 17).normal() * 1.1; recompute(); S.stage = 0; S.prog = 1; drawAll(); });
+    const bFwd = lib.button('forward', () => { played = true; stopTrain(); playTo(S.N + 1, 0); }, { primary: true });
+    const bBwd = lib.button('backward', () => { played = true; stopTrain(); playTo(LAST(), S.stage >= S.N + 1 && S.stage < LAST() ? S.stage : S.N + 1); });
+    const bTrain1 = lib.button('train step', () => { act(); adamStep(); recompute(); S.stage = LAST(); S.prog = 1; drawAll(); });
+    const bTrainN = lib.button('train ×60', () => { act(); startTrain(60); });
+    const bReset = lib.button('reset θ', () => { act(); resetTheta(); recompute(); S.stage = LAST(); S.prog = 1; drawAll(); });
     [bNew, bFwd, bBwd, bTrain1, bTrainN, bReset].forEach((b) => ctl1.appendChild(b));
     const ctl2 = h('div', { class: 'controls' }); ctlCol.appendChild(ctl2);
-    const slN = lib.slider({ id: 'alg1-n', label: 'unrolled steps N', min: 1, max: 6, step: 1, value: S.N, oninput: (v) => { stopAnim(); S.N = v; recompute(); S.stage = LAST(); S.prog = 1; drawAll(); } });
-    const slA = lib.slider({ id: 'alg1-alpha', label: 'inner step size α', min: 0.25, max: 1.5, step: 0.05, value: S.alpha, fmt: (v) => v.toFixed(2), oninput: (v) => { stopAnim(); S.alpha = v; recompute(); S.stage = LAST(); S.prog = 1; drawAll(); } });
+    const slN = lib.slider({ id: 'alg1-n', label: 'unrolled steps N', min: 1, max: 6, step: 1, value: S.N, oninput: (v) => { act(); S.N = v; recompute(); S.stage = LAST(); S.prog = 1; drawAll(); } });
+    const slA = lib.slider({ id: 'alg1-alpha', label: 'inner step size α', min: 0.25, max: 1.5, step: 0.05, value: S.alpha, fmt: (v) => v.toFixed(2), oninput: (v) => { act(); S.alpha = v; recompute(); S.stage = LAST(); S.prog = 1; drawAll(); } });
     ctl2.appendChild(slN.el); ctl2.appendChild(slA.el);
     const ro = h('div', { class: 'readout', 'aria-live': 'polite' }); ctlCol.appendChild(ro);
     function readout() {
-      ro.innerHTML = `<span>update <b>${S.t}</b></span><span>batch L <b>${fv(BL.L, 3)}</b></span>` +
-        `<span>batch ∇θL <b>(${BL.G.map((v) => fv(v)).join(', ')})</b></span><span>check vs finite diff. <b>${S.fd == null ? '–' : S.fd.toExponential(0)}</b></span>`;
+      ro.innerHTML = `<span>batch ∇θL <b>(${BL.G.map((v) => fs(v)).join(', ')})</b></span><span title="relative error of the exact batch gradient against central finite differences">vs finite diff. <b>${S.fd == null ? '–' : S.fd.toExponential(0).replace('e-', 'e−')}</b></span>`;
     }
 
     // ---------------- animation ----------------
@@ -428,6 +431,7 @@ EBT.panel({
     }
     function stopTrain() { S.trainLeft = 0; }
     function stopAnim() { S.trainLeft = 0; anim.stop(); S.prog = 1; S.target = S.stage; }
+    function act() { played = true; stopAnim(); }
     function drawFast() { graphC.render(); heatC.render(); readout(); }
     function drawAll() { graphC.render(); heatC.render(); trainC.render(); readout(); fitSticky(); }
 
@@ -436,22 +440,32 @@ EBT.panel({
       const Lh = lastHeatLayout; if (!Lh) return; const [px, py] = heatC.toLocal(ev), hb = Lh.hb;
       if (px < hb.x || px > hb.x + hb.w || py < hb.y || py > hb.y + hb.h) return;
       const x = clamp((px - hb.x) / hb.w, 0.01, 0.99), y0 = YL[1] - (py - hb.y) / hb.h * (YL[1] - YL[0]);
-      const r = lib.rng(Math.floor(x * 1e6) + 7); stopAnim();
+      const r = lib.rng(Math.floor(x * 1e6) + 7); act();
       S.sel = { x, y: AMP * sx(x) + NOISE * r.normal(), y0 }; recompute(); S.stage = 0; S.prog = 1; drawAll(); playTo(LAST(), 0);
     });
 
     // keep the sticky figure fully visible when it is taller than the window
-    function fitSticky() { try { if (getComputedStyle(stage).position !== 'sticky') { stage.style.top = ''; return; } stage.style.top = Math.min(24, window.innerHeight - stage.offsetHeight - 12) + 'px'; } catch (e) { /* ignore */ } }
+    function fitSticky() {
+      try {
+        stage.style.position = ''; if (getComputedStyle(stage).position !== 'sticky') { stage.style.top = ''; return; }
+        const hh = stage.offsetHeight, vh = window.innerHeight;
+        if (hh > vh * 1.2) { stage.style.position = 'static'; stage.style.top = ''; return; } // far taller than the window: let it scroll
+        stage.style.top = Math.min(24, vh - hh - 6) + 'px'; // a bit taller: stick with its bottom edge in view
+      } catch (e) { /* ignore */ }
+    }
     window.addEventListener('resize', fitSticky);
 
-    ctx.setCaption('Darker = lower energy. White line: valley floor (dashed: before training). Dots: data. Blue: predictions after N steps, hollow = noise start ŷ₀. Crosshair: target y of the highlighted example.');
+    ctx.setCaption('Top: Algorithm 1 for the highlighted example (crosshair). Heatmap: darker = lower energy; white line: valley floor (dashed: before training); dots: data; blue: the batch\'s predictions after N steps (hollow: ŷ₀). Click the heatmap to unroll another example.');
     recompute(); S.stage = LAST(); S.prog = 1; drawAll();
     setTimeout(fitSticky, 300);
 
     return {
       step(i) {
-        stopAnim();
-        if (i <= 4 && S.t > 0) { resetTheta(); }
+        stopAnim(); if (i > 0) played = true;
+        S.sel = Object.assign({}, SEL0); // the steps narrate the canonical example (N = 3, α = 1); clicks and sliders explore others
+        const changed = S.N !== 3 || S.alpha !== 1;
+        if (changed) { S.N = 3; S.alpha = 1; slN.set(3); slA.set(1); }
+        if ((i <= 4 || changed) && S.t > 0) { resetTheta(); }
         if (i <= 4) recompute();
         if (i === 0) { S.stage = LAST(); S.prog = 1; drawAll(); }
         if (i === 1) { S.stage = 0; S.prog = 1; drawAll(); }
@@ -461,7 +475,11 @@ EBT.panel({
         if (i === 5) { recompute(); S.stage = LAST(); S.prog = 1; drawAll(); startTrain(S.t < 60 ? 60 - S.t : 30); }
         if (i === 6) { if (S.t < 120) { const n = 120 - S.t; for (let j = 0; j < n; j++) adamStep(); } recompute(); S.stage = LAST(); S.prog = 1; drawAll(); }
       },
-      show() { fitSticky(); },
+      show() {
+        fitSticky();
+        // first time in view: play one full iteration (forward, loss, backward) unless the reader has already acted
+        if (!played && !lib.reducedMotion && ctx.step === 0 && S.t === 0 && S.stage === LAST() && !anim.running) { played = true; setTimeout(() => { if (ctx.visible() && S.t === 0 && !anim.running) playTo(LAST(), 0); }, 500); }
+      },
       hide() { stopAnim(); },
     };
   },

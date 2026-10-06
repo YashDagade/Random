@@ -8,3 +8,5 @@
 #alg1 .alg1-ctl .controls { gap: 6px 18px; }
 #alg1 .alg1-ctl .ctl { max-width: none; flex: 1 1 100%; }
 #alg1 .alg1-ctl .readout { gap: 2px 14px; }
+#alg1 .step p + p { margin-top: 8px; }
+#alg1 .tbl td:last-child .katex { white-space: nowrap; }

@@ -48,7 +48,7 @@
       const Q = new Float64Array(V * H1);
       for (let k = 0; k < V; k++) { const qo = k * H1; for (let d = 0; d < Dh; d++) { const w = Wpe[k * Dh + d], o = d * H1; for (let j = 0; j < H1; j++) Q[qo + j] += w * Wp[o + j]; } }
       const cx = { h, c1, Q, ids: id };
-      if (cache.size > 400) cache.delete(cache.keys().next().value);
+      if (cache.size > 48) cache.delete(cache.keys().next().value);
       cache.set(key, cx); return cx;
     }
     const a1 = new Float64Array(H1), s1 = new Float64Array(H1), a2 = new Float64Array(H2), da1 = new Float64Array(H1), da2 = new Float64Array(H2);
@@ -97,15 +97,15 @@
 
   // ---------------------------------------------------------------------------------------------
   const SLICES = [
-    { ctx: ' educated at highgate school in london, ', A: 't', B: 'a', truth: 'a', ext: [-4, 12], seg: '…in london, _', what: 'two kinds of basin' },
-    { ctx: 'd and harvard universities. he was in th', A: 'e', B: 'a', truth: 'e', ext: [-4, 12], seg: '…he was in th_', what: 'one valley' },
+    { ctx: ' educated at highgate school in london, ', A: 't', B: 'a', truth: 'a', ext: [-4, 14], seg: '…in london, _' },
+    { ctx: 'd and harvard universities. he was in th', A: 'e', B: 'a', truth: 'e', ext: [-4, 12], seg: '…he was in th_' },
   ];
   const TABLE2 = [ // Table 2 (p.10), percent perplexity improvement, OOD BigBench Dyck
-    { name: 'No random step size', tl: -1.47, sv: 0.19, why: 'α fixed in training. Thinking longer now hurts slightly (−1.47%) and verification barely helps (0.19%): the paper calls random step size critical.' },
-    { name: 'No random num. steps', tl: 0.00, sv: 9.65, why: 'Fixed step count in training. Extra steps give exactly 0.00%: the model never learned to use them. Verification still gives 9.65%.' },
-    { name: 'No Langevin dynamics', tl: 17.2, sv: 17.0, why: 'No noise in training. The best single-path gain (17.2%), but adding verification no longer helps (17.0%): less exploration, a landscape tuned to the direct path.' },
-    { name: 'No replay buffer', tl: 14.8, sv: 17.8, why: 'No replayed trajectories in training. 14.8% thinking longer, 17.8% with verification.' },
-    { name: 'Full System 2 config', tl: 7.19, sv: 18.7, full: true, why: 'All four regularizers. Weakest single-path gain of the useful rows (7.19%), but the best once candidates are verified (18.7%).' },
+    { name: 'No random step size', tl: -1.47, sv: 0.19, tls: '−1.47', svs: '0.19', why: 'α fixed in training. Thinking longer now hurts slightly (−1.47%) and verification barely helps (0.19%): the paper calls random step size critical.' },
+    { name: 'No random num. steps', tl: 0.00, sv: 9.65, tls: '0.00', svs: '9.65', why: 'Fixed step count in training. Extra steps give exactly 0.00%: the model never learned to use them. Verification still gives 9.65%.' },
+    { name: 'No Langevin dynamics', tl: 17.2, sv: 17.0, tls: '17.2', svs: '17.0', why: 'No noise in training. The best single-path gain (17.2%), but adding verification no longer helps (17.0%): less exploration, a landscape tuned to the direct path.' },
+    { name: 'No replay buffer', tl: 14.8, sv: 17.8, tls: '14.8', svs: '17.8', why: 'No replayed trajectories in training. 14.8% thinking longer, 17.8% with verification.' },
+    { name: 'Full System 2 config', tl: 7.19, sv: 18.7, tls: '7.19', svs: '18.7', full: true, why: 'All regularizers on. Its single-path gain (7.19%) trails the no-Langevin and no-replay rows, but it is the best once candidates are verified (18.7%).' },
   ];
   const DSN = { val: 'held-out web text', ood_shakespeare: 'Shakespeare (OOD)', ood_code: 'Python code (far OOD)', train: 'train text' };
 
@@ -126,19 +126,18 @@
       { label: 'Many candidates', html: '<p>Algorithm 2 with $M = 8$ starts and no noise. All eight fall into the same shallow basin, their energies agree, and there is nothing to choose between. Diversity from the starting point alone does not help when one basin captures almost every start.</p>' },
       { label: 'Choose by energy', html: '<p>$M = 8$, $\\sigma = 1$. Now the candidates spread across basins. The lowest final energy (blue ring, $\\hat y^{*}$) sits in a deep valley where \'a\' wins. The model never saw the answer: it ranked its own candidates. The readout compares the pick with the average candidate and with an oracle that cheats by using the true label.</p>' },
       { label: 'What noise buys, measured', html: '<p>The bottom chart repeats the experiment many times for every σ (live Monte Carlo, the same starts and kicks reused at every σ). One path (dashed) degrades as σ grows. The energy-picked best of $M$ (blue) drops sharply once noise lets candidates escape, then stays low. The oracle (dotted) shows how much diversity exists; the gap between blue and dotted is what the verifier leaves on the table. Try the one-valley context: there noise has nothing to find.</p>' },
-      { label: 'The full 54-D model', html: '<p>The slice shows the mechanism. The 54-D sweep runs the same experiment on 60 held-out positions of real web text, with every logit free, the toy\'s trained $\\alpha = 10$ and 8 steps. Here noise does not pay: the oracle keeps improving, but the energy cannot single out the better candidates, so the noisy picks are no better than the noise-free ones. The stored results (tab "full vocabulary") show what noise-free best-of-8 does buy: 2.329 → 2.250 nats on held-out text, against 1.869 for the oracle.</p>' },
+      { label: 'The full 54-D model', html: '<p>The slice shows the mechanism. The 54-D sweep runs the same experiment on 60 held-out positions of real web text, with every logit free, the toy\'s trained $\\alpha = 10$ and 8 steps. Here noise does not pay. Up to σ ≈ 0.25 the energy pick barely moves, and beyond that it gets worse, while the oracle keeps improving up to σ ≈ 1.25: better candidates exist, but the energy cannot single them out. The stored results (tab "full vocabulary") show what noise-free best-of-8 does buy: 2.329 → 2.250 nats on held-out text, against 1.869 for the oracle.</p>' },
       { label: 'Why the paper adds noise in training', html: '<p>In the paper Langevin noise is a <em>training</em> regularizer: "Without this random noise term, exploration is often limited to paths leading directly to the energy minimum, leaving other regions poorly defined" (p.7). A verifier can only rank candidates in regions it was shaped on. Table 2 (p.10) shows the trade: without Langevin noise, thinking longer gains more (17.2% vs 7.19%), but self-verification gains less (17.0% vs 18.7%).</p>' },
     ],
     after: `
       <h3>Why noise helps a verifier, and when it does not</h3>
-      <p>Deterministic descent is a function: the same start always gives the same answer. Best-of-$M$ needs two things. The candidates must land in different places, and the energy must rank those places correctly. Noise supplies the first, at a price: every candidate is shaken, so the single-path answer degrades. Verification wins that price back only where the energy is reliable. That is why the paper puts the noise into training. It makes the model visit, and therefore shape, the regions off the direct path. That is also why the full configuration in Table 2 is best only in the column with verification.</p>
-      <p>The verifier is imperfect even in the paper. Comparing best-of-10 with best-of-2, "verifying 10 samples occasionally leads to worse performance than verifying 2 samples, likely because the EBT found an adversarial sample (a sample with low energy that is in fact not a good prediction)". This happened in models trained on less data and faded as data grew (App. B.1, p.28). The gap between our blue and dotted curves is the same effect in miniature.</p>
-      <p class="note">Caveats. Algorithm 2 has no noise term, and the paper does not say whether Langevin noise is used at inference. Table 2 comes from one OOD benchmark (BigBench Dyck) and one seed, and the reference point of its "percent perplexity improvement" is not stated. The slice freezes 52 of 54 logits at 0, so its basins are not the minima of the full model: it shows the mechanism, and the 54-D sweep shows the effect size. In the toy, noise is added on every step except the last, as in its training. The "annealed" schedule is our extension; the paper lists annealed Langevin dynamics only as future work (p.27). Self-verification is per prediction (here per character) and uses the model's own energy, with no reward model (p.8).</p>`,
+      <p>Best-of-$M$ needs two things: candidates that land in different places, and an energy that ranks those places correctly. Noise supplies the first at a price, since every candidate is shaken and the single path degrades. Verification wins the price back only where the energy is reliable. That is why the paper puts the noise into training: the model visits, and so shapes, the regions off the direct path. It is also why the full configuration in Table 2 wins only in the column with verification.</p>
+      <p>The verifier is imperfect even in the paper. With less training data, "verifying 10 samples occasionally leads to worse performance than verifying 2 samples, likely because the EBT found an adversarial sample (a sample with low energy that is in fact not a good prediction)"; the effect faded as data grew (App. B.1, p.28). The gap between our blue and dotted curves is the same effect in miniature.</p>
+      <p class="note">Caveats. Algorithm 2 has no noise term, and whether the paper uses Langevin noise at inference is unspecified. Table 2 is one OOD benchmark (BigBench Dyck) and one seed, and its reference point is not stated. The slice freezes 52 logits at 0, so its basins are not the minima of the full model. Toy noise is added on every step except the last, as in its training. The "annealed" schedule is our extension; the paper lists annealed Langevin dynamics only as future work (p.27). Self-verification is per prediction (here per character) and uses the model's own energy, with no reward model (p.8).</p>`,
     source: [
-      { kind: 'toy', note: 'toy text EBT (54 symbols): 2-D slice and 54-D sweeps computed live' },
-      { kind: 'toy', note: 'stored best-of-M results, data/text.json' },
-      { kind: 'paper', note: 'Eq. 2, Alg. 2 (p.7), Table 2 (p.10)' },
-      { kind: 'ext', note: 'annealed noise schedule' },
+      { kind: 'toy', note: 'text EBT run live · data/text.json' },
+      { kind: 'paper', note: 'Eq. 2, Alg. 2, Table 2' },
+      { kind: 'ext', note: 'annealed noise' },
     ],
     figure(stage, ctx) {
       const { lib } = ctx, h = lib.h, C = lib.C;
@@ -159,22 +158,22 @@
       const pTrue = (o, k) => { const s = SLICES[k]; return s.truth === s.A ? o[1] : s.truth === s.B ? o[2] : o[3]; };
 
       // ---------------- layout ----------------
+      const SWD = Math.max(300, stage.clientWidth || 630), wide = SWD >= 500, sideW = Math.round(Math.max(200, Math.min(360, wide ? SWD - 352 : SWD)));   // logical canvas sizes follow the available width so text stays legible on phones
       const row = h('div', { class: 'fig-row lb-row' }); stage.appendChild(row);
       const FL = lib.frame(row, { label: 'Energy landscape · 2-D slice', sub: 'E<sub>θ</sub>(x, ŷ) on 2 of 54 logits · click a dot' });
       FL.wrap.classList.add('lb-land');
       const LS = 400, cv = lib.canvas(FL.frame, LS, LS, { label: 'Energy landscape of the toy text EBT on a two-logit slice, with the candidate predictions and their descent paths' });
-      const FR = lib.frame(row, { label: 'Energy per candidate', sub: 'lowest final E wins' });
+      const FR = lib.frame(row, { label: 'Energy per candidate', sub: 'E per step · lowest final value wins' });
       FR.wrap.classList.add('lb-side');
-      const pv = lib.canvas(FR.frame, 300, 250, { label: 'Energy of every candidate at each step' });
+      const PVW = sideW, PVH = wide ? 222 : 200, pv = lib.canvas(FR.frame, PVW, PVH, { label: 'Energy of every candidate at each step' });
       const ro = h('div', { class: 'readout lb-ro', 'aria-live': 'polite' }); FR.wrap.appendChild(ro);
       const c3 = h('div', { class: 'controls lb-btns' }); FR.wrap.appendChild(c3);
-      c3.appendChild(lib.button('new starts', () => { S.seed++; S.inspect = -1; recompute(true); }));
-      c3.appendChild(lib.button('run', () => { recompute(true); }, { primary: true }));
+      c3.appendChild(lib.button('new starts', () => { S.seed++; S.inspect = -1; S.stopAt = null; recompute(true); }));
+      c3.appendChild(lib.button('run', () => { S.stopAt = null; recompute(true); }, { primary: true }));
       c3.appendChild(lib.button('step', () => { S.playing = false; if (S.t >= S.N) S.t = 0; else S.t++; draw(); }));
-      c3.appendChild(lib.button('end', () => { S.playing = false; S.t = S.N; draw(); }));
 
       const c1 = h('div', { class: 'controls' }); stage.appendChild(c1);
-      const segCtx = lib.segmented({ label: 'Context', options: SLICES.map((s, i) => [i, s.seg]), value: 0, onchange: (v) => { S.si = v; S.inspect = -1; recompute(true); restartSweep(); } });
+      const segCtx = lib.segmented({ label: 'Context', options: SLICES.map((s, i) => [i, s.seg]), value: 0, onchange: (v) => { S.si = v; S.inspect = -1; S.stopAt = null; recompute(true); restartSweep(); } });
       c1.appendChild(h('span', { class: 'fig-label' }, 'context')); c1.appendChild(segCtx.el);
       const segSch = lib.segmented({ label: 'Noise schedule', options: [['const', 'constant σ'], ['anneal', 'annealed (ext)']], value: 'const', onchange: (v) => { S.sched = v; recompute(false); restartSweep(); } });
       c1.appendChild(h('span', { class: 'fig-label' }, 'noise')); c1.appendChild(segSch.el);
@@ -195,13 +194,13 @@
       const segMode = lib.segmented({ label: 'Sweep space', options: [['slice', 'this 2-D slice'], ['full', '54-D, 60 held-out positions']], value: 'slice', onchange: (v) => { S.sweepMode = v; restartSweep(); drawBottom(); } });
       const segDs = lib.segmented({ label: 'Dataset', options: Object.keys(DSN).filter(k => D.bon && D.bon.settings[0].datasets[k]).map(k => [k, DSN[k]]), value: 'val', onchange: (v) => { S.bonDs = v; drawBottom(); } });
       const segBN = lib.segmented({ label: 'Steps per candidate', options: (D.bon ? D.bon.settings : []).map((s, i) => [i, 'N = ' + s.N]), value: 0, onchange: (v) => { S.bonN = v; drawBottom(); } });
-      const BW = 640, BH = 196, bv = lib.canvas(FB.frame, BW, BH, { label: 'Results chart for the selected view' });
+      const BW = wide ? Math.min(640, SWD) : 360, BH = wide ? 186 : 286, bv = lib.canvas(FB.frame, BW, BH, { label: 'Results chart for the selected view' });
       const bro = h('div', { class: 'readout lb-bro' }); FB.frame.appendChild(bro);
       bv.canvas.addEventListener('mousemove', (ev) => { if (S.tab !== 'table2') return; const [, py] = bv.toLocal(ev); const r = t2Row(py); if (r !== S.hoverRow) { S.hoverRow = r; drawBottom(); } });
       bv.canvas.addEventListener('mouseleave', () => { if (S.hoverRow !== -1 && S.tab === 'table2') { S.hoverRow = -1; drawBottom(); } });
       bv.canvas.addEventListener('click', (ev) => { if (S.tab !== 'table2') return; const [, py] = bv.toLocal(ev); S.hoverRow = t2Row(py); drawBottom(); });
 
-      ctx.setCaption('Darker blue = lower energy (real toy text EBT, one context). Hollow circles: starts ŷ<sub>0,j</sub>. Gray: candidate paths. Blue ring: lowest-energy candidate ŷ*. Dashed curve: true character at probability ½.');
+      ctx.setCaption('Darker blue = lower energy. Circles: starts ŷ<sub>0,j</sub>. Gray: paths. Blue ring: lowest-energy candidate ŷ*. Dashed: true character at p = ½.');
 
       // ---------------- simulation (common random numbers: same starts and kicks for every σ, α, N) ----------------
       function simulate() {
@@ -224,8 +223,9 @@
         sim = { cands, N: S.N };
       }
       function recompute(animate) {
+        if (!animate) S.stopAt = null;
         if (!ctx.visible() && !sim) { pendingAnim = animate; return; }
-        simulate(); S.t = animate && !reduced ? 0 : S.N; S.playing = animate && !reduced; kick();
+        simulate(); S.t = animate && !reduced ? 0 : (S.stopAt != null ? S.stopAt : S.N); S.playing = animate && !reduced; kick();
       }
       let pendingAnim = true;
       const winnerAt = (t) => { let w = 0; sim.cands.forEach((c, j) => { if (c.E[t] < sim.cands[w].E[t]) w = j; }); return w; };
@@ -253,7 +253,7 @@
         const c = cv.ctx, s = sl(), g = grids[S.si]; cv.clear();
         c.save(); c.beginPath(); c.rect(PX.x, PX.y, PX.s, PX.s); c.clip();
         if (g && g.done) {
-          lib.heatmap(c, g.E, PX.x, PX.y, PX.s, PX.s, { key: 'lb-' + S.si, range: [g.lo, g.q], gamma: 0.9 });
+          lib.heatmap(c, g.E, PX.x, PX.y, PX.s, PX.s, { key: 'langevin-bon-slice-' + S.si, range: [g.lo, g.q], gamma: 0.9 });
           const lv = Array.from({ length: 18 }, (_, i) => g.lo + (g.q - g.lo) * (i + 0.5) / 18);
           lib.contours(c, g.E, PX.x, PX.y, PX.s, PX.s, lv, { color: 'rgba(17,17,17,0.2)', width: 1 });
         } else {
@@ -296,14 +296,6 @@
         hl(w, C.blue, 2.2);
         // starts
         sim.cands.forEach((cd) => { const p = toPx(cd.path[0]); lib.dot(c, p[0], p[1], 3.2, '#fff', { stroke: C.ink, lw: 1.1 }); });
-        // update decomposition for a single (or inspected) candidate
-        const showJ = sim.cands.length <= 2 ? w : (S.inspect >= 0 ? S.inspect : -1);
-        if (showJ >= 0 && t < sim.N) {
-          const cd = sim.cands[showJ], y = cd.path[t], gs = cd.G[t], nz = cd.Nz[t];
-          const p0 = toPx(y), p1 = toPx([y[0] + gs[0], y[1] + gs[1]]), p2 = toPx([y[0] + gs[0] + nz[0], y[1] + gs[1] + nz[1]]);
-          if (Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) > 4) { lib.arrow(c, p0[0], p0[1], p1[0], p1[1], { color: C.ink, width: 1.5, head: 8, dash: [4, 3] }); lib.text(c, '−α∇E', (p0[0] + p1[0]) / 2 + 6, (p0[1] + p1[1]) / 2 - 16, { size: 12, kind: 'mono', color: C.ink }); }
-          if (Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) > 4) { lib.arrow(c, p1[0], p1[1], p2[0], p2[1], { color: C.blue, width: 1.8, head: 8 }); lib.text(c, 'η' + sub(t), (p1[0] + p2[0]) / 2 + 6, (p1[1] + p2[1]) / 2 + 2, { size: 13, kind: 'mono', color: C.blue }); }
-        }
         // current positions
         sim.cands.forEach((cd, j) => {
           if (j === w) return; const p = toPx(cd.path[t]);
@@ -312,10 +304,19 @@
         const pw = toPx(sim.cands[w].path[t]);
         c.save(); c.strokeStyle = '#fff'; c.lineWidth = 3; c.beginPath(); c.arc(pw[0], pw[1], 10, 0, 7); c.stroke(); c.strokeStyle = C.blue; c.lineWidth = 1.8; c.beginPath(); c.arc(pw[0], pw[1], 10, 0, 7); c.stroke(); c.restore();
         lib.dot(c, pw[0], pw[1], 5, C.blue, { stroke: '#fff', lw: 1.5 });
+        // update decomposition for a single (or clicked) candidate: gradient step (dashed ink) + Langevin kick (blue)
+        const showJ = sim.cands.length <= 2 ? w : (S.inspect >= 0 ? S.inspect : -1);
+        if (showJ >= 0 && t < sim.N) {
+          const cd = sim.cands[showJ], y = cd.path[t], gs = cd.G[t], nz = cd.Nz[t];
+          const p0 = toPx(y), p1 = toPx([y[0] + gs[0], y[1] + gs[1]]), p2 = toPx([y[0] + gs[0] + nz[0], y[1] + gs[1] + nz[1]]);
+          const tag = (txt, x, y_, col) => { const m = lib.measure(c, txt, { size: 12, kind: 'mono' }); c.save(); c.fillStyle = 'rgba(255,255,255,0.9)'; c.fillRect(x - 2, y_ - 1, m.w + 4, 16); c.restore(); lib.text(c, txt, x, y_, { size: 12, kind: 'mono', color: col }); };
+          if (Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) > 3) { lib.arrow(c, p0[0], p0[1], p1[0], p1[1], { color: '#fff', width: 3.4, head: 9 }); lib.arrow(c, p0[0], p0[1], p1[0], p1[1], { color: C.ink, width: 1.5, head: 8, dash: [4, 3] }); tag('−α∇E', Math.min(p0[0], p1[0]) - 46, Math.max(p0[1], p1[1]) + 6, C.ink); }
+          if (Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) > 3) { lib.arrow(c, p1[0], p1[1], p2[0], p2[1], { color: '#fff', width: 3.6, head: 9 }); lib.arrow(c, p1[0], p1[1], p2[0], p2[1], { color: C.blue, width: 1.8, head: 8 }); tag('η' + sub(t), Math.max(p0[0], p1[0], p2[0]) + 14, Math.max(p0[1], p1[1], p2[1]) + 6, C.blue); }
+        }
         c.restore();
-        const lbl = t === sim.N ? 'ŷ*' : 'lowest now';
-        const lx = Math.min(PX.x + PX.s - 70, pw[0] + 13), ly = Math.max(PX.y + 4, Math.min(PX.y + PX.s - 18, pw[1] - 22));
+        const lbl = sim.cands.length === 1 ? 'ŷ' + sub(t) : t === sim.N ? 'ŷ*' : 'lowest now';
         const m = lib.measure(c, lbl, { size: 13, kind: 'mono' });
+        const lx = sim.cands.length === 1 ? Math.max(PX.x + 4, pw[0] - 14 - m.w) : Math.min(PX.x + PX.s - 70, pw[0] + 13), ly = Math.max(PX.y + 4, Math.min(PX.y + PX.s - 18, pw[1] - 24));
         c.save(); c.fillStyle = 'rgba(255,255,255,0.88)'; c.fillRect(lx - 3, ly - 1, m.w + 6, 18); c.restore();
         lib.text(c, lbl, lx, ly, { size: 13, kind: 'mono', color: C.blue, weight: 600 });
       }
@@ -327,10 +328,10 @@
         const t = Math.min(S.t, sim.N), w = winnerAt(t);
         let lo = Infinity, hi = -Infinity; sim.cands.forEach(cd => cd.E.forEach(v => { lo = Math.min(lo, v); hi = Math.max(hi, v); }));
         const pad = (hi - lo) * 0.06 || 0.1; lo -= pad; hi += pad;
-        const ax = lib.axes(c, { x: 46, y: 10, w: 240, h: 200, xlim: [0, sim.N], ylim: [lo, hi], xticks: niceTicks(0, sim.N, 4), yticks: niceTicks(lo, hi, 4), yfmt: (v) => v.toFixed(1), size: 12 });
-        lib.text(c, 'step i', 46 + 240, 236, { size: 12, kind: 'mono', color: C.muted, align: 'right' });
-        lib.text(c, 'E', 6, 6, { size: 12, kind: 'mono', color: C.muted });
-        c.save(); c.strokeStyle = C.blue3; c.lineWidth = 1; c.setLineDash([3, 3]); c.beginPath(); c.moveTo(ax.X(t), 10); c.lineTo(ax.X(t), 210); c.stroke(); c.restore();
+        const aw = PVW - 60, ah = PVH - 50;
+        const ax = lib.axes(c, { x: 46, y: 10, w: aw, h: ah, xlim: [0, sim.N], ylim: [lo, hi], xticks: niceTicks(0, sim.N, 4), yticks: niceTicks(lo, hi, 4), yfmt: (v) => v.toFixed(1), size: 12 });
+        lib.text(c, 'step i', 46 + aw, PVH - 14, { size: 12, kind: 'mono', color: C.muted, align: 'right' });
+        c.save(); c.strokeStyle = C.blue3; c.lineWidth = 1; c.setLineDash([3, 3]); c.beginPath(); c.moveTo(ax.X(t), 10); c.lineTo(ax.X(t), 10 + ah); c.stroke(); c.restore();
         sim.cands.forEach((cd, j) => { if (j === w || j === S.inspect) return; lib.plot(c, ax, cd.E.slice(0, t + 1).map((e, i) => [i, e]), { color: 'rgba(17,17,17,0.35)', width: 1.1 }); });
         if (S.inspect >= 0 && S.inspect < sim.cands.length && S.inspect !== w) lib.plot(c, ax, sim.cands[S.inspect].E.slice(0, t + 1).map((e, i) => [i, e]), { color: C.ink, width: 1.8 });
         lib.plot(c, ax, sim.cands[w].E.slice(0, t + 1).map((e, i) => [i, e]), { color: C.blue, width: 2.4 });
@@ -348,6 +349,19 @@
       }
 
       // ---------------- bottom: live sweep ----------------
+      // chart geometry for the bottom canvas (wide: legend at right; narrow: legend row on top)
+      const BOX = wide ? { x: 50, y: 18, w: BW - 250, h: BH - 58 } : { x: 44, y: 56, w: BW - 58, h: BH - 100 };
+      function legend(c, items, status) {
+        if (wide) {
+          const lx = BW - 184; let ly = 14;
+          items.forEach(([col, dash, label, sub_]) => { c.save(); c.strokeStyle = col; c.lineWidth = dash ? 1.6 : 2.4; if (dash) c.setLineDash(dash); c.beginPath(); c.moveTo(lx, ly + 7); c.lineTo(lx + 22, ly + 7); c.stroke(); c.restore(); lib.text(c, label, lx + 28, ly, { size: 12, kind: 'mono', color: C.ink }); if (sub_) lib.text(c, sub_, lx + 28, ly + 15, { size: 11, kind: 'mono', color: C.muted }); ly += sub_ ? 36 : 22; });
+          (status || []).forEach(([txt, col], i) => lib.text(c, txt, lx, ly + 2 + i * 14, { size: 11, kind: 'mono', color: col || C.muted }));
+        } else {
+          let lx = 6; const ly = 2;
+          items.forEach(([col, dash, label]) => { c.save(); c.strokeStyle = col; c.lineWidth = dash ? 1.6 : 2.4; if (dash) c.setLineDash(dash); c.beginPath(); c.moveTo(lx, ly + 7); c.lineTo(lx + 16, ly + 7); c.stroke(); c.restore(); const m = lib.text(c, label, lx + 20, ly, { size: 12, kind: 'mono', color: C.ink }); lx += 20 + m.w + 14; });
+          lib.text(c, (status || []).map(s => s[0]).join(' · '), 6, 18, { size: 11, kind: 'mono', color: (status && status[0] && status[0][1]) || C.muted });
+        }
+      }
       const SIG = { slice: [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3], full: [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2] };
       const RMAX = { slice: 40, full: 60 };
       let SW = null, heldOut = null;
@@ -389,24 +403,18 @@
         const W = SW, sig = W.sig, ser = ['single', 'pick', 'orc'].map(k => sig.map((s, i) => W.acc[i].n ? [s, W.acc[i][k] / W.acc[i].n] : null).filter(Boolean));
         const all = ser.flat().map(p => p[1]).filter(v => v > 0);
         const ymin = W.mode === 'slice' ? 0.01 : 1, ymax = W.mode === 'slice' ? 20 : 20;
-        const ax = lib.axes(c, { x: 50, y: 18, w: BW - 250, h: BH - 58, xlim: [0, sig[sig.length - 1]], ylim: [ymin, ymax], ylog: true, xticks: W.mode === 'slice' ? [0, 0.5, 1, 1.5, 2, 2.5, 3] : [0, 0.5, 1, 1.5, 2], yticks: W.mode === 'slice' ? [0.01, 0.1, 1, 10] : [1, 2, 5, 10, 20], yfmt: (v) => String(v), size: 12 });
-        lib.text(c, 'noise σ', 50 + BW - 250, BH - 20, { size: 12, kind: 'mono', color: C.muted, align: 'right' });
-        lib.text(c, '−log p(true), nats (log)', 4, 0, { size: 11, kind: 'mono', color: C.muted });
+        const ax = lib.axes(c, { x: BOX.x, y: BOX.y, w: BOX.w, h: BOX.h, xlim: [0, sig[sig.length - 1]], ylim: [ymin, ymax], ylog: true, xticks: W.mode === 'slice' ? [0, 0.5, 1, 1.5, 2, 2.5, 3] : [0, 0.5, 1, 1.5, 2], yticks: W.mode === 'slice' ? [0.01, 0.1, 1, 10] : [1, 2, 5, 10, 20], yfmt: (v) => String(v), size: 12 });
+        lib.text(c, 'noise σ', BOX.x + BOX.w, BOX.y + BOX.h + 24, { size: 12, kind: 'mono', color: C.muted, align: 'right' });
+        lib.text(c, '−log p(true), nats (log)', 4, BOX.y - 17, { size: 11, kind: 'mono', color: C.muted });
         const clipY = (pts) => pts.map(p => [p[0], Math.max(ymin, Math.min(ymax, p[1]))]);
-        c.save(); c.strokeStyle = C.blue3; c.lineWidth = 1; c.setLineDash([3, 3]); const xs = ax.X(Math.min(S.sigma, sig[sig.length - 1])); c.beginPath(); c.moveTo(xs, 18); c.lineTo(xs, BH - 40); c.stroke(); c.restore();
+        c.save(); c.strokeStyle = C.blue3; c.lineWidth = 1; c.setLineDash([3, 3]); const xs = ax.X(Math.min(S.sigma, sig[sig.length - 1])); c.beginPath(); c.moveTo(xs, BOX.y); c.lineTo(xs, BOX.y + BOX.h); c.stroke(); c.restore();
         lib.plot(c, ax, clipY(ser[0]), { color: C.ink, width: 1.6, dash: [6, 4], markers: 2.5 });
         lib.plot(c, ax, clipY(ser[2]), { color: C.muted, width: 1.4, dash: [1.5, 3.5], markers: 2.2 });
         lib.plot(c, ax, clipY(ser[1]), { color: C.blue, width: 2.4, markers: 3.2 });
-        // legend
-        const lx = BW - 184; let ly = 14;
-        const leg = (col, dash, label, sub_) => { c.save(); c.strokeStyle = col; c.lineWidth = dash ? 1.6 : 2.4; if (dash) c.setLineDash(dash); c.beginPath(); c.moveTo(lx, ly + 7); c.lineTo(lx + 22, ly + 7); c.stroke(); c.restore(); lib.text(c, label, lx + 28, ly, { size: 12, kind: 'mono', color: C.ink }); if (sub_) lib.text(c, sub_, lx + 28, ly + 15, { size: 11, kind: 'mono', color: C.muted }); ly += sub_ ? 36 : 22; };
-        leg(C.ink, [6, 4], 'one path', 'M = 1');
-        leg(C.blue, null, 'energy pick', 'best of M by E');
-        leg(C.muted, [1.5, 3.5], 'oracle', 'best of M by label');
         const nDone = Math.min(...W.acc.map(a => a.n)), R = W.mode === 'full' ? Math.min(W.R, heldOutPositions().length) : W.R;
-        lib.text(c, W.done ? 'done' : 'running…', lx, ly + 2, { size: 11, kind: 'mono', color: W.done ? C.muted : C.blue });
-        lib.text(c, nDone + '/' + R + (W.mode === 'full' ? ' positions' : ' runs') + ' per σ', lx, ly + 16, { size: 11, kind: 'mono', color: C.muted });
-        if (all.some(v => v > ymax)) lib.text(c, 'values > 20 clipped', lx, ly + 30, { size: 11, kind: 'mono', color: C.muted });
+        const status = [[W.done ? 'done' : 'running…', W.done ? C.muted : C.blue], [nDone + '/' + R + (W.mode === 'full' ? ' positions' : ' runs') + ' per σ']];
+        if (all.some(v => v > ymax)) status.push(['values > 20 clipped']);
+        legend(c, [[C.ink, [6, 4], 'one path', 'M = 1'], [C.blue, null, 'energy pick', 'best of M by E'], [C.muted, [1.5, 3.5], 'oracle', 'best of M by label']], status);
         const md = M0();
         bro.innerHTML = W.mode === 'slice'
           ? `<span>slice "${sl().seg}" · M <b>${W.M}</b> · N <b>${W.N}</b> · α <b>${W.alpha}</b> · ${W.sched === 'anneal' ? 'annealed' : 'constant'} noise</span>`
@@ -432,55 +440,53 @@
         const st = B.settings[S.bonN], d = st.datasets[S.bonDs] || st.datasets.val, Ms = B.M;
         const vals = [].concat(d.energy_select_ce, d.oracle_ce, d.mean_ce);
         let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
-        const ax = lib.axes(c, { x: 50, y: 18, w: BW - 250, h: BH - 58, xlim: [Ms[0], Ms[Ms.length - 1]], xlog: true, ylim: [lo, hi], xticks: Ms, yticks: niceTicks(lo, hi, 4), yfmt: (v) => v.toFixed(2), size: 12 });
-        lib.text(c, 'candidates M (log scale)', 50 + BW - 250, BH - 20, { size: 12, kind: 'mono', color: C.muted, align: 'right' });
-        lib.text(c, 'held-out loss, nats/char', 4, 0, { size: 11, kind: 'mono', color: C.muted });
+        const ax = lib.axes(c, { x: BOX.x, y: BOX.y, w: BOX.w, h: BOX.h, xlim: [Ms[0], Ms[Ms.length - 1]], xlog: true, ylim: [lo, hi], xticks: Ms, yticks: niceTicks(lo, hi, 4), yfmt: (v) => v.toFixed(2), size: 12 });
+        lib.text(c, 'candidates M (log scale)', BOX.x + BOX.w, BOX.y + BOX.h + 24, { size: 12, kind: 'mono', color: C.muted, align: 'right' });
+        lib.text(c, 'loss, nats per character', 4, BOX.y - 17, { size: 11, kind: 'mono', color: C.muted });
         lib.plot(c, ax, Ms.map((m, i) => [m, d.mean_ce[i]]), { color: C.ink, width: 1.6, dash: [6, 4], markers: 2.5 });
         lib.plot(c, ax, Ms.map((m, i) => [m, d.oracle_ce[i]]), { color: C.muted, width: 1.4, dash: [1.5, 3.5], markers: 2.2 });
         lib.plot(c, ax, Ms.map((m, i) => [m, d.energy_select_ce[i]]), { color: C.blue, width: 2.4, markers: 3.2 });
         const last = Ms.length - 1;
-        lib.text(c, d.energy_select_ce[last].toFixed(3), ax.X(Ms[last]) - 4, ax.Y(d.energy_select_ce[last]) - 18, { size: 12, kind: 'mono', color: C.blue, align: 'right' });
-        lib.text(c, d.oracle_ce[last].toFixed(3), ax.X(Ms[last]) - 4, ax.Y(d.oracle_ce[last]) + 6, { size: 12, kind: 'mono', color: C.muted, align: 'right' });
-        const lx = BW - 184; let ly = 14;
-        const leg = (col, dash, label, sub_) => { c.save(); c.strokeStyle = col; c.lineWidth = dash ? 1.6 : 2.4; if (dash) c.setLineDash(dash); c.beginPath(); c.moveTo(lx, ly + 7); c.lineTo(lx + 22, ly + 7); c.stroke(); c.restore(); lib.text(c, label, lx + 28, ly, { size: 12, kind: 'mono', color: C.ink }); if (sub_) lib.text(c, sub_, lx + 28, ly + 15, { size: 11, kind: 'mono', color: C.muted }); ly += sub_ ? 36 : 22; };
-        leg(C.blue, null, 'energy pick', 'Algorithm 2');
-        leg(C.ink, [6, 4], 'average', 'a random candidate');
-        leg(C.muted, [1.5, 3.5], 'oracle', 'best by true label');
-        lib.text(c, `N = ${st.N} steps, no noise`, lx, ly + 4, { size: 11, kind: 'mono', color: C.muted });
+        lib.text(c, d.energy_select_ce[last].toFixed(3), ax.X(Ms[last]) - 6, ax.Y(d.energy_select_ce[last]) + 6, { size: 12, kind: 'mono', color: C.blue, align: 'right' });
+        lib.text(c, d.oracle_ce[last].toFixed(3), ax.X(Ms[last]) - 10, ax.Y(d.oracle_ce[last]) - 17, { size: 12, kind: 'mono', color: C.muted, align: 'right' });
+        legend(c, [[C.blue, null, 'energy pick', 'Algorithm 2'], [C.ink, [6, 4], 'average', 'a random candidate'], [C.muted, [1.5, 3.5], 'oracle', 'best by true label']], [[`N = ${st.N} steps, no noise`], ['stored: data/text.json']]);
         const L = liveFull(), s = sl();
         bro.innerHTML = `<span>this context, live in 54-D (α ${M0().alpha0}, 8 steps, σ 0): candidates → ` + L.out.map((o, j) => `<b style="${j === L.w ? '' : 'color:var(--ink2);font-weight:400'}">${o.top.replace(/</g, '&lt;')}</b>`).join(' ') +
           ` · ŷ* = '${L.out[L.w].top}' (E ${fx(L.out[L.w].E)}) · true '${s.truth}', p at ŷ* <b>${fx(L.out[L.w].pt)}</b></span>`;
       }
 
       // ---------------- bottom: Table 2 ----------------
-      const T2 = { x0: 186, y0: 30, rh: 34 };
+      const T2 = wide ? { x0: 186, y0: 26, rh: 29, lab: 0 } : { x0: 8, y0: 36, rh: 44, lab: 15 };
       const t2Row = (py) => { const r = Math.floor((py - T2.y0) / T2.rh); return r >= 0 && r < TABLE2.length ? r : -1; };
       function drawT2() {
         const c = bv.ctx; bv.clear();
-        const x0 = T2.x0, w = BW - x0 - 70, X = (v) => x0 + (v + 2) / 22 * w;
-        // header + legend
-        c.fillStyle = C.ink; c.fillRect(x0, 9, 12, 8); lib.text(c, 'thinking longer + self-verification', x0 + 18, 6, { size: 12, kind: 'mono', color: C.ink });
-        c.strokeStyle = C.ink; c.lineWidth = 1; c.strokeRect(x0 + 300.5, 9.5, 12, 7); lib.text(c, 'thinking longer', x0 + 318, 6, { size: 12, kind: 'mono', color: C.ink });
+        const x0 = T2.x0, w = BW - x0 - 64, X = (v) => x0 + (v + 2) / 22 * w;
+        // legend
+        c.strokeStyle = C.ink; c.lineWidth = 1; c.strokeRect(x0 + 0.5, 6.5, 12, 7); lib.text(c, 'thinking longer', x0 + 18, 3, { size: 12, kind: 'mono', color: C.ink });
+        const lx2 = wide ? x0 + 150 : x0; const ly2 = wide ? 3 : 17;
+        c.fillStyle = C.blue; c.fillRect(lx2, ly2 + 3, 12, 8); lib.text(c, '+ self-verification', lx2 + 18, ly2, { size: 12, kind: 'mono', color: C.ink });
         TABLE2.forEach((r, i) => {
           const y = T2.y0 + i * T2.rh, hl = i === S.hoverRow || (S.hoverRow < 0 && (r.full || i === 2) && S.tab === 'table2' && emphT2);
-          if (hl) { c.fillStyle = C.blue4; c.fillRect(0, y - 2, BW, T2.rh - 2); }
-          lib.text(c, r.name, x0 - 10, y + 6, { size: 12, kind: 'mono', color: r.full ? C.ink : C.ink2 || C.ink, align: 'right', weight: r.full ? 700 : 400 });
+          if (hl) { c.fillStyle = C.blue4; c.fillRect(0, y - 3, BW, T2.rh - 2); }
+          if (wide) lib.text(c, r.name, x0 - 10, y + 6, { size: 12, kind: 'mono', color: C.ink, align: 'right', weight: r.full ? 700 : 400 });
+          else { lib.text(c, r.name, x0, y, { size: 12, kind: 'mono', color: C.ink, weight: r.full ? 700 : 400 }); }
+          const yy = y + T2.lab;
           // thinking longer: outlined bar
           const z = X(0);
           c.strokeStyle = C.ink; c.lineWidth = 1; c.fillStyle = '#fff';
           const tl0 = Math.min(z, X(r.tl)), tlw = Math.max(1.5, Math.abs(X(r.tl) - z));
-          c.fillRect(tl0, y + 1, tlw, 11); c.strokeRect(tl0 + 0.5, y + 1.5, tlw - 1, 10);
-          lib.text(c, r.tl.toFixed(2), Math.max(z, X(r.tl)) + 5, y, { size: 11, kind: 'mono', color: C.ink });
+          c.fillRect(tl0, yy + 1, tlw, 11); c.strokeRect(tl0 + 0.5, yy + 1.5, tlw - 1, 10);
+          lib.text(c, r.tls, Math.max(z, X(r.tl)) + 5, yy, { size: 11, kind: 'mono', color: C.ink });
           // + self-verification: filled blue
           const sv0 = Math.min(z, X(r.sv)), svw = Math.max(1.5, Math.abs(X(r.sv) - z));
-          c.fillStyle = C.blue; c.fillRect(sv0, y + 14, svw, 11);
-          lib.text(c, r.sv.toFixed(2), Math.max(z, X(r.sv)) + 5, y + 13, { size: 11, kind: 'mono', color: C.blue, weight: 600 });
+          c.fillStyle = C.blue; c.fillRect(sv0, yy + 14, svw, 11);
+          lib.text(c, r.svs, Math.max(z, X(r.sv)) + 5, yy + 13, { size: 11, kind: 'mono', color: C.blue, weight: 600 });
         });
         const yb = T2.y0 + TABLE2.length * T2.rh;
-        c.strokeStyle = C.faint; c.lineWidth = 1; c.beginPath(); c.moveTo(X(0) + 0.5, T2.y0 - 4); c.lineTo(X(0) + 0.5, yb); c.stroke();
+        c.strokeStyle = C.faint; c.lineWidth = 1; c.beginPath(); TABLE2.forEach((_, i) => { const yy = T2.y0 + i * T2.rh + T2.lab; c.moveTo(X(0) + 0.5, yy - 2); c.lineTo(X(0) + 0.5, yy + 27); }); c.stroke();
         [0, 5, 10, 15, 20].forEach(v => lib.text(c, v + '%', X(v), yb + 2, { size: 11, kind: 'mono', color: C.muted, align: 'center' }));
         const r = TABLE2[S.hoverRow >= 0 ? S.hoverRow : 2];
-        bro.innerHTML = `<span><b>${r.name}</b>: ${r.why}</span><span style="color:var(--muted)">% perplexity improvement on OOD BigBench Dyck (p.10) · hover or tap a row</span>`;
+        bro.innerHTML = `<span><b>${r.name}</b>: ${r.why} <span style="color:var(--muted)">(hover or tap a row)</span></span>`;
       }
       let emphT2 = true;
 
@@ -489,7 +495,7 @@
         segTab.set(S.tab); subRow.innerHTML = '';
         if (S.tab === 'sweep') { subRow.appendChild(h('span', { class: 'fig-label' }, 'space')); subRow.appendChild(segMode.el); segMode.set(S.sweepMode); }
         if (S.tab === 'full') { subRow.appendChild(segDs.el); subRow.appendChild(segBN.el); }
-        if (S.tab === 'table2') subRow.appendChild(h('span', { class: 'fig-sub' }, 'Table 2 · removing one regularizer from training at a time'));
+        if (S.tab === 'table2') subRow.appendChild(h('span', { class: 'fig-sub' }, 'Table 2 (p.10) · % perplexity gain, OOD BigBench Dyck · one regularizer removed'));
         if (S.tab === 'sweep' && !SW) restartSweep();
         drawBottom(); kick();
       }
@@ -502,9 +508,9 @@
         // landscape grid first
         if (!(grids[S.si] && grids[S.si].done)) { gridStep(S.si, 10); drawLand(); return true; }
         if (S.playing && sim) {
-          acc += dt; const rate = Math.max(8, sim.N / 2.2);
+          acc += dt; const rate = Math.max(8, sim.N / 2.2), stop = S.stopAt != null ? Math.min(S.stopAt, sim.N) : sim.N;
           while (acc > 1 / rate) { acc -= 1 / rate; S.t++; }
-          if (S.t >= sim.N) { S.t = sim.N; S.playing = false; }
+          if (S.t >= stop) { S.t = stop; S.playing = false; }
           draw(); busy = true;
         }
         if (sweepWork(7)) { drawBottom(); busy = true; }
@@ -548,7 +554,7 @@
           const prevKey = SW && SW.key;
           setAll(Object.assign({ si: i === 5 ? S.si : 0, N: 20, alpha: 5, sched: 'const' }, o));
           if (i < 5 && S.si !== 0) { S.si = 0; segCtx.set(0); }
-          emphT2 = true; S.hoverRow = -1;
+          emphT2 = true; S.hoverRow = -1; S.stopAt = i === 1 ? 7 : null;
           if (!ctx.visible()) { pendingAnim = true; sim = null; SW = null; syncTabSilently(); return; }
           recompute(true);
           const key = [S.sweepMode, S.si, S.alpha, S.N, S.M, S.sched].join('|');
@@ -556,7 +562,7 @@
           syncTab();
         },
         show() {
-          if (!sim) { simulate(); S.t = pendingAnim && !reduced ? 0 : S.N; S.playing = pendingAnim && !reduced; }
+          if (!sim) { simulate(); S.t = pendingAnim && !reduced ? 0 : (S.stopAt != null ? S.stopAt : S.N); S.playing = pendingAnim && !reduced; }
           if (!SW) restartSweep();
           syncTab(); kick();
         },

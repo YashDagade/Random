@@ -1,0 +1,8 @@
+/* regularizers panel */
+#regularizers .p-intro, #regularizers .p-after, #regularizers .steps { grid-template-columns: minmax(0, 1fr); }
+#regularizers .p-text .eq, #regularizers .p-text .step > div { min-width: 0; }
+#regularizers .reg-tg { gap: 8px 16px; }
+#regularizers .reg-tg .tg[aria-pressed="false"] { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--faint); }
+#regularizers .reg-tg .tg[aria-pressed="true"] { color: var(--blue); font-weight: 700; text-decoration: none; }
+#regularizers .p-after table td { font-size: 13.5px; }
+#regularizers .reg-vs { color: var(--muted); }

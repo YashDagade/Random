@@ -103,9 +103,9 @@
       { label: 'Read the plot as printed', html: '<p>Fig 4a (p.9): xxs models (6.18M non-embedding parameters), batch 128, only the number of training tokens changes. EBT (blue) starts worse, ≈74 vs ≈64 perplexity at 0.5B tokens, crosses near 3B and ends slightly better, ≈38.8 vs ≈40.0 at 6.9B. The thin lines are the paper\'s drawn trend curves. Hover a point to read it.</p>' },
       { label: 'Take logs: power laws become lines', html: '<p>On log–log axes both series are close to straight, so an ordinary least-squares fit of $\\log L$ on $\\log R$ summarizes each by a slope: $\\beta_{\\text{T++}}\\approx0.166$, $\\beta_{\\text{EBT}}\\approx0.226$ for data. Click any point to drop that run from both fits; the readout refits live and the drop-one range shows how much a single run moves the rate.</p>' },
       { label: 'The rate is a ratio of slopes', html: '<p>$0.226/0.166-1\\approx36\\%$, the 35.98% in the title. Concretely, each doubling of data multiplies EBT perplexity by $2^{-0.226}\\approx0.855$ and Transformer++ perplexity by $2^{-0.166}\\approx0.891$. That is all "scales 36% faster" means: a steeper line, not a lower one.</p>' },
-      { label: 'Slope is not height', html: '<p>Parameters (Fig 5a, xxs to large): the gain is 2.91%, and EBT has the higher perplexity at every size from 6M to 396M. With slopes this close, the fitted lines meet only far beyond the largest model. Depth, width and both video axes look the same way: EBT is worse or level at every measured point. Only data and batch size (and the FineWeb run) actually cross over. The paper\'s own word for parameters and FLOPs is "slightly out-scale" (p.10).</p>' },
+      { label: 'Slope is not height', html: '<p>Parameters (Fig 5a, xxs to large): the gain is 2.91%, and EBT has the higher perplexity at every size from 6M to 396M. With slopes this close, the fitted lines meet only far beyond the largest model. On depth and both video axes EBT is also worse at every measured point, and width is a wash. Only data and batch size (and the FineWeb run) actually cross over. The paper\'s own word for parameters and FLOPs is "slightly out-scale" (p.10).</p>' },
       { label: 'Equal compute: the FLOPs axis', html: '<p>Fig 5b plots the same runs against training FLOPs. Each EBT run sits ≈6.67× to the right of its Transformer++ twin (arrows), because one two-step EBT training step costs ≈6.66× a Transformer++ step: forward, backward for $\\nabla_{\\hat y}E$, a Hessian-vector product, on a sequence of doubled length (p.35–36). At every FLOP budget that was measured, Transformer++ has the lower perplexity. The 2.92% is a statement about slope only: extended, these two lines would not meet until about $10^{52}$ FLOPs [derived].</p>' },
-      { label: 'Extrapolate, with care', html: '<p>Drag <b>extend the fits</b>. Beyond the hatched line there is no data. At the measured slopes, the parameter-scaling lines would cross at ≈260B non-embedding parameters, ≈650× the largest model trained. The paper\'s "at the scale of modern foundation models ... we expect the pretraining performance of EBTs to be significantly better" (p.9) is this move. It assumes the slope difference, estimated from 4 to 5 runs with one seed each and no error bars, holds over three orders of magnitude.</p>' },
+      { label: 'Extrapolate, with care', html: '<p>Drag <b>extend the fits</b>. Beyond the hatched line there is no data. At the measured slopes, the parameter-scaling lines would cross at ≈255B non-embedding parameters, ≈640× the largest model trained [derived]. The paper\'s "at the scale of modern foundation models ... we expect the pretraining performance of EBTs to be significantly better" (p.9) is this move. It assumes the slope difference, estimated from 4 to 5 runs with one seed each and no error bars, holds over three orders of magnitude.</p>' },
       { label: 'How robust is the rate?', html: '<p>Real loss curves flatten toward an irreducible floor, $L=E_0+A R^{-\\beta}$ (the form used by Hoffmann et al. 2022; not used in the paper). Set an assumed floor and every fit uses $\\log(L-E_0)$ instead. The data and batch gains barely move. The ≈3% gains on parameters and FLOPs fall to zero once $E_0$ reaches about half the lowest measured perplexity. The list on the right refits all eleven axes under the same assumption.</p>' },
     ],
     after: `
@@ -143,7 +143,7 @@
           note: 'Fig B.3a. Small models, batch 256, context 1024, 500k steps (p.28). EBT crosses below Transformer++ near 90B tokens.' },
         { key: 'fwz', id: 'figB3b', group: 'Larger run · FineWeb (App. B)', name: '≥51B', kind: 'tokB', res: 'data',
           note: 'Fig B.3b. The same FineWeb runs, fitted only from ≈51B tokens on. Same models, narrower window, a different rate (51.70% vs 35.69%).' },
-        { key: 's2', id: 'figC1', group: 'Recipe · EBT-S2 vs EBT-S1 (App. C)', name: 'S2 vs S1', kind: 'paramM', res: 'parameters',
+        { key: 's2', id: 'figC1', group: 'Recipe · EBT-S2 vs EBT-S1 (App. C)', name: 'S2/S1', kind: 'paramM', res: 'parameters',
           note: 'Fig C.1. Both are EBTs: S1 tuned for stable pretraining, S2 for thinking (p.30). Tiny models, 0.9M to 12.4M.' },
       ].filter(a => P[a.id] && P[a.id].series && P[a.id].series.length === 2);
       AX.forEach(a => { a.p = P[a.id]; });
@@ -185,7 +185,7 @@
       const top = lib.frame(stage, { label: 'Scaling explorer' });
       const subEl = top.wrap.querySelector('.fig-label');
       let R = analyze(byKey[S.axis]);
-      const cv = rcanvas(lib, top.frame, { aspect: (w) => clamp(Math.round(w * 0.55), 290, 380), label: 'Validation loss against a scaling resource for Transformer++ (hollow ink circles) and EBT (blue dots), with fitted power laws', draw: () => draw() });
+      const cv = rcanvas(lib, top.frame, { aspect: (w) => clamp(Math.round(w * 0.52), 290, 360), label: 'Validation loss against a scaling resource for Transformer++ (hollow ink circles) and EBT (blue dots), with fitted power laws', draw: () => draw() });
       const ctl = h('div', { class: 'controls' }); stage.appendChild(ctl);
       const modeSeg = lib.segmented({ label: 'Axes', options: [['paper', 'as printed'], ['log', 'log–log']], value: 'paper', onchange: (v) => { setMode(v); } });
       ctl.appendChild(h('span', { class: 'fig-label' }, 'axes')); ctl.appendChild(modeSeg.el);
@@ -201,10 +201,11 @@
       const row = h('div', { class: 'fig-row sc-row2' }); stage.appendChild(row);
       const RO = lib.frame(row, { label: 'Fit readout' }); RO.wrap.style.flex = '1 1 220px';
       const roBox = h('div', { class: 'sc-ro', 'aria-live': 'polite' }); RO.frame.appendChild(roBox);
+      const noteEl = h('p', { class: 'sc-note' }); RO.frame.appendChild(noteEl);
       roBox.addEventListener('click', (ev) => { if (ev.target && ev.target.dataset && ev.target.dataset.restore) { dropOf(S.axis).clear(); refresh(); } });
       const AXF = lib.frame(row, { label: 'All axes · click to select' }); AXF.wrap.style.flex = '1.3 1 300px';
       const list = h('div', { class: 'sc-axes', role: 'group', 'aria-label': 'Scaling axis' }); AXF.frame.appendChild(list);
-      list.appendChild(h('div', { class: 'sc-head' }, h('span', {}, 'axis · fig'), h('span', {}, 'printed  | refit'), h('span', { class: 'r' }, 'gain'), h('span', { class: 'r', title: 'which model has the lower loss at the largest run both reached' }, 'lower')));
+      list.appendChild(h('div', { class: 'sc-head' }, h('span', {}, 'axis · fig'), h('span', {}, 'rate gain'), h('span', { class: 'r' }, 'printed → refit'), h('span', { class: 'r', title: 'which model has the lower loss at the largest run both reached' }, 'lower')));
       const gmax = 0.55, gmin = -0.1;
       const rowsEl = {};
       let grp = null;
@@ -227,7 +228,8 @@
           r.tick.style.left = pos(A2.gain) + '%';
           const changed = Math.abs(A2.gain - pr) > 0.0006;
           r.tick.style.display = changed ? 'block' : 'none';
-          r.val.innerHTML = (pr * 100).toFixed(2) + '%' + (changed ? ` <em>→ ${(A2.gain * 100).toFixed(1)}</em>` : '');
+          const rv = A2.gain * 100, rs = Math.abs(rv) < 0.05 ? '0.0' : rv.toFixed(1).replace('-', MINUS);
+          r.val.innerHTML = (pr * 100).toFixed(2) + '%' + (changed ? ` <em>→ ${rs}</em>` : '');
           const L = A2.lead, nm = shortN(a);
           r.lead.textContent = L.b < L.a ? nm[1] : nm[0];
           r.lead.classList.toggle('ebt', L.b < L.a);
@@ -251,6 +253,7 @@
         const xg = [lx[0] - slx * 0.05, lx[1] + slx * 0.05];
         const ys = R.A.points.concat(R.B.points).map(q => q[1]);
         if (S.ext > 0.01) { [R.fA, R.fB].forEach(f => { if (f) { const v = fitY(f, xmaxV); if (isFinite(v) && v > 0) ys.push(v); } }); }
+        if (R.E > 0) ys.push(R.E * 0.96);
         const ylo = Math.min(...ys), yhi = Math.max(...ys), spy = (yhi - ylo) || yhi * 0.1;
         const yl = [ylo - spy * 0.07, yhi + spy * 0.07];
         const ly = [L10(ylo), L10(yhi)], sly = (ly[1] - ly[0]) || 0.05;
@@ -327,11 +330,13 @@
             const bx = X + 9;
             polyline(g, [[bx - 3, ya], [bx, ya], [bx, yb], [bx - 3, yb]], C.ink, { w: 1 });
             const gp = L.b / L.a - 1, s = `${shortN(ax)[1]} ${gp >= 0 ? '+' : MINUS}${Math.abs(gp * 100).toFixed(1)}%`;
-            lib.text(g, s, X - 6, Math.max(ya, yb) + 10, { size: 11, kind: 'mono', color: C.ink, align: 'right', weight: 600 });
+            const tw = lib.measure(g, s, { size: 11, kind: 'mono', weight: 600 }).w;
+            if (bx + 6 + tw < r.x + r.w - 2) lib.text(g, s, bx + 5, (ya + yb) / 2, { size: 11, kind: 'mono', color: C.ink, weight: 600, baseline: 'middle' });
+            else lib.text(g, s, X + 12, Math.min(ya, yb) - 9, { size: 11, kind: 'mono', color: C.ink, align: 'right', weight: 600, baseline: 'alphabetic' });
           }
         }
         // crossing
-        if (S.lines !== 'curves' && isFinite(R.uc) && logX) {
+        if (S.lines !== 'curves' && isFinite(R.uc) && logX && Math.abs(R.gain) >= 0.005) {
           const xc = P10(R.uc), X = M.X(xc);
           if (X > r.x + 4 && X < r.x + r.w - 4 && R.fA) {
             const Y = M.Y(fitY(R.fA, xc));
@@ -339,7 +344,8 @@
               g.save(); g.strokeStyle = C.ink; g.lineWidth = 1; g.beginPath(); g.arc(X, Y, 7, 0, 7); g.stroke(); g.beginPath(); g.moveTo(X - 4, Y); g.lineTo(X + 4, Y); g.moveTo(X, Y - 4); g.lineTo(X, Y + 4); g.stroke(); g.restore();
               const s = 'fits cross ≈ ' + KIND[ax.kind](xc), tw = lib.measure(g, s, { size: 11, kind: 'mono' }).w;
               const lx = Math.max(r.x + 4 + tw, X - 10);
-              lib.text(g, s, lx, Y + 12, { size: 11, kind: 'mono', color: C.ink, align: 'right' });
+              if (Y + 28 < r.y + r.h) lib.text(g, s, lx, Y + 12, { size: 11, kind: 'mono', color: C.ink, align: 'right' });
+              else lib.text(g, s, X - 12, Y + 3, { size: 11, kind: 'mono', color: C.ink, align: 'right', baseline: 'middle' });
             }
           }
         }
@@ -394,10 +400,8 @@
         const out = [];
         if (!R.fA || !R.fB) { roBox.innerHTML = cell('fit', 'needs at least 2 runs per model'); return; }
         const nd = dropOf(ax.key).size;
-        out.push(cell('slope m', `${neg(R.fA.m.toFixed(3))} · <b>${neg(R.fB.m.toFixed(3))}</b>`, `${nA} · ${nB}` + (R.E > 0 ? `, slope of L − E₀ (E₀ = ${num(R.E, 3)})` : '')));
-        out.push(cell('rate gain', `<b>${pct(R.gain)}</b> <span class="s0">printed ${(pr * 100).toFixed(2)}%</span>`, `${R.nAct} runs fitted` + (nd ? ` · ${nd} dropped · <a href="javascript:void 0" data-restore="1">restore</a>` : '')));
-        out.push(cell('per 10×', `×${P10(R.fA.m).toFixed(3)} · <b>×${P10(R.fB.m).toFixed(3)}</b>`, (R.E > 0 ? 'L − E₀' : (isLoss(ax) ? 'loss' : 'perplexity')) + ' per 10× ' + ax.res));
-        if (R.jk) out.push(cell('drop one', `${pct(R.jk[0], 1)} … ${pct(R.jk[1], 1)}`, 'gain with any one run left out'));
+        out.push(cell('slope m', `${neg(R.fA.m.toFixed(3))} · <b>${neg(R.fB.m.toFixed(3))}</b>`, `${nA} · ${nB}: ×${P10(R.fA.m).toFixed(3)} · ×${P10(R.fB.m).toFixed(3)} ${R.E > 0 ? 'on L − E₀ (E₀ = ' + num(R.E, 3) + ')' : (isLoss(ax) ? 'loss' : 'ppl')} per 10× ${ax.res}`));
+        out.push(cell('rate gain', `<b>${pct(R.gain)}</b>`, `printed ${(pr * 100).toFixed(2)}% · ${R.nAct} runs` + (R.jk ? ` · drop one: ${pct(R.jk[0], 1)} … ${pct(R.jk[1], 1)}` : '') + (nd ? ` · ${nd} dropped · <a href="javascript:void 0" data-restore="1">restore</a>` : '')));
         const L = R.lead, gp = L.b / L.a - 1;
         out.push(cell('largest run', `${nB} <b>${gp >= 0 ? '+' : MINUS}${Math.abs(gp * 100).toFixed(1)}%</b> vs ${nA}`, `${KIND[ax.kind](L.x)}: ${num(L.b, 4)} vs ${num(L.a, 4)}${L.measured ? '' : ' (fit)'}`));
         if (isFinite(R.uc)) {
@@ -407,7 +411,7 @@
           else if (R.uc < lo) s = 'below the measured range';
           else if (R.uc <= hi) s = 'inside the measured range';
           else s = `<span class="warn">×${num(xc / R.xmax, 3)} past the largest run</span>`;
-          out.push(cell('fits cross', `≈${KIND[ax.kind](xc)}`, s));
+          out.push(cell('fits cross', Math.abs(R.gain) < 0.005 ? 'no meaningful crossing' : `≈${KIND[ax.kind](xc)}`, s));
         }
         if (S.ext > 0.01) {
           const xe = R.xmax * P10(S.ext), ya = fitY(R.fA, xe), yb = fitY(R.fB, xe), ge = yb / ya - 1;
@@ -421,7 +425,8 @@
         if (!byKey[k]) return; S.axis = k; S.hover = null;
         const ax = byKey[k];
         subEl.textContent = 'Scaling explorer · ' + ax.group;
-        ctx.setCaption(ax.note + ' Hollow ink circles: ' + names(ax)[0] + '. Blue dots: ' + names(ax)[1] + '. Values approx., read from ' + ax.p.figure + '.');
+        noteEl.textContent = ax.note;
+        ctx.setCaption('Hollow ink circles: ' + names(ax)[0] + '. Blue dots: ' + names(ax)[1] + '. Values approx., read from ' + ax.p.figure + '. Hover a point to read it, click to drop it from the fits.');
         if (!keep) setMode(modeSeg.value(), true);
         refresh();
       }
