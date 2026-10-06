@@ -1,14 +1,23 @@
-# Resume plan (paused for usage reset)
+# Resume plan v2 (user feedback: site too long)
 
-All 10 panel build agents finished (24 panels exist). Critiques: 1 of 10 done. Resume each workflow with the same script + same args:
+USER REQUEST: whole site ≈ 5,000 words (not much more), focused on INTUITION for the methods and the ARCHITECTURE. Keep the strong interactive figures and animations; cut prose and results/data detail.
+Do NOT resume the old critique workflows (they review the long versions). Instead consolidate.
 
-script: /root/.claude/projects/-home-user-Random-ebt-explainer/9843a8a1-7b0a-5ed7-8867-6762f4a2ea11/workflows/scripts/ebt-panels-wf_7f4f9a87-c2a.js
-
-1. resumeFromRunId wf_7f4f9a87-c2a  args groups: [system2,families], [energy,landscape]
-2. resumeFromRunId wf_68ef3b88-159  args groups: [two-landscapes,uncertainty], [langevin-bon,tokens]
-3. resumeFromRunId wf_c9c1f965-c62  args groups: [alg1,second-order], [contrastive,regularizers,learning]
-4. resumeFromRunId wf_4713494c-212  args groups: [text-data,image-data,video-data], [architecture,costs]
-5. resumeFromRunId wf_cf7c1884-3c2  args groups: [scaling,thinking-results,image-results], [planning,world-models]
-(The args JSON, including each group's notes, must be byte-identical to the original launch to hit the cache; copy from the transcript.)
-
-After critiques: whole-site review (accuracy, notation consistency, coverage of the user's asks, visual QA desktop + phone), fix, rebundle, commit, push.
+Step 1: measure words per panel (strip HTML/KaTeX from text/steps/after) to see the current total.
+Step 2: restructure into ~14 panels, ~300-400 words each (hard cap 450), total ≈ 5,000:
+  1 families        ← system2 + families (why a Transformer's per-token compute is fixed; AR / RNN / diffusion / EBT; Table 1 facets)
+  2 energy          ← energy (E, Boltzmann, unnormalized; verifying vs generating)
+  3 landscape       ← landscape + two-landscapes (energy landscape over ŷ vs loss landscape over θ, toggle)
+  4 descent         ← keep (reference panel; trim to ~300 words)
+  5 langevin-bon    ← keep (noise + Best-of-N self-verification)
+  6 tokens          ← tokens + one paragraph of uncertainty insight (energy defined up to c(x); Fig 8)
+  7 training        ← alg1 + second-order (unrolled optimization, backprop through it, Hessian-vector products)
+  8 shaping         ← contrastive + regularizers (why optimization-based training scales; replay, Langevin, random α/N)
+  9 learning        ← keep (landscape forming over checkpoints)
+ 10 architecture    ← keep (how ŷ enters the Transformer, AR leakage fix, bidirectional, cost per step)
+ 11 data            ← text-data + image-data + video-data (compact: what training/eval samples look like, perplexity, PSNR, noise σ)
+ 12 results         ← scaling + thinking-results + image-results + costs (compact, honest: per-axis rates, 29% context, 3 vs 300 passes, compute cost)
+ 13 planning        ← planning (energy planning steps + MPC steps, CEM comparison)
+ 14 world-models    ← world-models trimmed (JEPA connection) + tiny glossary
+Use a workflow: ~6 merge agents (each 2-3 target panels; they read the source panel files, keep the best figure(s) with all interactivity working, rewrite prose to the word budget with intuition first, equations kept where they carry the idea), then 2 reviewer agents (accuracy vs notes/paper_facts.md + visual QA desktop/phone via src/shot_panel.js), then a final word-count check (≈5,000).
+Update assets/js/panels/manifest.js to the new ids/parts; move retired panel files to legacy/panels/. Update README word/section counts. Rebundle (python3 src/bundle_data.py), test every panel, commit, push.
