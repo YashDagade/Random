@@ -167,7 +167,7 @@ def batches(rng, x, bs):
 HP = {
     "batch": 32,
     "lr": 1e-3,
-    "warmup": 100,
+    "warmup": 50,
     "sigma_train": 0.1,
     "ebt_alpha": 1.0,            # fixed base step size (not learned)
     "ebt_alpha_rand": 2.0,       # alpha * exp(U(-ln2, ln2)), i.e. factor in [1/2, 2]
@@ -195,7 +195,8 @@ def make_ebt_loss(n_steps):
     return loss_fn
 
 
-def train(mode, npz, run_dir, seconds, est_steps):
+def train(mode, npz, run_dir, seconds, est_steps, max_steps=10**9, tag=None):
+    tag = tag or mode
     os.makedirs(run_dir, exist_ok=True)
     tr, te, _ = load_data(npz)
     rng = np.random.default_rng(0)
@@ -226,7 +227,7 @@ def train(mode, npz, run_dir, seconds, est_steps):
     log = []
     t0 = time.time()
     step = 0
-    while time.time() - t0 < seconds:
+    while time.time() - t0 < seconds and step < max_steps:
         y = jnp.asarray(next(gen))
         key, k1, k2, k3, k4 = jax.random.split(key, 5)
         if mode == "ebt":
@@ -253,8 +254,8 @@ def train(mode, npz, run_dir, seconds, est_steps):
             log.append({"step": step, "loss": float(loss), "gnorm": float(gn), "time": round(el, 1)})
             print(mode, step, f"loss={float(loss):.5f} gn={float(gn):.3f} t={el:.0f}s", flush=True)
         step += 1
-    np.savez(os.path.join(run_dir, f"{mode}_params.npz"), **{k: np.asarray(v) for k, v in p.items()})
-    with open(os.path.join(run_dir, f"{mode}_log.json"), "w") as f:
+    np.savez(os.path.join(run_dir, f"{tag}_params.npz"), **{k: np.asarray(v) for k, v in p.items()})
+    with open(os.path.join(run_dir, f"{tag}_log.json"), "w") as f:
         json.dump({"mode": mode, "steps": step, "seconds": time.time() - t0, "log": log,
                    "n_params": n_params(p), "hp": HP}, f)
     print("done", mode, step, "steps", n_params(p), "params")
@@ -295,4 +296,6 @@ if __name__ == "__main__":
         run_dir = sys.argv[3]
         secs = float(sys.argv[4])
         est = int(sys.argv[5])
-        train(mode, npz, run_dir, secs, est)
+        mx = int(sys.argv[6]) if len(sys.argv) > 6 else 10**9
+        tag = sys.argv[7] if len(sys.argv) > 7 else None
+        train(mode, npz, run_dir, secs, est, mx, tag)

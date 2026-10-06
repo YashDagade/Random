@@ -296,7 +296,9 @@ def train(kind, work, total, alpha0=None, tag=None):
             p, st, loss, yN, E0, EN, gn = step_fn(p, st, ctx, y, yhat0, alpha, nsteps, noise, lr)
             # write back: replayed rows continue their trajectory, fresh rows are inserted
             yN = np.asarray(yN)
-            if buf_n < R:
+            if n_rep == 0:
+                pass
+            elif buf_n < R:
                 k = min(B, R - buf_n)
                 buf_pos[buf_n:buf_n + k] = idx[:k]
                 buf_y[buf_n:buf_n + k] = yN[:k]

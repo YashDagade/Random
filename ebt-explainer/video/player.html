@@ -29,9 +29,10 @@
   <div class="row"><button id="play" type="button">Play</button><span id="time">0:00 / 0:00</span><input id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek"><select id="speed" aria-label="Speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select><button id="music" type="button" class="on">Music on</button></div>
   <div id="chapters"></div>
 </div>
-<audio id="audio" src="music.wav" preload="auto"></audio>
+<audio id="audio" preload="auto"><source src="music.m4a" type="audio/mp4"><source src="music.wav" type="audio/wav"></audio>
 <script src="../data/bundle.js"></script>
 <script src="engine.js"></script>
+<script src="../assets/js/toy2d_model.js"></script>
 <script src="scenes/manifest.js"></script>
 <script>
 (function () {

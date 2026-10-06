@@ -1,0 +1,174 @@
+{
+ "_meta": {
+  "source": "Gladstone et al., 'Energy-Based Transformers are Scalable Learners and Thinkers', arXiv 2507.02092v1 (July 2025). Definitions written for this explainer from notes/paper_text.txt; (p.N) = PDF page.",
+  "note": "Entries tagged [derived] are our arithmetic or inference, not stated in the paper. [approx., read from Fig N] marks values read off plots. Loss landscape, world model and MPC entries flag explainer extensions beyond the paper. See notes/paper_facts.md for full context.",
+  "count": 33
+ },
+ "terms": [
+  {
+   "term": "Energy",
+   "short": "A learned scalar score E(x, ŷ) for a context and a candidate prediction. Low energy means compatible.",
+   "long": "An Energy-Based Transformer outputs one number per (context, prediction) pair. Lower energy means the pair is more compatible, i.e. more likely. The energy works like an unnormalized negative log-likelihood: p(x, ŷ) ∝ exp(−E(x, ŷ)). The paper never trains the energy against a target value. It is shaped only through the loss on the optimized prediction (p.6, p.37, p.41)."
+  },
+  {
+   "term": "Energy-Based Model (EBM)",
+   "short": "A model that scores how well variables fit together instead of outputting a prediction directly.",
+   "long": "EBMs assign a scalar energy to each configuration of their inputs (p.5–6). You predict with an EBM by searching for the input that has the lowest energy. EBTs are explicit EBMs: the network maps the context and the candidate directly to an energy. Diffusion models, RNNs and Hopfield networks can be read as implicit EBMs (p.41)."
+  },
+  {
+   "term": "Energy-Based Transformer (EBT)",
+   "short": "A Transformer that takes context x and candidate ŷ and returns an energy. It predicts by gradient descent on ŷ.",
+   "long": "There are two variants. The decoder-only (autoregressive, GPT-like) EBT makes all next-token predictions in parallel. The bidirectional EBT is built on the DiT code (p.4, p.8). The autoregressive version runs on 2N-length sequences, N observed plus N predicted, with a custom attention pattern that prevents information leakage (Sec C.3, p.30–32)."
+  },
+  {
+   "term": "Energy landscape",
+   "short": "Energy as a function of the prediction ŷ, for one fixed context and fixed trained weights.",
+   "long": "A surface over the space of possible predictions. Thinking is gradient descent across this surface toward a low-energy basin (Fig 3, p.5; p.40). Training tries to make it convex and smooth around the true answer (p.7). It is not the loss landscape."
+  },
+  {
+   "term": "Loss landscape",
+   "short": "The training loss as a function of the model weights θ. It is a different object from the energy landscape.",
+   "long": "The surface the weight optimizer (AdamW) descends during training. The EBT paper only discusses energy landscapes. 'Loss landscape' appears only in the title of reference [57], which Fig 3's drawing style is adapted from (p.5). In this explainer any loss-landscape plot comes from our toy models and must be labeled as such."
+  },
+  {
+   "term": "System 2 Thinking",
+   "short": "Slow, deliberate computation. In the paper this means spending extra function evaluations to improve a prediction.",
+   "long": "The term comes from dual-process psychology (p.1). Definition C.1 formalizes it as STT(x, θ, F) = E_x[P(x, θ, F) / P(x, θ, F0) − 1]: the expected percentage improvement in a metric when the number of function evaluations F rises above the minimum F0 (p.30). EBTs think in two ways: thinking longer and self-verification."
+  },
+  {
+   "term": "Thinking longer",
+   "short": "Running more gradient-descent steps on the same prediction at inference time.",
+   "long": "Corresponds to Facet 1, dynamic compute allocation. The paper compares it to adding diffusion denoising steps (p.8). In Fig 6a, going from 2 to 3 forward passes takes EBT from worse than Transformer++ to better than it [approx., read from Fig 6a]."
+  },
+  {
+   "term": "Self-verification (Best-of-N, BoN)",
+   "short": "Optimize several random starts, then keep the candidate with the lowest energy.",
+   "long": "Algorithm 2 (p.7). It runs on every single prediction, uses the model's own energy as the judge, and needs no external reward model (p.8). The paper reports BoN-5 in Fig 6b and BoN-10 vs BoN-2 in Fig B.1a. Alg 2 calls the number of candidates M."
+  },
+  {
+   "term": "Three cognitive facets",
+   "short": "Dynamic compute allocation, uncertainty in continuous spaces, and prediction verification.",
+   "long": "Table 1 (p.3): feed-forward Transformers and RNNs have none of the three. Diffusion Transformers have dynamic compute only. EBTs have all three. Appendix F adds a fourth facet, compositional reasoning (p.38)."
+  },
+  {
+   "term": "Number of Function Evaluations (NFE)",
+   "short": "The paper's unit of thinking compute: one per forward pass, i.e. one per optimization step for EBTs.",
+   "long": "Defined on p.8. Fig 6a and Fig 12 plot performance against the number of forward passes. One EBT step also needs a backward pass to get ∇_ŷE, so one NFE costs more than a plain forward pass. That point is our inference; the paper does not discuss it."
+  },
+  {
+   "term": "Langevin dynamics (in EBT training)",
+   "short": "Adding Gaussian noise to each gradient step on the prediction so the model explores more of the landscape.",
+   "long": "Eq. 2: ŷ_{i+1} = ŷ_i − α∇E + η_i, with η_i ∼ N(0, σ) (p.7). Without the noise, training only shapes the direct path to the minimum. The NLP S2 setting uses 'Langevin Dynamics Noise 3' (Table D.4, p.36). Removing it improves thinking longer (17.2) but hurts the combined score (17.0 vs 18.7) (Table 2, p.10)."
+  },
+  {
+   "term": "Replay buffer",
+   "short": "Stores past predictions so training can resume optimizing from them, simulating longer trajectories.",
+   "long": "Borrowed from earlier EBM work [48, 51]. It helps shape the landscape near its minimum (p.7). The paper does not give buffer size or sampling details. Ablation: removing it gives 14.8 / 17.8 vs 7.19 / 18.7 for the full setup (Table 2, p.10)."
+  },
+  {
+   "term": "Randomized step size and step count",
+   "short": "Varying α and the number of optimization steps during training.",
+   "long": "This varies the paths toward the answer and 'significantly improved generalization' (p.7). Removing the random step size nearly removes all thinking gains (−1.47 / 0.19). Removing the random step count gives 0.00 / 9.65 (Table 2, p.10). The S2 NLP setting uses α = 5 with a multiplicative random factor of 2 and 2–3 steps (Table D.4). α is randomized per batch and sequence element (p.42)."
+  },
+  {
+   "term": "Step size α",
+   "short": "How far each gradient step on the prediction moves. It is a key EBT-specific hyperparameter.",
+   "long": "S1 models learn α. S2 models fix it (p.30, p.42). The values are large: 500 (NLP S1), 30,000 (video), 5 (NLP S2) (Tables D.3, D.4; p.42). Without a large step size, gradient magnitudes kept growing and training became unstable (p.42)."
+  },
+  {
+   "term": "Hessian-vector product (HVP)",
+   "short": "A second derivative multiplied by a vector, computed without forming the full Hessian. Its cost is linear in model size.",
+   "long": "The training loss is measured after gradient steps on ŷ, so updating θ needs gradients of gradients. EBTs get these with HVPs (p.7). One HVP costs about one backward pass, so a step costs F + B + B. That is ≈1.66× a feed-forward pass for a single step (p.41), ≈3.33× per step for autoregressive EBTs because their sequences are twice as long (p.36), and 6.66× for 2-step training (p.36)."
+  },
+  {
+   "term": "Optimization-based EBM training",
+   "short": "Training the energy so that gradient descent from noise lands on the right answer. No negative samples are needed.",
+   "long": "Algorithm 1 (p.7): sample ŷ0 ∼ N(0, I), take N gradient steps, compute an ordinary loss J(ŷ_N, y), and backpropagate through the steps. This avoids the curse of dimensionality that contrastive training faces, and it makes the landscape convex around the truth (p.7). In the GAN analogy, the forward pass acts as a discriminator and the descent on ŷ acts as a generator (p.7)."
+  },
+  {
+   "term": "Contrastive training and the curse of dimensionality",
+   "short": "Push true samples down in energy and negative samples up. This scales badly because high-dimensional spaces hold exponentially many negatives.",
+   "long": "One of the two families of EBM training. The other is regularized or optimization-based training (p.6, p.40). Contrastive training needs negatives from MCMC or a GAN-like generator, and 'must increase the energy of an exponentially higher number of negative samples' (p.7)."
+  },
+  {
+   "term": "S1-EBT vs S2-EBT",
+   "short": "Two training recipes. S1 is tuned for stability and learning; S2 is tuned for thinking.",
+   "long": "S1 detaches predictions between steps, applies the loss at every step, learns α, uses step embeddings, and has no landscape regularization. Most scaling plots use S1. S2 does not detach, truncates backprop, applies the loss only at the last step, fixes α, and adds the replay buffer, Langevin noise and randomization (p.30, p.36, p.42–45). Fig C.1: S2 scales 3.30% faster but starts at a higher perplexity."
+  },
+  {
+   "term": "Transformer++",
+   "short": "The strong modern autoregressive Transformer baseline (the Llama-2-style recipe).",
+   "long": "Uses the Llama 2 implementation: RMSNorm, SwiGLU, RoPE, Xavier init (p.33, p.42). It makes one feed-forward pass per token, so it cannot use more compute on a single prediction (p.10). Training costs about 6N FLOPs per token (p.35)."
+  },
+  {
+   "term": "Diffusion Transformer (DiT)",
+   "short": "A Transformer diffusion model that predicts noise. It is the baseline for bidirectional image denoising.",
+   "long": "Diffusion models allow extra denoising steps but follow a fixed schedule, are supervised at every step, and need an external verifier to go further (p.2, p.16, Fig E.1). The baseline uses the DiT code [26], batch 128, and DDIM applied recursively three times, for 300 forward passes in total (p.34–35)."
+  },
+  {
+   "term": "Perplexity (PPL)",
+   "short": "exp of the average next-token cross-entropy. Lower is better.",
+   "long": "The paper's language metric throughout. Small from-scratch models get low accuracy on GSM8K and similar benchmarks, and 'perplexity often functions as a more linear metric than accuracy' (p.9). Example: Table 3 pretraining perplexity is 31.36 for Transformer++ and 33.43 for EBT (p.12)."
+  },
+  {
+   "term": "PSNR",
+   "short": "Peak Signal-to-Noise Ratio in dB, for image reconstruction quality. Higher is better.",
+   "long": "PSNR = 10·log10(255² / MSE) for 8-bit pixels. That formula reproduces every PSNR/MSE pair in Table 4 [derived]. Table 4: EBT 27.25 vs DiT 26.58 at σ = 0.1, and 23.29 vs 19.56 at σ = 0.2 (p.13)."
+  },
+  {
+   "term": "Out-of-distribution (OOD)",
+   "short": "Test data that differs from the training distribution.",
+   "long": "For text, OOD shift is measured as downstream perplexity divided by pretraining perplexity. Thinking gains grow roughly linearly with this ratio (Fig 7, p.11). For images, the OOD setting is noisier inputs, σ = 0.2 vs the training σ = 0.1 (p.13)."
+  },
+  {
+   "term": "Noise level σ (image denoising)",
+   "short": "The fraction of the diffusion schedule used to noise an image: 0.1 for training, 0.2 for the OOD test.",
+   "long": "Uses a linear variance schedule from 1e-4 to 2e-2, following DiT (p.13). σ is not a noise standard deviation. [derived, assuming a 1000-step schedule] σ = 0.1 ≈ timestep 100, noise std ≈ 0.32. σ = 0.2 ≈ timestep 200, noise std ≈ 0.58. Do not confuse it with the Langevin noise σ."
+  },
+  {
+   "term": "Scaling rate",
+   "short": "How fast a metric improves as you scale data, parameters, FLOPs and so on: the slope of the fitted scaling trend.",
+   "long": "The paper reports 'EBT scales X% faster than Transformer++' (Figs 4, 5, 9, B.3). The values are 35.98% (data), 28.46% (batch), 5.29% (depth), 2.91% (params), 2.92% (FLOPs), 0.02% (width), 33.66% and 34.28% (video). The paper never defines the term formally. It behaves like the ratio of fitted log-log slopes minus 1 [derived from Fig 9a]. A faster rate does not mean better absolute numbers at the scales tested."
+  },
+  {
+   "term": "Linear probe",
+   "short": "Train only a linear classifier on frozen features to measure representation quality.",
+   "long": "Run on ImageNet-1k using the average of the final patch tokens (DiT gets T = 0) (p.14, p.35). EBT reaches 5.32% top-1 and 13.2% top-5, against DiT's 0.31% and 1.36% (Table 4)."
+  },
+  {
+   "term": "Smooth L1 loss",
+   "short": "Squared error for small errors and absolute error for large ones. Used for video frame prediction.",
+   "long": "β = 1.0. It is the loss for next-frame prediction on 3136-dimensional frozen-VAE features of Something-Something V2 frames (p.12). Fig 9 reports the minimum validation loss."
+  },
+  {
+   "term": "Score",
+   "short": "The gradient of the log-density, i.e. the negative gradient of the energy with respect to the data.",
+   "long": "Diffusion models and recurrent-depth RNNs can be read as predicting the score with no explicit energy. That makes them implicit EBMs: ∇xE(x,t) = −sθ(x,t) (p.36, p.41). An explicit EBM can compare two samples in one forward pass (p.37)."
+  },
+  {
+   "term": "World model (as used in the paper)",
+   "short": "A model of how states evolve. In the paper this appears only as a future-work idea in Appendix A.3.",
+   "long": "A.3 (p.26): an EBT trained on context, future states and future actions 'could implicitly be used as policies'. You would hold the past fixed and descend the energy with respect to actions and future states. The paper runs no planning, control or MPC experiments. Our planning demos are an extension beyond the paper."
+  },
+  {
+   "term": "Model predictive control (MPC)",
+   "short": "Plan a sequence of actions by optimizing a model's predicted outcome, execute the first action, then replan. This is not in the paper.",
+   "long": "The paper never mentions MPC. The explainer uses it to illustrate A.3's idea that energy minimization over actions could act as planning. Any MPC demo must be labeled as an extension beyond the paper and a toy model built for this explainer."
+  },
+  {
+   "term": "Transformer FLOPs (6N rule)",
+   "short": "Training a Transformer costs about 6 × (non-embedding parameters) FLOPs per token: 2N forward, 4N backward.",
+   "long": "Used for Transformer++ (p.35). An EBT step adds one more backward-sized HVP. The autoregressive EBT's doubled sequence makes each step ≈3.33×, and two steps ≈6.66× the Transformer++ FLOPs (p.36). The FLOP-scaling plot (Fig 5b) uses these counts."
+  },
+  {
+   "term": "RedPajamaV2",
+   "short": "The web-text corpus used for language pretraining: a 100B-token sample from Hugging Face.",
+   "long": "Tokenized with the GPT-NeoX tokenizer (EleutherAI/gpt-neox-20b, vocab 50,277). The authors made their own split of 66 million training and 33 thousand validation samples, with context length 256 (p.8, Table D.2)."
+  },
+  {
+   "term": "Something-Something V2 (SSV2)",
+   "short": "A video dataset of people doing actions with everyday objects, used for next-frame prediction.",
+   "long": "Uses the standard train/val split, 0.25 s between frames, 16-frame context, and 224×224 frames encoded to 3136 dimensions by a frozen VAE (p.12, p.34)."
+  }
+ ]
+}

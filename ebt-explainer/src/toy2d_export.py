@@ -25,6 +25,7 @@ TRAIN = sys.argv[1] if len(sys.argv) > 1 else "/tmp/claude-0/-home-user-Random/9
 OUT_JSON = os.path.join(ROOT, "data", "toy2d.json")
 
 HP = json.load(open(os.path.join(TRAIN, "hparams.json")))
+HP.setdefault("sigma_shift", 0.25)
 Z = np.load(os.path.join(TRAIN, "train_out.npz"))
 CK = [int(s) for s in Z["ckpt_steps"]]
 NL = len(HIDDEN) + 1
@@ -116,17 +117,21 @@ print("grids:", len(grids))
 # ------------------------------------------------------------------ trajectories (final model)
 PF = to_jax(PARAMS[FINAL])
 N_START, N_STEP = 8, 40
+# Trajectories use alpha = 0.5, the smallest step size seen in training. At alpha0 = 1 the learned bowl is so
+# well tuned that GD lands near the minimum in 1-2 big jumps (the model learned curvature k ~ 0.87 ~ 1/alpha0);
+# alpha = 0.5 shows the same descent as a smooth multi-step path. The browser can recompute any alpha.
+TRAJ_ALPHA = 0.5
 STARTS = np.array(sig4(np.clip(INIT_SCALE * rng.standard_normal((N_START, 2)), -2.4, 2.4)))
 key = jax.random.PRNGKey(7)
 trajectories = []
 for ci, c in enumerate(contexts):
     f = jnp.asarray(np.repeat(feats_np(c["x"])[None], N_START, 0))
-    a = jnp.full((N_START,), ALPHA0)
+    a = jnp.full((N_START,), TRAJ_ALPHA)
     P, E = gd_paths(PF, f, jnp.asarray(STARTS), a, N_STEP)
     key, k = jax.random.split(key)
     PL, EL = gd_paths(PF, f, jnp.asarray(STARTS), a, N_STEP, noise_std=LANG, key=k)
     trajectories.append(dict(
-        ctx=ci, alpha=ALPHA0, steps=N_STEP, langevin_sigma=LANG,
+        ctx=ci, alpha=TRAJ_ALPHA, steps=N_STEP, langevin_sigma=LANG,
         gd=[dict(path=sig4(P[j]), E=rnd_e(E[j])) for j in range(N_START)],
         langevin=[dict(path=sig4(PL[j]), E=rnd_e(EL[j])) for j in range(N_START)],
     ))
@@ -136,8 +141,8 @@ traj_by_ckpt = []
 for ci in FOCUS:
     f = jnp.asarray(np.repeat(feats_np(contexts[ci]["x"])[None], N_START, 0))
     for s in CK:
-        P, E = gd_paths(to_jax(PARAMS[s]), f, jnp.asarray(STARTS), jnp.full((N_START,), ALPHA0), N_STEP)
-        traj_by_ckpt.append(dict(ctx=ci, step=s, ckpt=CK.index(s),
+        P, E = gd_paths(to_jax(PARAMS[s]), f, jnp.asarray(STARTS), jnp.full((N_START,), TRAJ_ALPHA), N_STEP)
+        traj_by_ckpt.append(dict(ctx=ci, step=s, ckpt=CK.index(s), alpha=TRAJ_ALPHA,
                                  paths=[sig4(P[j]) for j in range(N_START)], E=[rnd_e(E[j]) for j in range(N_START)]))
 
 # ------------------------------------------------------------------ eval set (fixed) + metrics
@@ -167,12 +172,21 @@ for s in CK:
     eval_curve["mse_vs_mu_N40"].append(sig4(min(b40, 1e6)))
     eval_curve["mean_final_E_N40"].append(sig4(np.mean(E40[:, -1])))
 
-# thinking curve: final model, error vs number of GD steps (no Langevin)
-P, E, _, _ = eval_ckpt(PF, 60)
-th_mse_mu = np.mean(np.sum((P - muv[:, None]) ** 2, -1), 0)
-th_mse_y = np.mean(np.sum((P - yv[:, None]) ** 2, -1), 0)
+# thinking curves: final model, error vs number of GD steps (no Langevin), for several step sizes
+thinking_by_alpha = []
+for al_ in (0.25, 0.5, 1.0, 2.0):
+    P, E, _, _ = eval_ckpt(PF, 60, alpha=al_)
+    mm = np.mean(np.sum((P - muv[:, None]) ** 2, -1), 0)
+    my = np.mean(np.sum((P - yv[:, None]) ** 2, -1), 0)
+    thinking_by_alpha.append(dict(alpha=al_, mse_vs_mu=sig4(np.minimum(mm, 1e6)), mse_vs_y=sig4(np.minimum(my, 1e6)),
+                                  mean_E=rnd_e(E.mean(0))))
+    if al_ == ALPHA0:
+        th_mse_mu, th_mse_y, th_E = mm, my, E.mean(0)
 thinking_curve = dict(steps=list(range(61)), mse_vs_mu=sig4(th_mse_mu), mse_vs_y=sig4(th_mse_y),
-                      mean_E=sig4(E.mean(0)), alpha=ALPHA0, train_N_range=[HP["n_min"], HP["n_max"]])
+                      mean_E=rnd_e(th_E), alpha=ALPHA0, train_N_range=[HP["n_min"], HP["n_max"]],
+                      by_alpha=thinking_by_alpha,
+                      note="Mean over the fixed eval set; yhat_0 ~ N(0, I); step 0 = the random initial guess. "
+                           "Training only unrolled N in [n_min, n_max] steps with alpha in [alpha0/2, 2 alpha0].")
 # thinking curve at a few checkpoints (does "thinking longer" get better as training goes on?)
 thinking_by_ckpt = []
 for s in CK[4:]:
@@ -419,7 +433,12 @@ out = dict(
             "alpha is randomized independently per sample (paper App. I.1.3 found per-batch alpha unstable); N is randomized per batch.",
             "Backprop through all unrolled steps (no detach), loss only at the last step, as for the paper's S2 models; we do not truncate.",
             "Replay buffer stores (x, y, yhat_N) and restarts a fraction of each batch from stored predictions.",
-            "All exported numbers are computed in float64 from the rounded (4 significant digit) weights in this file.",
+            "All exported numbers are computed in float64 from the rounded (4 significant digit) weights in this file. Energies are stored with 4 significant digits but at least 3 decimals.",
+        ],
+        insights=[
+            "Algorithm 1 only ever uses grad_yhat E, so adding any function c(x) to the energy leaves training unchanged: the energy level of one context versus another is not directly trained. Comparing energies of candidates for the SAME context (Best-of-N) is grounded; comparing energies across contexts relies on emergent behaviour.",
+            "With MSE on noisy targets, the best yhat_N is the conditional mean mu(x); the expected loss equals ||yhat_N - mu||^2 + noise, so the target noise level does not enter the expected gradient. In this toy the basins are almost equally sharp for near-deterministic and very noisy contexts.",
+            "The learned curvature adapts to the step size: with alpha randomized in [alpha0/2, 2 alpha0] and only 2..6 training steps, the model learns a bowl where one step at alpha0 covers ~87% of the distance to the minimum.",
         ],
         grid_axes="grids[k].E[r][c] is the energy at yhat = (xs[c], ys[r]) with xs = linspace(extent[0], extent[1], grid_n), "
                   "ys = linspace(extent[2], extent[3], grid_n). Row 0 is the BOTTOM (ymin).",
@@ -457,16 +476,30 @@ th = th_mse_mu
 f = []
 f.append(f"Final eval: mean ||yhat-mu||^2 after 40 GD steps = {th[40]:.4f}; mse vs noisy y = {th_mse_y[40]:.4f} "
          f"(noise floor {noise_floor:.4f}).")
-f.append(f"Thinking longer: mse_vs_mu at steps 1/2/4/6/10/20/40/60 = " + ", ".join(f"{th[k]:.4f}" for k in [1, 2, 4, 6, 10, 20, 40, 60]) +
-         f" (training used N in [{HP['n_min']},{HP['n_max']}]).")
+for tb in thinking_by_alpha:
+    v = tb["mse_vs_mu"]
+    f.append(f"Thinking longer (alpha {tb['alpha']}): mse_vs_mu at steps 0/1/2/4/6/10/20/40/60 = " + ", ".join(f"{v[k]:.4g}" for k in [0, 1, 2, 4, 6, 10, 20, 40, 60]) +
+             f" (training used N in [{HP['n_min']},{HP['n_max']}]).")
 f.append("Best-of-N (Langevin, random alpha, %d steps): mse_vs_mu for M=%s: %s; oracle best of 16 = %.4f." % (
     BON_N, Ms, ", ".join(f"{bon_final[M]:.4f}" for M in Ms), bon_final["oracle_best_of_max"]))
 f.append("BoN gain over training (M=1 -> M=8): " + "; ".join(
     f"step {s}: {a} -> {b}" for s, a, b in zip(bon_vs_training["step"], bon_vs_training["M1"], bon_vs_training["M8"])))
 f.append(f"Uncertainty check (64 contexts): corr(sigma, E_min) = {basin['corr_sigma_vs_Emin']}, "
-         f"corr(sigma, mean Hessian eigenvalue) = {basin['corr_sigma_vs_mean_curvature']}, corr(sigma, steps to converge) = {basin['corr_sigma_vs_steps']}.")
+         f"corr(sigma, mean Hessian eigenvalue) = {basin['corr_sigma_vs_mean_curvature']}, corr(sigma, steps to converge) = {basin['corr_sigma_vs_steps']}. "
+         f"Hessian eigenvalues span only {eig.min():.3f}..{eig.max():.3f} while sigma spans {sig_b.min():.3f}..{sig_b.max():.3f}; "
+         f"basin curvature is set mainly by the step size (alpha0 * k ~ {ALPHA0 * eig.mean():.2f}), not by the noise level.")
+for name, xq in (("right tip x=0.25 (sigma 0.03)", 0.25), ("left tip x=0.75 (sigma 0.30)", 0.75)):
+    fq = jnp.asarray(feats_np(xq))
+    Pq, Eq = gd_paths(PF, fq[None], jnp.asarray(mu_np(xq)[None]), jnp.array([0.5]), 300)
+    ev = np.linalg.eigvalsh(np.asarray(H_1(PF, fq, jnp.asarray(Pq[0, -1]))))
+    tips = basin.setdefault("tips", [])
+    tips.append(dict(x=xq, label=name, E_min=sig4(Eq[0, -1]), hess_eig=sig4(ev), argmin=sig4(Pq[0, -1]), mu=sig4(mu_np(xq))))
+    f.append(f"{name}: E_min {Eq[0, -1]:.4f}, Hessian eigenvalues {ev[0]:.4f}, {ev[1]:.4f}, argmin {np.round(Pq[0, -1], 4).tolist()} vs mu {np.round(mu_np(xq), 4).tolist()}.")
 f.append(f"Param-space training-loss slice: center {center_loss:.4f}, min {L.min():.4f}, max {L.max():.3g}.")
 out["_meta"]["findings"] = f
+out["_meta"]["insights"][2] = (f"The learned curvature adapts to the step size: with alpha randomized in [alpha0/2, 2 alpha0] and only "
+                               f"{HP['n_min']}..{HP['n_max']} training steps, the model learns a bowl whose Hessian eigenvalues k are ~{eig.mean():.2f}, "
+                               f"so near the minimum one step at alpha0={ALPHA0} covers ~{100 * ALPHA0 * eig.mean():.0f}% of the remaining distance.")
 for line in f:
     print(line)
 

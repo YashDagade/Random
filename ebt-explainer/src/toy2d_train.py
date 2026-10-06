@@ -51,8 +51,11 @@ def mu(x):
     return jnp.stack([A_X * jnp.sin(2 * jnp.pi * x), A_Y * jnp.sin(4 * jnp.pi * x)], -1)
 
 
+SIGMA_SHIFT = float(os.environ.get("TOY2D_SIGMA_SHIFT", "0.25"))  # 0.75 = control run with the noise pattern mirrored
+
+
 def sigma(x):
-    return S_MIN + (S_MAX - S_MIN) * jnp.sin(jnp.pi * (x - 0.25)) ** 2
+    return S_MIN + (S_MAX - S_MIN) * jnp.sin(jnp.pi * (x - SIGMA_SHIFT)) ** 2
 
 
 def feats(x):
@@ -187,7 +190,7 @@ def main():
     np.savez(os.path.join(OUT, "buffer.npz"), x=np.asarray(state[4]), y=np.asarray(state[5]), yh=np.asarray(state[6]))
     import json
     with open(os.path.join(OUT, "hparams.json"), "w") as fh:
-        json.dump(dict(HP, wall_seconds=wall, ckpt_steps=sorted(saved)), fh)
+        json.dump(dict(HP, wall_seconds=wall, ckpt_steps=sorted(saved), sigma_shift=SIGMA_SHIFT), fh)
 
 
 if __name__ == "__main__":
