@@ -1,0 +1,40 @@
+// Render the full video: node src/render_video.js [workers=3] [fps=30]
+// Splits the timeline across workers; each pipes JPEG frames into ffmpeg (libx264) -> segment; then concat + mux music.
+const path = require('path'), fs = require('fs'), { spawn, execFileSync } = require('child_process');
+const { chromium } = require('/tmp/claude-0/-home-user-Random/9843a8a1-7b0a-5ed7-8867-6762f4a2ea11/scratchpad/work/node_modules/playwright');
+const root = path.resolve(__dirname, '..');
+const FF = execFileSync('python3', ['-c', 'import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())']).toString().trim();
+const WORKERS = parseInt(process.argv[2] || '3'), FPS = parseInt(process.argv[3] || '30');
+const OUTDIR = root + '/video/build'; fs.mkdirSync(OUTDIR, { recursive: true });
+(async () => {
+  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--allow-file-access-from-files'] });
+  const probe = await b.newPage({ viewport: { width: 1920, height: 1080 } });
+  await probe.goto('file://' + root + '/video/player.html?render=1');
+  await probe.waitForFunction(() => window.__ready === true, null, { timeout: 120000 });
+  const total = await probe.evaluate(() => EBTV.total()); await probe.close();
+  const N = Math.ceil(total * FPS); console.log('total', total.toFixed(2), 's frames', N);
+  const per = Math.ceil(N / WORKERS); const t0 = Date.now();
+  const segs = await Promise.all(Array.from({ length: WORKERS }, async (_, w) => {
+    const a = w * per, z = Math.min(N, a + per); const out = `${OUTDIR}/seg${w}.mp4`;
+    const p = await b.newPage({ viewport: { width: 1920, height: 1080 } });
+    p.on('pageerror', e => console.log('[pageerror]', e.message));
+    await p.goto('file://' + root + '/video/player.html?render=1');
+    await p.waitForFunction(() => window.__ready === true, null, { timeout: 120000 });
+    const ff = spawn(FF, ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-', '-c:v', 'libx264', '-preset', 'medium', '-crf', '21', '-pix_fmt', 'yuv420p', '-r', String(FPS), out], { stdio: ['pipe', 'inherit', 'inherit'] });
+    for (let i = a; i < z; i++) {
+      const url = await p.evaluate((t) => window.__frame(t, 'image/jpeg', 0.93), i / FPS);
+      const buf = Buffer.from(url.split(',')[1], 'base64');
+      if (!ff.stdin.write(buf)) await new Promise(r => ff.stdin.once('drain', r));
+      if ((i - a) % 300 === 0) console.log(`w${w} frame ${i - a}/${z - a} ${((Date.now() - t0) / 1000).toFixed(0)}s`);
+    }
+    ff.stdin.end(); await new Promise(r => ff.on('close', r)); await p.close(); return out;
+  }));
+  await b.close();
+  fs.writeFileSync(`${OUTDIR}/list.txt`, segs.map(s => `file '${s}'`).join('\n'));
+  execFileSync(FF, ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', `${OUTDIR}/list.txt`, '-c', 'copy', `${OUTDIR}/video_noaudio.mp4`]);
+  const music = fs.existsSync(root + '/video/music.wav') ? root + '/video/music.wav' : null;
+  const final = root + '/video/ebt_explainer.mp4';
+  if (music) execFileSync(FF, ['-y', '-loglevel', 'error', '-i', `${OUTDIR}/video_noaudio.mp4`, '-i', music, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-af', `afade=t=out:st=${Math.max(0, total - 4).toFixed(2)}:d=4`, '-shortest', '-movflags', '+faststart', final]);
+  else fs.copyFileSync(`${OUTDIR}/video_noaudio.mp4`, final);
+  console.log('done', final, (fs.statSync(final).size / 1e6).toFixed(1), 'MB', ((Date.now() - t0) / 1000).toFixed(0), 's');
+})();

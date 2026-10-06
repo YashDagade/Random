@@ -1,0 +1,5 @@
+video/frames/
+video/build/
+video/*.wav
+src/__pycache__/
+*.pyc

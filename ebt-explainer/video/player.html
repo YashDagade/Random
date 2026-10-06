@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EBT Explainer Player</title>
+<style>
+  :root { --bg:#0d131f; --panel:#141c2b; --rule:#283449; --ink:#e9eef6; --muted:#93a1b8; --ebt:#ffc95c; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font-family: system-ui, sans-serif; }
+  body.render { overflow:hidden; }
+  #wrap { position:relative; width:100%; height:calc(100% - 92px); display:flex; align-items:center; justify-content:center; }
+  body.render #wrap { height:auto; display:block; }
+  canvas { max-width:100%; max-height:100%; aspect-ratio:16/9; background:#000; }
+  body.render canvas { max-width:none; max-height:none; }
+  #bar { height:92px; box-sizing:border-box; padding:10px 16px; border-top:1px solid var(--rule); background:var(--panel); display:grid; gap:8px; }
+  body.render #bar { display:none; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  button, select { background:#1a2437; color:var(--ink); border:1px solid var(--rule); border-radius:8px; padding:5px 10px; font:13px system-ui; cursor:pointer; }
+  button.on { border-color:var(--ebt); color:var(--ebt); }
+  input[type=range] { flex:1; accent-color: var(--ebt); }
+  #time { font: 13px ui-monospace, monospace; color:var(--muted); min-width:110px; }
+  #chapters { display:flex; gap:6px; overflow-x:auto; }
+  #chapters button { white-space:nowrap; font-size:12px; }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="cv" width="1920" height="1080"></canvas></div>
+<div id="bar">
+  <div class="row"><button id="play" type="button">Play</button><span id="time">0:00 / 0:00</span><input id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek"><select id="speed" aria-label="Speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select><button id="music" type="button" class="on">Music on</button></div>
+  <div id="chapters"></div>
+</div>
+<audio id="audio" src="music.wav" preload="auto"></audio>
+<script src="../data/bundle.js"></script>
+<script src="engine.js"></script>
+<script src="scenes/manifest.js"></script>
+<script>
+(function () {
+  const q = new URLSearchParams(location.search);
+  const render = q.has('render');
+  if (render) document.body.classList.add('render');
+  const only = q.get('scene');
+  const list = only ? [only] : window.EBTV_SCENES;
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const audio = document.getElementById('audio');
+  let T = parseFloat(q.get('t') || '0'), playing = false, last = 0, speed = 1, musicOn = true;
+  const fmt = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+  EBTV.init(list).then(() => {
+    window.__ready = true;
+    if (render) return;
+    const total = EBTV.total();
+    const ch = document.getElementById('chapters');
+    EBTV.timeline().forEach(e => { const b = document.createElement('button'); b.type = 'button'; b.textContent = (e.def.title || e.id); b.onclick = () => seek(e.t0 + 0.01); ch.appendChild(b); });
+    const scrub = document.getElementById('scrub');
+    scrub.oninput = () => seek(scrub.value / 1000 * total);
+    function seek(t) { T = Math.max(0, Math.min(total - 0.01, t)); if (!only) { try { audio.currentTime = T; } catch (e) {} } draw(); }
+    function draw() { EBTV.render(ctx, T); document.getElementById('time').textContent = fmt(T) + ' / ' + fmt(total); scrub.value = Math.round(T / total * 1000); }
+    function tick(now) { if (!playing) return; const dt = (now - last) / 1000; last = now; T += dt * speed; if (T >= total) { T = only ? 0 : total - 0.01; if (!only) { playing = false; btn.textContent = 'Play'; audio.pause(); } } draw(); requestAnimationFrame(tick); }
+    const btn = document.getElementById('play');
+    btn.onclick = () => { playing = !playing; btn.textContent = playing ? 'Pause' : 'Play'; if (playing) { last = performance.now(); requestAnimationFrame(tick); if (musicOn && !only) { audio.currentTime = T; audio.playbackRate = speed; audio.volume = 0.6; audio.play().catch(() => {}); } } else audio.pause(); };
+    document.getElementById('speed').onchange = e => { speed = parseFloat(e.target.value); audio.playbackRate = speed; };
+    document.getElementById('music').onclick = e => { musicOn = !musicOn; e.target.classList.toggle('on', musicOn); e.target.textContent = musicOn ? 'Music on' : 'Music off'; if (!musicOn) audio.pause(); else if (playing && !only) { audio.currentTime = T; audio.play().catch(() => {}); } };
+    document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); btn.click(); } if (e.code === 'ArrowRight') seek(T + 5); if (e.code === 'ArrowLeft') seek(T - 5); });
+    draw();
+  });
+  // headless helpers
+  window.__frame = (t, type, quality) => { EBTV.render(ctx, t); return cv.toDataURL(type || 'image/jpeg', quality || 0.92); };
+  window.__sceneFrame = (id, t, type) => { const e = EBTV.timeline().find(x => x.id === id); EBTV.render(ctx, (e ? e.t0 : 0) + t); return cv.toDataURL(type || 'image/png'); };
+})();
+</script>
+</body>
+</html>
