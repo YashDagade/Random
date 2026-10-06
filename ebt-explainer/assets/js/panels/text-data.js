@@ -333,7 +333,7 @@
         nl.forEach((v, i) => { if (!isFinite(v)) { runTok.push(NaN); runChar.push(NaN); return; } s += v; n++; cs += toks[i].chars.length; runTok.push(Math.exp(s / n)); runChar.push(cs ? Math.exp(s / cs) : NaN); });
         return { toks, nl, run: st.unit === 'tok' ? runTok : runChar, sum: s, n, chars: cs };
       }
-      function pLay(w) { const LM = 46, RM = 8, y0 = 20, bh = 76, lab = 52, rh = 98, cy = y0 + bh + 6 + lab + 10 + rh + 4; return { LM, RM, y0, bh, lab, rh, cy, H: cy + 92 }; }
+      function pLay(w) { const LM = 46, RM = 8, y0 = 20, bh = 76, lab = 52, rh = 98, cy = y0 + bh + 6 + lab + 10 + rh + 4; return { LM, RM, y0, bh, lab, rh, cy, H: cy + 100 }; }
       function drawPpl(g, w) {
         if (!score) score = prepScore();
         const L = pLay(w), P = pplStats(), n = P.toks.length, bw = (w - L.LM - L.RM) / Math.max(1, n);
@@ -341,7 +341,7 @@
         const Yb = (v) => L.y0 + L.bh - v / top * L.bh, base = L.y0 + L.bh;
         g.strokeStyle = C.rule; g.lineWidth = 1;
         [0, top / 2, top].forEach(v => { g.beginPath(); g.moveTo(L.LM, Yb(v)); g.lineTo(w - L.RM, Yb(v)); g.stroke(); T(g, String(v), L.LM - 6, Yb(v), { size: 11, align: 'right', baseline: 'middle', color: C.muted }); });
-        T(g, '−ln p, nats per token (stacked: its characters)', L.LM, 2, { size: 11, color: C.muted });
+        T(g, w < 520 ? '−ln p, nats per token' : '−ln p, nats per token (hairlines split it by character)', L.LM, 2, { size: 11, color: C.muted });
         P.nl.forEach((v, i) => {
           const x = L.LM + i * bw + bw * 0.16, ww = bw * 0.68, on = i === st.sel;
           if (!isFinite(v)) { g.strokeStyle = C.rule; g.setLineDash([2, 2]); g.strokeRect(x, Yb(top * 0.15), ww, base - Yb(top * 0.15)); g.setLineDash([]); return; }
@@ -360,7 +360,7 @@
         const refs = tok ? [[31.36, 'Transformer++ 31.36 (Table 3)', C.ink, 'left'], [VOCAB, 'uniform over 50,277 tokens', C.muted, 'right']]
           : [[TPP_CHAR, `Transformer++ ≈ ${TPP_CHAR.toFixed(2)} (derived)`, C.ink, 'left'], [TOY_BASE, `toy one-pass baseline ${TOY_BASE.toFixed(2)} (held-out)`, C.muted, 'right'], [TOY_SYMS, `uniform over ${TOY_SYMS} symbols`, C.muted, 'right']];
         const vals = P.run.filter(isFinite), hiExp = Math.max(2, Math.ceil(Math.log10(Math.max(10, ...vals, ...refs.map(r => r[0]))) + 0.05)), Yr = (v) => ry + rh - Math.log10(Math.max(1, v)) / hiExp * rh;
-        T(g, `perplexity ${tok ? 'per token' : 'per character'} of the text so far (log scale)`, L.LM, ry - 14, { size: 11, color: C.muted });
+        T(g, w < 520 ? `perplexity per ${tok ? 'token' : 'char'} so far (log)` : `perplexity ${tok ? 'per token' : 'per character'} of the text so far (log scale)`, L.LM, ry - 14, { size: 11, color: C.muted });
         const stepE = hiExp > 6 ? 2 : 1;
         for (let e = 0; e <= hiExp; e += stepE) { g.strokeStyle = C.rule; g.beginPath(); g.moveTo(L.LM, Yr(Math.pow(10, e))); g.lineTo(w - L.RM, Yr(Math.pow(10, e))); g.stroke(); T(g, e === 0 ? '1' : e < 4 ? String(Math.pow(10, e)) : '1e' + e, L.LM - 6, Yr(Math.pow(10, e)), { size: 11, align: 'right', baseline: 'middle', color: C.muted }); }
         refs.forEach(([v, s, col, al]) => {
@@ -373,15 +373,15 @@
         if (pts.length > 1) lib.line(g, pts, { color: lc, width: 2 });
         pts.forEach((p, i) => lib.dot(g, p[0], p[1], i === pts.length - 1 ? 4 : 2.2, lc));
         g.strokeStyle = C.rule; g.beginPath(); g.moveTo(0, L.cy - 2); g.lineTo(w, L.cy - 2); g.stroke();
-        const tk = P.toks[st.sel]; T(g, `inside "${tk ? tokShow(tk.text) : ''}": p(token) = product of its characters' p`, 6, L.cy + 3, { size: 11, color: C.muted, maxWidth: w - 12 });
-        g.save(); g.translate(0, L.cy + 16); drawChars(g, w); g.restore();
+        const tk = P.toks[st.sel]; T(g, w < 520 ? `inside "${tk ? tokShow(tk.text) : ''}": p = Π of its chars' p` : `inside "${tk ? tokShow(tk.text) : ''}": p(token) = product of its characters' p`, 6, L.cy + 3, { size: 11, color: C.muted });
+        g.save(); g.translate(0, L.cy + 14); drawChars(g, w); g.restore();
       }
       function drawChars(g, w) {
         const P = pplStats(), tk = P.toks[st.sel];
         if (!tk) return;
         if (st.mode !== 'ebt') { T(g, st.mode === 'tpp' ? 'This reference scorer gives every true token p = 1/31.36: −ln p = 3.45 nats per token,' : 'This reference scorer spreads p evenly over all 50,277 tokens: −ln p = 10.83 nats per token,', 6, 10, { size: 12, color: C.muted, maxWidth: w - 12 }); T(g, 'so its per-token perplexity is that constant, whatever the text.', 6, 46, { size: 12, color: C.muted, maxWidth: w - 12 }); return; }
         if (!tk.chars.length) { T(g, 'This token has no characters the toy model can score.', 6, 10, { size: 12, color: C.muted }); return; }
-        const n = tk.chars.length, cw = Math.min(64, (w - 12) / Math.max(n, 4)), x0 = 6, top = 14, bh = 28;
+        const n = tk.chars.length, cw = Math.min(64, (w - 12) / Math.max(n, 4)), x0 = 6, top = 13, bh = 28;
         const vals = tk.chars.map(charNll), mx = Math.max(4, ...vals.filter(isFinite));
         tk.chars.forEach((c, i) => {
           const v = vals[i], x = x0 + i * cw, y1 = top + bh;
