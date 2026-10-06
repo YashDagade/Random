@@ -109,7 +109,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9694,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -594,7 +594,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9712,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -1077,7 +1077,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.985,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -1526,7 +1526,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9798,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -2005,7 +2005,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9979,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -2446,7 +2446,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9986,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -2924,7 +2924,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9983,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -3365,7 +3365,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9963,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -3843,7 +3843,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9984,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -4288,7 +4288,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9964,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -4762,7 +4762,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9994,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -5203,7 +5203,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9969,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -5756,7 +5756,7 @@
    "rate_gain_printed": null,
    "approx": true,
    "label": "approx., read from Fig 6a",
-   "note": "EBT improves from 44.77 (no thinking) to 31.76 at 30 passes: 29.1% lower, matching the paper's \"up to 29%\". Transformer++ is a flat line (one pass per token; drawn across x for comparison).",
+   "note": "EBT improves from 44.77 (no thinking) to 31.76 at 30 passes: 29.1% lower, matching the paper's \"up to 29%\". Transformer++ stays flat at about 38.41: more forward passes cannot change its per-token prediction.",
    "thinking_improvement": 0.2906
   },
   {
@@ -6647,7 +6647,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9691,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -7092,7 +7092,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9672,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -7570,7 +7570,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9194,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -8015,7 +8015,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9262,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -9454,7 +9454,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9442,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -9951,7 +9951,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9671,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -10458,7 +10458,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9983,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -10931,7 +10931,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9997,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -11410,7 +11410,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9986,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [
@@ -11851,7 +11851,7 @@
       "form": "log10(y) = slope*log10(x) + intercept  (power law y = 10^intercept * x^slope)",
       "r2": 0.9943,
       "fit_by": "explainer",
-      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to 0.01%)."
+      "fit_note": "OLS on the digitized points; this is the fit the paper uses for its printed scaling-rate titles (reproduced to within 0.01 percentage points)."
      },
      "paper_curve": {
       "points": [

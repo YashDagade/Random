@@ -1,17 +1,17 @@
 // s01_intro: "Thinking, fast and slow" (50 s)
-// Beats: A title card (0-7) | B System 1 vs System 2 (7-18.6) | C today's System 2 recipes and their limits (18.6-27.6)
-//        D the core question (27.6-33.9) | E the paper's answer: verify, then optimize (33.9-46.6) | F roadmap (46.6-50)
+// Beats: A title card (0-6.8) | B System 1 vs System 2 (6.8-18.3) | C today's System 2 recipes and their limits (18.3-27.2)
+//        D the core question (27.2-33.4) | E the paper's answer: verify, then optimize (33.4-46.0) | F roadmap (46.0-50)
 // Facts: abstract p.1, intro p.1-4, Table 1 p.3, Eq. 1 p.7, Algorithms 1-2 p.7.
 (function () {
   const DUR = 50;
 
   // ---------- timing of beats ----------
-  const A0 = 0, A1 = 7.0;
-  const B0 = 7.0, B1 = 18.6;
-  const C0 = 18.6, C1 = 27.6;
-  const D0 = 27.6, D1 = 33.9;
-  const E0 = 33.9, E1 = 46.6;
-  const F0 = 46.6, F1 = 50.0;
+  const A0 = 0, A1 = 6.8;
+  const B0 = 6.8, B1 = 18.3;
+  const C0 = 18.3, C1 = 27.2;
+  const D0 = 27.2, D1 = 33.4;
+  const E0 = 33.4, E1 = 46.0;
+  const F0 = 46.0, F1 = 50.0;
 
   // ---------- procedural energy field for the background (world coords in px) ----------
   // A gentle bowl with several wells. Purely decorative; it is a picture of "an energy landscape".
@@ -90,8 +90,8 @@
   let PATH = null;
   function marblePath() {
     if (PATH) return PATH;
-    let x = 1840, y = 150; const pts = [[x, y]]; const h = 1.5, eta = 5200;
-    for (let i = 0; i < 70; i++) {
+    let x = 1300, y = 90; const pts = [[x, y]]; const h = 1.5, eta = 5200;
+    for (let i = 0; i < 75; i++) {
       const gx = (field(x + h, y, true) - field(x - h, y, true)) / (2 * h);
       const gy = (field(x, y + h, true) - field(x, y - h, true)) / (2 * h);
       x -= eta * gx; y -= eta * gy; pts.push([x, y]);
@@ -99,7 +99,7 @@
     PATH = pts; return PATH;
   }
 
-  const KEYS = [[0, 0.0], [0.5, 1], [6.5, 1], [7.6, 0.42], [18.2, 0.42], [19.0, 0.34], [27.3, 0.34], [28.3, 0.78], [33.3, 0.78], [34.3, 0.26], [46.2, 0.26], [47.0, 0.5], [49.3, 0.5], [50, 0]];
+  const KEYS = [[0, 0.0], [0.5, 1], [6.3, 1], [7.4, 0.42], [17.9, 0.42], [18.7, 0.34], [26.9, 0.34], [27.9, 0.78], [32.8, 0.78], [33.8, 0.26], [45.6, 0.26], [46.4, 0.5], [49.3, 0.5], [50, 0]];
   function fieldAlpha(t, U) {
     for (let i = 1; i < KEYS.length; i++) if (t <= KEYS[i][0]) { const [ta, va] = KEYS[i - 1], [tb, vb] = KEYS[i]; return U.lerp(va, vb, U.ease(U.inv(ta, tb, t))); }
     return 0;
@@ -110,7 +110,8 @@
     const al = U.fade(t, a, b, 0.7, 0.5); if (al <= 0) return;
     const dy = (1 - U.easeOut(U.inv(a, a + 0.9, t))) * 14;
     U.text(ctx, eyebrow.toUpperCase(), 96, 70 + dy, { size: 24, kind: 'mono', color: o.color || U.C.ebt, alpha: al, spacing: 3 });
-    U.text(ctx, title, 96, 106 + dy, { size: o.size || 56, kind: 'display', weight: 600, color: U.C.ink, alpha: al, maxWidth: o.maxWidth || 1728 });
+    if (Array.isArray(title)) U.rich(ctx, title, 96, 106 + dy, { size: o.size || 56, kind: 'display', weight: 600, color: U.C.ink, alpha: al });
+    else U.text(ctx, title, 96, 106 + dy, { size: o.size || 56, kind: 'display', weight: 600, color: U.C.ink, alpha: al, maxWidth: o.maxWidth || 1728 });
   }
   function check(ctx, x, y, s, col, a) {
     if (a <= 0) return; ctx.save(); ctx.globalAlpha *= a; ctx.strokeStyle = col; ctx.lineWidth = Math.max(2, s * 0.15); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -130,14 +131,16 @@
   // math line: parts = [{t, sub, nabla, color}], mono font; returns width. align: 'left'|'center'
   function mathLine(ctx, U, parts, x, y, o = {}) {
     const size = o.size || 30, col = o.color || U.C.ink, al = o.alpha == null ? 1 : o.alpha;
-    const wOf = (p) => p.nabla ? size * 0.72 : U.measure(ctx, p.t, { size: p.sub ? size * 0.66 : size, kind: 'mono' }).w;
+    const kind = o.kind || 'display';
+    const wOf = (p) => p.sp != null ? p.sp : p.nabla ? size * 0.72 : U.measure(ctx, p.t, { size: p.sub ? size * 0.66 : size, kind: p.kind || kind }).w;
     const total = parts.reduce((s, p) => s + wOf(p), 0);
     let cx = o.align === 'center' ? x - total / 2 : x;
     parts.forEach(p => {
       const c = p.color || col;
+      if (p.sp != null) { cx += p.sp; return; }
       if (p.nabla) { nabla(ctx, cx, y, size, c, al); cx += size * 0.72; return; }
       const sz = p.sub ? size * 0.66 : size;
-      U.text(ctx, p.t, cx, y + (p.sub ? size * 0.42 : 0), { size: sz, kind: 'mono', color: c, alpha: al });
+      U.text(ctx, p.t, cx, y + (p.sub ? size * 0.42 : 0) + (p.dy || 0), { size: sz, kind: p.kind || kind, color: c, alpha: al });
       cx += wOf(p);
     });
     return total;
@@ -181,8 +184,8 @@
     // hairline grows
     const hw = 140 * U.ease(U.inv(1.6, 2.6, t));
     if (hw > 1) { ctx.save(); ctx.globalAlpha *= al; ctx.fillStyle = C.ebt; ctx.fillRect(x, 702, hw, 3); ctx.restore(); }
-    U.text(ctx, 'A. Gladstone, G. Nanduru, M. M. Islam, P. Han, H. Ha, A. Chadha, Y. Du, H. Ji, J. Li, T. Iqbal', x, 736 + rise(1.9), { size: 27, color: C.muted, alpha: a4, maxWidth: 960, lh: 1.35 });
-    U.text(ctx, 'UVA · UIUC · Amazon GenAI · Stanford · Harvard', x, 826 + rise(2.1), { size: 23, kind: 'mono', color: C.faint, alpha: a4 * 0.95 });
+    U.text(ctx, 'A. Gladstone, G. Nanduru, M. M. Islam, P. Han, H. Ha, A. Chadha, Y. Du, H. Ji, J. Li, T. Iqbal', x, 736 + rise(1.9), { size: 27, color: C.muted, alpha: a4, maxWidth: 1240, lh: 1.35 });
+    U.text(ctx, 'UVA · UIUC · Amazon GenAI · Stanford · Harvard', x, 790 + rise(2.1), { size: 23, kind: 'mono', color: C.faint, alpha: a4 * 0.95 });
 
     // marble: gradient descent on the background landscape, foreshadowing "thinking"
     const P = marblePath(), [ox, oy] = PAN(t);
@@ -241,16 +244,16 @@
         pill(ctx, U, 'a sandwich', p.x + 560, cy - 36, 210, 72, { alpha: ansA, size: 30, stroke: U.rgba(C.muted, 0.8) });
         // a pulse that repeats: the answer is immediate every time
         const ph0 = t - (p.a + 1.2); if (ph0 > 0) { const u = (ph0 % 3.0) / 0.7; if (u < 1) glowDot(ctx, U, U.lerp(x1, x2 - 10, U.ease(u)), cy, 8, C.ink, ma * (1 - 0.3 * u)); }
-        U.text(ctx, 'passes: 1', p.x + 415, cy + 120, { size: 26, kind: 'mono', color: C.muted, align: 'center', alpha: ma });
+        U.text(ctx, 'passes: 1', p.x + 415, y + 520, { size: 26, kind: 'mono', color: C.muted, align: 'center', alpha: ma });
       }
     }
     // --- System 2 mechanism: a propose -> check -> refine loop ---
     {
       const p = panels[1], y = py, ma = al * U.easeOut(U.inv(p.a + 0.9, p.a + 1.6, t));
       if (ma > 0) {
-        const cy = y + 410, cx = p.x + 430, R = 96;
+        const cy = y + 384, cx = p.x + 430, R = 92;
         pill(ctx, U, 'career?', p.x + 40, cy - 36, 160, 72, { alpha: ma, size: 30 });
-        U.arrow(ctx, p.x + 212, cy, cx - R - 66, cy, { color: U.rgba(C.ebt, 0.8), width: 3, alpha: ma, progress: U.seg(t, p.a + 1.1, p.a + 1.6) });
+        U.arrow(ctx, p.x + 212, cy, cx - R - 14, cy, { color: U.rgba(C.ebt, 0.8), width: 3, alpha: ma, progress: U.seg(t, p.a + 1.1, p.a + 1.6) });
         // ring
         const L0 = p.a + 1.6, per = 1.1, nLoops = 5, Lend = L0 + per * nLoops;
         ctx.save(); ctx.globalAlpha *= ma; ctx.strokeStyle = U.rgba(C.ebt, 0.45); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2 * U.ease(U.inv(p.a + 1.2, p.a + 1.8, t))); ctx.stroke(); ctx.restore();
@@ -265,14 +268,14 @@
         });
         if (running) glowDot(ctx, U, cx + R * Math.cos(ang), cy + R * Math.sin(ang), 8, C.ebt, ma);
         const passes = Math.max(0, Math.min(nLoops, Math.floor((t - L0) / per) + (t > L0 ? 1 : 0)));
-        U.text(ctx, 'passes: ' + (t > L0 ? passes : 0), cx, cy + R + 64, { size: 26, kind: 'mono', color: C.ebt, align: 'center', alpha: ma });
+        U.text(ctx, 'passes: ' + (t > L0 ? passes : 0), cx, y + 520, { size: 26, kind: 'mono', color: C.ebt, align: 'center', alpha: ma });
         // decision
         const da = ma * U.easeOut(U.inv(Lend, Lend + 0.6, t));
-        U.arrow(ctx, cx + R + 72, cy, p.x + 620, cy, { color: U.rgba(C.ebt, 0.8), width: 3, alpha: ma, progress: U.seg(t, Lend - 0.1, Lend + 0.4) });
+        U.arrow(ctx, cx + R + 16, cy, p.x + 620, cy, { color: U.rgba(C.ebt, 0.8), width: 3, alpha: ma, progress: U.seg(t, Lend - 0.1, Lend + 0.4) });
         pill(ctx, U, 'decision', p.x + 630, cy - 36, 160, 72, { alpha: da, size: 28, stroke: U.rgba(C.ebt, 0.9) });
       }
     }
-    U.caption(ctx, 'Hard choices deserve more thought. But a standard Transformer spends the same compute on every token.', t, B0 + 6.0, B1 - 0.2, { maxWidth: 1500 });
+    U.caption(ctx, 'Hard choices deserve more thought. But a standard Transformer spends the same compute on every token.', t, B0 + 6.0, B1 - 0.2, { maxWidth: 1680 });
   }
 
   // ========== Beat C: today's System 2 recipes and their limits ==========
@@ -280,7 +283,7 @@
     const { C } = U;
     const al = U.fade(t, C0, C1, 0.6, 0.6); if (al <= 0) return;
     hdr(ctx, U, t, C0 + 0.1, C1, 'System 2 in AI today', 'Reasoning models think longer. Three catches.');
-    const cw = 544, ch = 470, cy0 = 286, gap = 48;
+    const cw = 544, ch = 470, cy0 = 300, gap = 48;
     const cards = [
       { ti: 'Only checkable problems', bo: 'RL needs answers a rule can check, like math and code.', a: C0 + 0.9 },
       { ti: 'Extra supervision', bo: 'A separate verifier or reward model must be trained.', a: C0 + 2.4 },
@@ -345,28 +348,28 @@
     U.text(ctx, "THE PAPER'S CORE QUESTION", cx, 330 - 10 * (1 - a1), { size: 26, kind: 'mono', color: C.ebt, align: 'center', spacing: 4, alpha: a1 });
     const hl = U.ease(U.inv(D0 + 1.9, D0 + 2.7, t));
     const hcol = U.mix(C.ink, C.ebt, hl);
-    const size = 70, opt = { size, kind: 'display', weight: 500, italic: true, align: 'center' };
+    const size = 70, opt = { size, kind: 'display', weight: 500, align: 'center' };
     const L1 = [{ t: '“Can we rely entirely on ' }, { t: 'unsupervised learning', color: hcol }];
     const L2 = [{ t: 'to develop ' }, { t: 'System 2 Thinking', color: hcol }, { t: '?”' }];
     const y1 = 420 + 14 * (1 - a2 / Math.max(al, 1e-6)), y2 = 520 + 14 * (1 - a3 / Math.max(al, 1e-6));
     const w1 = U.rich(ctx, L1, cx, y1, { ...opt, alpha: a2 });
     const w2 = U.rich(ctx, L2, cx, y2, { ...opt, alpha: a3 });
     // underline sweeps under the highlighted phrases
-    ctx.save(); ctx.font = U.font(size, 'display', 500, true);
+    ctx.save(); ctx.font = U.font(size, 'display', 500, false);
     const pre1 = ctx.measureText(L1[0].t).width, ph1 = ctx.measureText(L1[1].t).width;
     const pre2 = ctx.measureText(L2[0].t).width, ph2 = ctx.measureText(L2[1].t).width;
     ctx.restore();
     const ul = U.ease(U.inv(D0 + 2.1, D0 + 3.0, t));
     if (ul > 0) {
       ctx.save(); ctx.globalAlpha *= al; ctx.fillStyle = C.ebt;
-      ctx.fillRect(cx - w1 / 2 + pre1, y1 + size * 1.08, ph1 * ul, 3);
-      ctx.fillRect(cx - w2 / 2 + pre2, y2 + size * 1.08, ph2 * ul, 3);
+      ctx.fillRect(cx - w1 / 2 + pre1, y1 + size * 1.17, ph1 * ul, 3);
+      ctx.fillRect(cx - w2 / 2 + pre2, y2 + size * 1.17, ph2 * ul, 3);
       ctx.restore();
     }
     const a4 = al * U.easeOut(U.inv(D0 + 2.6, D0 + 3.4, t));
     U.text(ctx, 'Any problem, any modality, no external supervision.', cx, 676, { size: 36, color: C.muted, align: 'center', alpha: a4 });
-    U.badge(ctx, 'paper', 'p.2', cx, 760, { alpha: a4, align: 'right' });
-    // centre the badge: draw it right-aligned at cx + half its width
+    const bw = U.measure(ctx, 'FROM THE PAPER · p.2', { size: 18, kind: 'mono', spacing: 1 }).w + 28;
+    U.badge(ctx, 'paper', 'p.2', cx - bw / 2, 760, { alpha: a4 });
   }
 
   // ========== Beat E: the paper's answer ==========
@@ -380,7 +383,7 @@
   function beatE(ctx, U, t) {
     const { C } = U;
     const al = U.fade(t, E0, E1, 0.6, 0.5); if (al <= 0) return;
-    hdr(ctx, U, t, E0 + 0.1, E1, "The paper's answer", 'Learn to verify. Then think by optimizing against the verifier.', { size: 50 });
+    hdr(ctx, U, t, E0 + 0.1, E1, "The paper's answer", [{ t: 'Learn to ' }, { t: 'verify', color: C.ebt }, { t: '. Then think by ' }, { t: 'optimizing', color: C.ebt }, { t: ' against the verifier.' }], { size: 50 });
 
     // iteration state
     const u = (t - IT0) / PER; // iterations completed (fractional)
@@ -417,13 +420,13 @@
     U.arrow(ctx, 462, 646, bx - 6, bcy + 50, { color: U.rgba(C.ebt, 0.85), width: 3, alpha: al, progress: U.seg(t, E0 + 1.1, E0 + 1.6) });
     U.panel(ctx, bx, by0, bw, bh, { fill: U.mix(C.panel, '#3a3220', 0.35 + 0.65 * glow), stroke: U.rgba(C.ebt, 0.7 + 0.3 * glow), alpha: ea, r: 18, lw: 2.5 });
     U.text(ctx, 'EBT', bcx, bcy - 40, { size: 60, kind: 'display', weight: 700, color: C.ebt, align: 'center', baseline: 'middle', alpha: ea });
-    mathLine(ctx, U, [{ t: 'E' }, { t: 'θ', sub: true }, { t: '(x, ŷ)' }], bcx, bcy + 22, { size: 30, color: C.ink, alpha: ea, align: 'center' });
+    mathLine(ctx, U, [{ t: 'E' }, { t: 'θ', sub: true }, { sp: 2 }, { t: '(x, ŷ)' }], bcx, bcy + 14, { size: 38, color: C.ink, alpha: ea, align: 'center' });
     U.text(ctx, 'verifier', bcx, bcy + 82, { size: 24, kind: 'mono', color: C.muted, align: 'center', alpha: ea });
     // forward pulses
     if (inIt && ph < 0.42) {
       const f = U.ease(U.inv(0.0, 0.3, ph));
       if (ph < 0.3) { glowDot(ctx, U, U.lerp(462, bx - 6, f), U.lerp(370, bcy - 50, f), 7, C.ink, al); glowDot(ctx, U, U.lerp(462, bx - 6, f), U.lerp(646, bcy + 50, f), 7, C.ebt, al); }
-      else { const g = U.ease(U.inv(0.3, 0.42, ph)); glowDot(ctx, U, U.lerp(bx + bw + 4, 870, g), bcy, 7, C.ebt, al); }
+      else { const g = U.ease(U.inv(0.3, 0.42, ph)); glowDot(ctx, U, U.lerp(bx + bw + 4, 858, g), bcy, 7, C.ebt, al); }
     }
     // --- energy readout ---
     const ra = ba(E0 + 1.9);
@@ -450,13 +453,13 @@
     U.line(ctx, loop, { color: U.rgba(C.ebt, 0.8), width: 3, progress: la, alpha: al });
     if (la >= 1) U.arrow(ctx, 290, 830, 290, 802, { color: U.rgba(C.ebt, 0.8), width: 3, alpha: al, head: 16 });
     const rla = ba(E0 + 3.0);
-    mathLine(ctx, U, [{ t: 'ŷ ← ŷ − α' }, { nabla: true }, { t: 'ŷ', sub: true }, { t: 'E' }], (290 + bcx) / 2, 900, { size: 32, color: C.ebt, alpha: rla, align: 'center' });
-    U.text(ctx, 'each gradient step is one step of thinking', (290 + bcx) / 2, 954, { size: 24, color: C.muted, align: 'center', alpha: rla });
+    mathLine(ctx, U, [{ t: 'ŷ' }, { sp: 14 }, { t: '←', kind: 'mono', dy: 2 }, { sp: 14 }, { t: 'ŷ' }, { sp: 12 }, { t: '−' }, { sp: 12 }, { t: 'α' }, { sp: 3 }, { nabla: true }, { t: 'ŷ', sub: true }, { t: 'E' }], (290 + bcx) / 2, 896, { size: 40, color: C.ebt, alpha: rla, align: 'center' });
+    U.text(ctx, 'each gradient step is one step of thinking', (290 + bcx) / 2, 958, { size: 24, color: C.muted, align: 'center', alpha: rla });
     if (inIt && ph >= 0.42) { const g = U.ease(U.inv(0.42, 0.95, ph)); const [qx, qy] = along(loop, g); glowDot(ctx, U, qx, qy, 7, C.ebt, al); }
 
     // --- headline results ---
     const chips = [
-      { pre: 'UP TO', n: '35%', tx: 'higher scaling rate than Transformer++ during pretraining', b: 'Abstract', a: E0 + 6.2 },
+      { pre: 'UP TO', n: '35%', tx: 'higher pretraining scaling rate than Transformer++', b: 'Abstract', a: E0 + 6.2 },
       { pre: 'UP TO', n: '29%', tx: 'more gain from thinking than Transformer++ on language', b: 'Fig 6a', a: E0 + 7.4 },
       { pre: '', n: '99%', tx: 'fewer forward passes than DiT, with better image denoising', b: 'Table 4', a: E0 + 8.6 },
     ];
@@ -467,8 +470,8 @@
       U.panel(ctx, x, y, cwid, chh, { fill: U.rgba(C.panel, 0.95), stroke: U.rgba(C.ebt, 0.35), alpha: ca, r: 16 });
       if (c.pre) U.text(ctx, c.pre, x + 28, y + 26, { size: 22, kind: 'mono', color: C.muted, spacing: 2, alpha: ca });
       U.text(ctx, c.n, x + 26, y + 54, { size: 76, kind: 'display', weight: 700, color: C.ebt, alpha: ca });
-      U.text(ctx, c.tx, x + 214, y + 24, { size: 30, color: C.ink, alpha: ca, maxWidth: cwid - 240, lh: 1.25 });
-      U.badge(ctx, 'paper', c.b, x + 214, y + chh - 54, { alpha: ca });
+      U.text(ctx, c.tx, x + 206, y + 26, { size: 30, color: C.ink, alpha: ca, maxWidth: cwid - 236, lh: 1.25 });
+      U.badge(ctx, 'paper', c.b, x + 206, y + chh - 56, { alpha: ca });
     });
     U.text(ctx, 'schematic · numbers in the loop are illustrative', 120, 1010, { size: 22, kind: 'mono', color: C.faint, alpha: ba(E0 + 3.4) });
   }
@@ -482,11 +485,11 @@
     const w = 390, h = 124, gap = 56;
     RM.forEach((name, i) => {
       const r = Math.floor(i / 4), c = i % 4;
-      const x = 96 + c * (w + gap), y = 360 + r * (h + 48);
-      const a0 = F0 + 0.35 + 0.13 * i, ca = al * U.easeOut(U.inv(a0, a0 + 0.5, t)); if (ca <= 0) return;
+      const x = 96 + c * (w + gap), y = 400 + r * (h + 48);
+      const a0 = F0 + 0.3 + 0.09 * i, ca = al * U.easeOut(U.inv(a0, a0 + 0.45, t)); if (ca <= 0) return;
       const dy = (1 - U.easeOut(U.inv(a0, a0 + 0.6, t))) * 16;
       // highlight sweep
-      const hs = F0 + 1.6 + 0.2 * i, hot = Math.max(0, 1 - Math.abs(t - hs) / 0.35);
+      const hs = F0 + 1.5 + 0.21 * i, hot = Math.max(0, 1 - Math.abs(t - hs) / 0.35);
       U.panel(ctx, x, y + dy, w, h, { fill: U.mix(C.panel, '#3a3220', hot * 0.6), stroke: U.mix(C.rule, C.ebt, 0.25 + 0.75 * hot), alpha: ca, r: 16 });
       U.text(ctx, String(i + 2).padStart(2, '0'), x + 30, y + dy + h / 2, { size: 28, kind: 'mono', color: C.ebt, baseline: 'middle', alpha: ca });
       U.text(ctx, name, x + 92, y + dy + h / 2 + 2, { size: 38, kind: 'display', weight: 600, color: C.ink, baseline: 'middle', alpha: ca });

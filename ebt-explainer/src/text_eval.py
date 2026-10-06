@@ -115,26 +115,28 @@ def main(work):
     bon = {"M": [1, 2, 4, 8], "note": "M candidates from different random yhat_0 ~ N(0,I), fixed alpha, N steps, no noise; "
            "keep the candidate with the lowest final energy (no external verifier). 'oracle' picks the candidate with "
            "the lowest true loss (upper bound, uses the answer); 'mean' is the average candidate.", "settings": []}
+    cand = {}
+    for name, (ctx, y) in sets.items():
+        h = cache_h[name]
+        B = ctx.shape[0]
+        cc, cE = [], []
+        for j in range(Mmax):
+            y0 = jax.random.normal(jax.random.PRNGKey(5000 + j), (B, T.V))
+            ys, Es = trace_fixed(h, y0, jnp.full((B,), alpha0))
+            cc.append(np.stack([ce_np(ys[i], y) for i in range(NMAX + 1)]))
+            cE.append(np.asarray(Es))
+        cand[name] = (np.stack(cc), np.stack(cE))  # (M, steps, B)
     for N in sorted(set([cfg["n_max"], 8])):
         entry = {"N": N, "datasets": {}}
         for name, (ctx, y) in sets.items():
-            h = cache_h[name]
             B = ctx.shape[0]
-            cand_ce, cand_E = [], []
-            for j in range(Mmax):
-                y0 = jax.random.normal(jax.random.PRNGKey(5000 + j), (B, T.V))
-                ys, Es = trace_fixed(h, y0, jnp.full((B,), alpha0))
-                cand_ce.append(ce_np(ys[N], y))
-                cand_E.append(np.asarray(Es[N]))
-            cand_ce = np.stack(cand_ce)  # (M, B)
-            cand_E = np.stack(cand_E)
+            cand_ce, cand_E = cand[name][0][:, N], cand[name][1][:, N]
             sel, orc, mean = [], [], []
             for M in bon["M"]:
                 idx = np.argmin(cand_E[:M], 0)
                 sel.append(cand_ce[idx, np.arange(B)].mean())
                 orc.append(cand_ce[:M].min(0).mean())
                 mean.append(cand_ce[:M].mean())
-            # how well does energy rank candidates? Spearman-like: corr between energy and loss within example
             ce_c = cand_ce - cand_ce.mean(0)
             E_c = cand_E - cand_E.mean(0)
             corr = float((ce_c * E_c).sum() / (np.sqrt((ce_c ** 2).sum() * (E_c ** 2).sum()) + 1e-9))
@@ -217,7 +219,7 @@ def main(work):
     example_specs = []
     for label, pat, off, kind in [
         ("q is almost always followed by u", "q", 1, "easy"),
-        ("finishing the word 'the'", " th", 3, "easy"),
+        ("finishing the word 'the'", " the ", 3, "easy"),
         ("deep inside a long word", "informatio", 10, "easy"),
         ("first letter of a new word", ". ", 2, "hard"),
         ("which digit comes next in a year?", " 20", 3, "hard"),
