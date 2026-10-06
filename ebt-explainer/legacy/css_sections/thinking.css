@@ -1,0 +1,86 @@
+/* Text thinking lab. Every selector is scoped to #thinking. Colours come from base.css tokens only. */
+#thinking .thinking-lab { display: grid; gap: 14px; margin-top: 18px; }
+#thinking .thinking-labhead { display: grid; gap: 6px; max-width: 78ch; }
+#thinking .thinking-labhead h3 { font-size: 24px; }
+#thinking .thinking-labhead p { color: var(--muted); }
+#thinking .thinking-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+#thinking .thinking-head h4 { margin: 0; }
+#thinking .thinking-badges { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+#thinking .badge { white-space: normal; line-height: 1.35; }
+#thinking .thinking-note { font-size: 14px; color: var(--muted); line-height: 1.5; }
+#thinking .thinking-sm { font-size: 13px; color: var(--muted); }
+#thinking .thinking-facts { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 15px; }
+#thinking .thinking-facts b { color: var(--ink); }
+#thinking .thinking-intro { align-items: start; }
+
+/* scoreboard and small probability bars */
+#thinking .thinking-score, #thinking .thinking-pbars { display: grid; gap: 7px; }
+#thinking .thinking-score-row { display: grid; grid-template-columns: minmax(0, 15ch) minmax(40px, 1fr) 5.2ch; gap: 10px; align-items: center; font-size: 14px; }
+#thinking .thinking-pbars .thinking-score-row { grid-template-columns: 9ch minmax(40px, 1fr) 5.2ch; }
+#thinking .thinking-score-row .l { color: var(--muted); line-height: 1.25; }
+#thinking .thinking-score-row .b { height: 12px; background: var(--panel2); border-radius: 6px; overflow: hidden; }
+#thinking .thinking-score-row .b i { display: block; height: 100%; border-radius: 6px; }
+#thinking .thinking-score-row .v { font-family: var(--f-mono); font-size: 13px; text-align: right; color: var(--ink); }
+
+/* controls */
+#thinking .thinking-ctl h4 { margin: 4px 0 0; }
+#thinking .seg { flex-wrap: wrap; max-width: 100%; }
+#thinking .thinking-exlist { display: grid; gap: 6px; }
+#thinking .thinking-ex { appearance: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; font: 14px var(--f-body); color: var(--muted); background: var(--panel2); border: 1px solid var(--rule); border-radius: 9px; padding: 7px 10px; cursor: pointer; }
+#thinking .thinking-ex:hover { color: var(--ink); border-color: var(--muted); }
+#thinking .thinking-ex[aria-pressed="true"] { color: var(--ink); border-color: var(--ebt); box-shadow: inset 3px 0 0 var(--ebt); }
+#thinking .thinking-ex .tag { flex: none; font: 500 11px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; padding: 1px 6px; border-radius: 5px; border: 1px solid; }
+#thinking .thinking-ex .tag.easy { color: var(--truth); border-color: rgba(116,224,192,.45); }
+#thinking .thinking-ex .tag.hard { color: var(--bad); border-color: rgba(255,107,129,.45); }
+#thinking textarea { width: 100%; font: 14px var(--f-mono); color: var(--ink); background: var(--panel2); border: 1px solid var(--rule); border-radius: 8px; padding: 7px 9px; resize: vertical; }
+#thinking textarea:focus { border-color: var(--ebt); outline: none; }
+#thinking select { font-family: var(--f-mono); }
+#thinking input[type=range]:disabled { opacity: .4; }
+
+/* instrument */
+#thinking .thinking-ins { min-width: 0; }
+#thinking .thinking-cbox { position: relative; width: 100%; }
+#thinking .thinking-cbox canvas { display: block; width: 100%; border-radius: 10px; }
+#thinking .thinking-cbox canvas:focus-visible { outline: 2px solid var(--ebt); outline-offset: 2px; }
+#thinking .thinking-ctxline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-family: var(--f-mono); font-size: 14.5px; background: var(--bg); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; }
+#thinking .thinking-ctxline .lbl { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); width: 100%; }
+#thinking .thinking-ctxline .ctx { white-space: pre-wrap; word-break: break-all; color: var(--ink); }
+#thinking .thinking-ctxline .guess { display: inline-block; min-width: 1.6em; text-align: center; background: var(--ebt); color: var(--bg); border-radius: 5px; padding: 0 5px; font-weight: 600; }
+#thinking .thinking-ctxline .truth { color: var(--truth); border: 1px solid rgba(116,224,192,.5); border-radius: 5px; padding: 0 6px; font-size: 13px; }
+#thinking .thinking-algo { margin: 0; font: 12.5px/1.55 var(--f-mono); color: var(--faint); background: var(--bg); border: 1px solid var(--rule); border-radius: 10px; padding: 8px 12px; overflow-x: auto; white-space: pre; }
+#thinking .thinking-algo span { display: inline-block; min-width: 100%; border-radius: 4px; padding: 0 4px; transition: background .2s, color .2s; }
+#thinking .thinking-algo span.on { color: var(--ebt); background: rgba(255,201,92,.1); }
+#thinking .thinking-cands table { font-size: 13.5px; }
+#thinking .thinking-cands tr[role=button] { cursor: pointer; }
+#thinking .thinking-cands tr.on td { background: rgba(255,201,92,.08); }
+#thinking .thinking-cands tr.win td:last-child { color: var(--ebt); }
+#thinking .thinking-cands tr:focus-visible { outline: 2px solid var(--ebt); outline-offset: -2px; }
+#thinking .thinking-dyn { max-width: none; font-size: 15px; }
+#thinking .thinking-gen { border-top: 1px solid var(--rule); padding-top: 12px; }
+#thinking .thinking-genout { font: 14px/1.9 var(--f-mono); background: var(--bg); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; word-break: break-all; white-space: pre-wrap; }
+#thinking .thinking-genout .ctx { color: var(--faint); }
+#thinking .thinking-genout .g { border-radius: 3px; padding: 1px 0; }
+
+/* lab 2 */
+#thinking .thinking-two { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1080px) { #thinking .thinking-two { grid-template-columns: minmax(0, 1fr); } }
+
+/* lab 3: heat text */
+#thinking .thinking-heat { display: flex; flex-wrap: wrap; row-gap: 10px; font: 19px/1.25 var(--f-mono); background: var(--bg); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 12px; }
+#thinking .thinking-heat .w { display: inline-flex; white-space: nowrap; }
+#thinking .thinking-heat .c { display: inline-block; min-width: .62em; text-align: center; padding: 3px 1px 4px; cursor: pointer; border-bottom: 3px solid transparent; }
+#thinking .thinking-heat .c.hard { border-bottom-color: var(--bad); }
+#thinking .thinking-heat .c.easy { border-bottom-color: var(--truth); }
+#thinking .thinking-heat .c.sel { outline: 2px solid var(--ink); outline-offset: -1px; position: relative; z-index: 1; }
+#thinking .thinking-u { display: inline-block; width: 16px !important; height: 3px !important; border-radius: 2px !important; vertical-align: 3px !important; }
+#thinking .thinking-u.hard { background: var(--bad); }
+#thinking .thinking-u.easy { background: var(--truth); }
+#thinking .paper-fig img { max-height: 420px; object-fit: contain; }
+
+@media (max-width: 560px) {
+  #thinking .card { padding: 14px 12px; }
+  #thinking .thinking-heat { font-size: 16px; padding: 10px 8px; }
+  #thinking .thinking-ctxline { font-size: 13px; }
+  #thinking .thinking-labhead h3 { font-size: 21px; }
+  #thinking .thinking-score-row { grid-template-columns: minmax(0, 12ch) minmax(30px, 1fr) 5.2ch; font-size: 13px; }
+}

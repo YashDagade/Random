@@ -1,0 +1,110 @@
+/* Chapter: families (Four ways to predict the next token). Every selector is scoped to #families. */
+#families .families-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 520px); gap: 24px; align-items: start; }
+@media (max-width: 960px) { #families .families-intro { grid-template-columns: minmax(0, 1fr); } }
+#families .families-list { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+#families .families-list li { color: var(--ink); }
+#families .c-ar { color: var(--ar); } #families .c-rnn { color: var(--rnn); } #families .c-diff { color: var(--diff); } #families .c-ebt { color: var(--ebt); }
+#families .families-fig1 figcaption, #families .families-close figcaption { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+
+/* bench */
+#families .families-bench { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); }
+@media (max-width: 900px) { #families .families-bench { grid-template-columns: minmax(0, 1fr); } }
+#families .families-ctl { display: grid; gap: 10px; align-content: start; }
+#families .families-ctl h4 { margin: 0; }
+#families .families-h4 { margin-top: 8px !important; padding-top: 10px; border-top: 1px solid var(--rule); }
+#families .families-gap { height: 2px; }
+#families .families-lbl { font-size: 13px; color: var(--muted); }
+#families .families-prompt { font-size: 15px; color: var(--ink); background: var(--panel2); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 10px; }
+#families .families-prompt u { text-decoration: none; background: rgba(116,224,192,.16); color: var(--truth); border-radius: 4px; padding: 0 2px; }
+#families .families-small { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+#families .families-warn { color: var(--bad); }
+#families .families-dim { opacity: .45; }
+#families .families-transport { gap: 6px; }
+#families .families-transport .btn { padding: 7px 11px; }
+#families .families-status { font: 13px var(--f-mono); color: var(--muted); min-height: 1.4em; }
+#families .families-tries { display: flex; flex-wrap: wrap; gap: 6px; }
+#families .families-try { appearance: none; font: 13.5px var(--f-body); color: var(--ink); background: var(--panel2); border: 1px solid var(--rule); border-radius: 999px; padding: 5px 11px; cursor: pointer; text-align: left; }
+#families .families-try:hover { border-color: var(--ebt); color: var(--ebt); }
+#families .families-hint { font-size: 14px; color: var(--ink); background: rgba(255,201,92,.06); border-left: 3px solid var(--ebt); border-radius: 0 8px 8px 0; padding: 8px 12px; line-height: 1.45; }
+#families .families-hint b { color: var(--ebt); }
+
+/* lanes */
+#families .families-inst { display: grid; gap: 12px; min-width: 0; }
+#families .families-badges { gap: 6px; }
+#families .badge { white-space: normal; max-width: 100%; line-height: 1.35; }
+#families .families-lanes { display: grid; gap: 10px; }
+#families .families-lane { background: var(--panel); border: 1px solid var(--rule); border-left: 3px solid var(--lc); border-radius: var(--radius); padding: 10px 14px 10px; min-width: 0; transition: box-shadow .2s; }
+#families .families-lane.hl { box-shadow: 0 0 0 2px var(--lc); }
+#families .families-lane-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 8px; }
+#families .families-lane-head b { font-family: var(--f-display); font-size: 19px; font-weight: 600; color: var(--lc); margin-right: 4px; }
+#families .families-chip { font: 12.5px var(--f-mono); color: var(--muted); border: 1px solid var(--rule); border-radius: 6px; padding: 1px 7px; white-space: nowrap; }
+#families .families-cv canvas { border-radius: 0; }
+#families .families-ro { margin-top: 6px; gap: 2px 14px; }
+#families .families-note { font-style: normal; color: var(--faint); }
+
+/* charts and tables */
+#families .families-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+#families .families-chartcard { display: grid; gap: 6px; padding: 12px 14px; }
+#families .families-alloc { display: grid; gap: 8px; }
+#families .families-alloc table { font-size: 14px; }
+#families .families-alloc th, #families .families-alloc td { padding: 6px 10px; }
+#families .families-alloc .families-cur { background: rgba(255,201,92,.07); color: var(--ink); }
+#families .families-sub { display: block; font-size: 11.5px; color: var(--faint); }
+#families .families-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: 0; }
+
+/* lab 2: numbers vs arrows */
+#families .families-lab2 { display: grid; gap: 12px; }
+#families .families-lab2 h3, #families .families-t1 h3 { font-size: clamp(22px, 2.6vw, 28px); margin: 0; }
+#families .families-lab2-ctl { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 10px 20px; align-items: end; }
+@media (max-width: 760px) { #families .families-lab2-ctl { grid-template-columns: minmax(0, 1fr); } }
+#families .families-lab2-out { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px; }
+#families .families-lab2-out > p { grid-column: 1 / -1; }
+#families .families-verdict { display: grid; gap: 2px; background: var(--panel2); border: 1px solid var(--rule); border-radius: 10px; padding: 8px 12px; font-size: 14.5px; }
+#families .families-verdict.ebt { border-left: 3px solid var(--ebt); }
+#families .families-verdict.diff { border-left: 3px solid var(--diff); }
+#families .families-verdict > b { font-family: var(--f-mono); font-weight: 500; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+#families .families-verdict span b { font-family: var(--f-mono); }
+#families .families-cost { font: 12.5px var(--f-mono); color: var(--faint); }
+
+/* table 1 */
+#families .families-t1 { display: grid; gap: 10px; }
+#families .families-t1grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { #families .families-t1grid { grid-template-columns: minmax(0, 1fr); } }
+#families .families-table th { vertical-align: bottom; font-size: 11.5px; }
+#families .families-table .families-fn { color: var(--ebt); }
+#families .families-table td { vertical-align: middle; }
+#families .families-table tr.hl td { background: rgba(255,201,92,.06); }
+#families .families-cellwrap { text-align: center; padding: 4px 6px; }
+#families .families-cell { appearance: none; width: 100%; min-width: 44px; min-height: 40px; border-radius: 8px; border: 1px solid var(--rule); background: var(--panel2); font: 700 20px var(--f-body); cursor: pointer; }
+#families .families-cell.yes { color: var(--truth); }
+#families .families-cell.no { color: var(--faint); }
+#families .families-cell:hover, #families .families-cell.on { border-color: var(--ebt); background: rgba(255,201,92,.08); }
+#families .families-why { background: var(--panel2); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; min-height: 160px; }
+#families .families-why-h { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 15px; }
+#families .families-mark { font: 600 12.5px var(--f-mono); padding: 1px 7px; border-radius: 6px; margin-left: 4px; }
+#families .families-mark.yes { color: var(--truth); background: rgba(116,224,192,.12); }
+#families .families-mark.no { color: var(--bad); background: rgba(255,107,129,.1); }
+
+/* closing */
+#families .families-close { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 960px) { #families .families-close { grid-template-columns: minmax(0, 1fr); } }
+#families .families-close .callout { max-width: none; display: grid; gap: 8px; }
+#families .families-close .callout p { margin: 0; }
+@media (max-width: 560px) {
+  #families .families-lane { padding: 10px 10px; }
+  #families .families-lane-head b { font-size: 17px; }
+  #families .families-cell { min-width: 40px; }
+  #families .families-table th, #families .families-table td { padding: 6px 6px; }
+}
+#families .families-thsub { text-transform: none; letter-spacing: 0; font-size: 12px; margin-top: 2px; }
+#families .families-fs { display: none; }
+@media (max-width: 560px) {
+  #families .families-fl { display: none; }
+  #families .families-fs { display: inline; }
+  #families .families-t1 { padding: 14px 12px; }
+  #families .families-alloc { padding: 14px 12px; }
+}
+#families .btn:disabled { opacity: .45; cursor: default; }
+#families .families-handle { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; border: 2px solid transparent; background: transparent; cursor: grab; touch-action: none; padding: 0; }
+#families .families-handle:hover { border-color: rgba(233,238,246,.45); }
+#families .families-handle:focus-visible { border-color: var(--ebt); outline: none; }

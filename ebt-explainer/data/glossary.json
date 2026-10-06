@@ -1,8 +1,8 @@
 {
  "_meta": {
   "source": "Gladstone et al., 'Energy-Based Transformers are Scalable Learners and Thinkers', arXiv 2507.02092v1 (July 2025). Definitions written for this explainer from notes/paper_text.txt; (p.N) = PDF page.",
-  "note": "Entries tagged [derived] are our arithmetic or inference, not stated in the paper. [approx., read from Fig N] marks values read off plots. Loss landscape, world model and MPC entries flag explainer extensions beyond the paper. See notes/paper_facts.md for full context.",
-  "count": 33
+  "note": "Entries tagged [derived] are our arithmetic or inference, not stated in the paper. [approx., read from Fig N] marks values read off plots. Loss landscape, world model and MPC entries flag explainer extensions beyond the paper. See notes/paper_facts.md for full context. Fact-checked against the paper text and figure renders in an adversarial pass (see the log at the end of notes/paper_facts.md).",
+  "count": 35
  },
  "terms": [
   {
@@ -18,12 +18,12 @@
   {
    "term": "Energy-Based Transformer (EBT)",
    "short": "A Transformer that takes context x and candidate ŷ and returns an energy. It predicts by gradient descent on ŷ.",
-   "long": "There are two variants. The decoder-only (autoregressive, GPT-like) EBT makes all next-token predictions in parallel. The bidirectional EBT is built on the DiT code (p.4, p.8). The autoregressive version runs on 2N-length sequences, N observed plus N predicted, with a custom attention pattern that prevents information leakage (Sec C.3, p.30–32)."
+   "long": "There are two variants. The decoder-only (autoregressive, GPT-like) EBT makes all next-token predictions in parallel. The bidirectional EBT uses bidirectional attention and is built on the DiT code (p.4, p.8, p.33). The autoregressive version runs on 2N-length sequences, N observed plus N predicted, with a custom attention pattern that prevents information leakage (Sec C.3, p.30–32)."
   },
   {
    "term": "Energy landscape",
    "short": "Energy as a function of the prediction ŷ, for one fixed context and fixed trained weights.",
-   "long": "A surface over the space of possible predictions. Thinking is gradient descent across this surface toward a low-energy basin (Fig 3, p.5; p.40). Training tries to make it convex and smooth around the true answer (p.7). It is not the loss landscape."
+   "long": "A surface over the space of possible predictions. Thinking is gradient descent across this surface toward a low-energy basin (Fig 3, p.5; p.40). Fig 3 is a hand-drawn schematic, not a measured landscape. Training tries to make it convex and smooth around the true answer (p.7). It is not the loss landscape."
   },
   {
    "term": "Loss landscape",
@@ -38,7 +38,7 @@
   {
    "term": "Thinking longer",
    "short": "Running more gradient-descent steps on the same prediction at inference time.",
-   "long": "Corresponds to Facet 1, dynamic compute allocation. The paper compares it to adding diffusion denoising steps (p.8). In Fig 6a, going from 2 to 3 forward passes takes EBT from worse than Transformer++ to better than it [approx., read from Fig 6a]."
+   "long": "Corresponds to Facet 1, dynamic compute allocation. The paper compares it to adding diffusion denoising steps (p.8). In Fig 6a (mean over four OOD datasets), going from 2 to 3 forward passes takes EBT from worse than Transformer++ to better than it [approx., read from Fig 6a]. Training used only 2–3 steps (p.26)."
   },
   {
    "term": "Self-verification (Best-of-N, BoN)",
@@ -58,7 +58,7 @@
   {
    "term": "Langevin dynamics (in EBT training)",
    "short": "Adding Gaussian noise to each gradient step on the prediction so the model explores more of the landscape.",
-   "long": "Eq. 2: ŷ_{i+1} = ŷ_i − α∇E + η_i, with η_i ∼ N(0, σ) (p.7). Without the noise, training only shapes the direct path to the minimum. The NLP S2 setting uses 'Langevin Dynamics Noise 3' (Table D.4, p.36). Removing it improves thinking longer (17.2) but hurts the combined score (17.0 vs 18.7) (Table 2, p.10)."
+   "long": "Eq. 2: ŷ_{i+1} = ŷ_i − α∇E + η_i, with η_i ∼ N(0, σ) (p.7). Without the noise, training only shapes the direct path to the minimum. The NLP S2 setting uses 'Langevin Dynamics Noise 3' (Table D.4, p.36). Removing it improves thinking longer (17.2 vs 7.19) but hurts the combined score (17.0 vs 18.7) (Table 2, p.10). The paper does not say whether noise is also added at inference."
   },
   {
    "term": "Replay buffer",
@@ -78,12 +78,12 @@
   {
    "term": "Hessian-vector product (HVP)",
    "short": "A second derivative multiplied by a vector, computed without forming the full Hessian. Its cost is linear in model size.",
-   "long": "The training loss is measured after gradient steps on ŷ, so updating θ needs gradients of gradients. EBTs get these with HVPs (p.7). One HVP costs about one backward pass, so a step costs F + B + B. That is ≈1.66× a feed-forward pass for a single step (p.41), ≈3.33× per step for autoregressive EBTs because their sequences are twice as long (p.36), and 6.66× for 2-step training (p.36)."
+   "long": "The training loss is measured after gradient steps on ŷ, so updating θ needs gradients of gradients. EBTs get these with HVPs (p.7). One HVP costs about one backward pass, so a step costs F + B + B. That is ≈1.66× a standard feed-forward training step (forward + backward, 6N) for a single step (p.41), ≈3.33× per step for autoregressive EBTs because their sequences are twice as long (p.36), and 6.66× for 2-step training (p.36)."
   },
   {
    "term": "Optimization-based EBM training",
    "short": "Training the energy so that gradient descent from noise lands on the right answer. No negative samples are needed.",
-   "long": "Algorithm 1 (p.7): sample ŷ0 ∼ N(0, I), take N gradient steps, compute an ordinary loss J(ŷ_N, y), and backpropagate through the steps. This avoids the curse of dimensionality that contrastive training faces, and it makes the landscape convex around the truth (p.7). In the GAN analogy, the forward pass acts as a discriminator and the descent on ŷ acts as a generator (p.7)."
+   "long": "Algorithm 1 (p.7): sample ŷ0 ∼ N(0, I), take N gradient steps, compute an ordinary loss J(ŷ_N, y), and backpropagate through the steps. This avoids the curse of dimensionality that contrastive training faces, and it pushes the landscape to be (locally) convex around the truth (p.7, p.40). In the GAN analogy, the forward pass acts as a discriminator and the descent on ŷ acts as a generator (p.7)."
   },
   {
    "term": "Contrastive training and the curse of dimensionality",
@@ -93,7 +93,7 @@
   {
    "term": "S1-EBT vs S2-EBT",
    "short": "Two training recipes. S1 is tuned for stability and learning; S2 is tuned for thinking.",
-   "long": "S1 detaches predictions between steps, applies the loss at every step, learns α, uses step embeddings, and has no landscape regularization. Most scaling plots use S1. S2 does not detach, truncates backprop, applies the loss only at the last step, fixes α, and adds the replay buffer, Langevin noise and randomization (p.30, p.36, p.42–45). Fig C.1: S2 scales 3.30% faster but starts at a higher perplexity."
+   "long": "S1 detaches predictions between steps, applies the loss at every step, learns α, gives each step its own learnable step embedding, and has no landscape regularization. \"Many of the pretraining scaling experiments\" use S1 (p.30). S2 does not detach, truncates backprop, applies the loss only at the last step, fixes α, runs every step under the same step condition, and adds the replay buffer, Langevin noise and randomization (p.30, p.36, p.42–45). Fig C.1: S2 scales 3.30% faster but starts at a higher perplexity."
   },
   {
    "term": "Transformer++",
@@ -103,12 +103,12 @@
   {
    "term": "Diffusion Transformer (DiT)",
    "short": "A Transformer diffusion model that predicts noise. It is the baseline for bidirectional image denoising.",
-   "long": "Diffusion models allow extra denoising steps but follow a fixed schedule, are supervised at every step, and need an external verifier to go further (p.2, p.16, Fig E.1). The baseline uses the DiT code [26], batch 128, and DDIM applied recursively three times, for 300 forward passes in total (p.34–35)."
+   "long": "Diffusion models allow extra denoising steps but follow a fixed schedule, are supervised at every step, and need an external verifier to go further (p.2, p.16, Fig E.1). The baseline uses the DiT code [26], batch 128, and DDIM applied recursively three times, for 300 forward passes in total (p.34–35). Fig 1 caption: diffusion models \"predict the noise rather than the energy\" (p.2)."
   },
   {
    "term": "Perplexity (PPL)",
    "short": "exp of the average next-token cross-entropy. Lower is better.",
-   "long": "The paper's language metric throughout. Small from-scratch models get low accuracy on GSM8K and similar benchmarks, and 'perplexity often functions as a more linear metric than accuracy' (p.9). Example: Table 3 pretraining perplexity is 31.36 for Transformer++ and 33.43 for EBT (p.12)."
+   "long": "The paper's language metric throughout. Small from-scratch models get low accuracy on GSM8K and similar benchmarks, and 'perplexity often functions as a more linear metric than accuracy' (p.9). The paper reports only teacher-forced perplexities for text: no accuracies and no generated text. It also does not spell out how an EBT's perplexity is computed from its optimized prediction (presumably the softmax of the final logits) [unspecified]. Example: Table 3 pretraining perplexity is 31.36 for Transformer++ and 33.43 for EBT (p.12)."
   },
   {
    "term": "PSNR",
@@ -162,13 +162,23 @@
   },
   {
    "term": "RedPajamaV2",
-   "short": "The web-text corpus used for language pretraining: a 100B-token sample from Hugging Face.",
-   "long": "Tokenized with the GPT-NeoX tokenizer (EleutherAI/gpt-neox-20b, vocab 50,277). The authors made their own split of 66 million training and 33 thousand validation samples, with context length 256 (p.8, Table D.2)."
+   "short": "The web-text corpus used for language pretraining: the paper uses its \"100B sample\" from Hugging Face.",
+   "long": "Tokenized with the GPT-NeoX tokenizer (EleutherAI/gpt-neox-20b, vocab 50,277). The authors made their own split of 66 million training and 33 thousand validation samples, with context length 256 (p.8; Table D.2, p.33). Each training sample is seen only once (p.12)."
   },
   {
    "term": "Something-Something V2 (SSV2)",
    "short": "A video dataset of people doing actions with everyday objects, used for next-frame prediction.",
-   "long": "Uses the standard train/val split, 0.25 s between frames, 16-frame context, and 224×224 frames encoded to 3136 dimensions by a frozen VAE (p.12, p.34)."
+   "long": "Uses the standard train/val split, 0.25 s between frames, 16-frame context, and 224×224 frames encoded to 3136 dimensions by a frozen VAE (p.12, p.34; context length from Table D.2, p.33). Models train for many epochs on this small dataset, so the video results measure how well a model fits a fixed dataset (p.12)."
+  },
+  {
+   "term": "Adversarial sample (in self-verification)",
+   "short": "A candidate the model gives low energy even though it is a bad prediction. Best-of-N can pick it by mistake.",
+   "long": "Appendix B.1 (p.28): with little training data, verifying 10 samples was sometimes worse than verifying 2, \"likely because the EBT found an adversarial sample (a sample with low energy that is in fact not a good prediction)\". As data scale grew, BoN-10 gained more over BoN-2, and the authors read this as the energy landscape becoming less adversarial (Fig B.1a, RedPajamaV2 validation)."
+  },
+  {
+   "term": "Aleatoric vs epistemic uncertainty",
+   "short": "Aleatoric: randomness inherent in the data. Epistemic: uncertainty from lack of knowledge. The paper shows EBT energy reflecting both.",
+   "long": "Aleatoric: within a familiar sentence, hard-to-predict tokens such as \"quick\" or \"problem\" keep higher energy than easy ones such as \".\" or \"the\" (Fig 8, p.12). Epistemic: a random token string gets higher energy than a familiar sentence (Fig B.2, p.29), which the paper calls learning to \"know what they don't know\" (p.28). The heatmaps show normalized energy, and the normalization is unspecified."
   }
  ]
 }

@@ -1,0 +1,87 @@
+/* Chapter: Planning and MPC with energy. Every selector is scoped to #planning or .planning-. */
+#planning .planning-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 520px); gap: 22px; align-items: start; }
+@media (max-width: 1000px) { #planning .planning-intro { grid-template-columns: minmax(0, 1fr); } }
+#planning .planning-intro .prose p { color: var(--ink); }
+#planning .planning-eq { display: grid; gap: 10px; }
+#planning .planning-eq h4 { margin: 0; }
+#planning .planning-terms { display: grid; gap: 6px; }
+#planning .planning-term { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 0 10px; padding: 6px 0; border-top: 1px solid var(--rule); }
+#planning .planning-term:first-child { border-top: 0; }
+#planning .planning-term .n { grid-row: span 2; font: 500 12px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ebt); padding-top: 2px; }
+#planning .planning-term .f { font-family: var(--f-mono); font-size: 13.5px; color: var(--ink); overflow-wrap: anywhere; }
+#planning .planning-term .d { font-size: 14px; color: var(--muted); }
+@media (max-width: 560px) { #planning .planning-term { grid-template-columns: minmax(0, 1fr); } #planning .planning-term .n { grid-row: auto; } #planning .planning-eq .row .badge { white-space: normal; } }
+#planning .planning-note { font-size: 14px; color: var(--muted); line-height: 1.5; }
+#planning sub { font-size: .72em; }
+
+/* bench */
+#planning .planning-bench { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); }
+@media (max-width: 900px) { #planning .planning-bench { grid-template-columns: minmax(0, 1fr); } }
+#planning .planning-ctl { display: grid; gap: 14px; align-content: start; }
+#planning .planning-group { border: 0; border-top: 1px solid var(--rule); margin: 0; padding: 12px 0 0; display: grid; gap: 10px; min-width: 0; }
+#planning .planning-group:first-child { border-top: 0; padding-top: 0; }
+#planning .planning-group legend { font: 500 12px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 0 0 4px; }
+#planning .planning-group .seg { display: flex; width: 100%; }
+#planning .planning-group .seg button { flex: 1 1 0; padding: 7px 6px; line-height: 1.25; font-size: 13px; }
+#planning .planning-group select { width: 100%; }
+#planning .planning-hint { font-size: 14px; color: var(--muted); line-height: 1.45; }
+#planning .planning-lam { font-size: 13px; color: var(--muted); line-height: 1.45; margin-top: -4px; }
+#planning .planning-lam b { color: var(--ink); font-family: var(--f-mono); font-weight: 500; }
+#planning .planning-lam .ok { color: var(--truth); }
+#planning .planning-lam .no { color: var(--bad); font-weight: 700; }
+#planning .planning-chk { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--ink); cursor: pointer; line-height: 1.35; }
+#planning .planning-chk input { accent-color: var(--ebt); width: 16px; height: 16px; margin: 2px 0 0; flex: none; }
+#planning input[type=range]:disabled { opacity: .35; }
+
+/* instrument */
+#planning .planning-inst { display: grid; gap: 12px; align-content: start; }
+#planning .planning-inst h4 { margin: 0; }
+#planning .planning-transport { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+#planning .planning-transport .row { gap: 6px; }
+#planning .planning-transport .btn { min-width: 64px; }
+#planning .planning-transport .btn:disabled { opacity: .4; cursor: default; }
+#planning .planning-status { font: 500 12.5px var(--f-mono); letter-spacing: .04em; color: var(--muted); padding: 4px 10px; border: 1px solid var(--rule); border-radius: 999px; white-space: nowrap; }
+#planning .planning-status[data-state="reached"] { color: var(--truth); border-color: rgba(116,224,192,.5); }
+#planning .planning-status[data-state="crashed"], #planning .planning-status[data-state="missed"], #planning .planning-status[data-state="timeout"], #planning .planning-status[data-state="stuck"] { color: var(--bad); border-color: rgba(255,107,129,.5); }
+#planning .planning-cbox { position: relative; width: 100%; }
+#planning .planning-cbox canvas { display: block; width: 100%; border-radius: 10px; }
+#planning .planning-world canvas { touch-action: none; border: 1px solid var(--rule); }
+#planning .planning-legend i.dash { width: 16px; height: 0; border-top: 2px dashed; border-radius: 0; vertical-align: 3px; }
+#planning .planning-tip { font-size: 13.5px; color: var(--faint); }
+#planning .planning-readouts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 700px) { #planning .planning-readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+#planning .planning-readouts > div { background: var(--panel2); border: 1px solid var(--rule); border-radius: 9px; padding: 7px 10px; display: grid; gap: 2px; min-width: 0; }
+#planning .planning-readouts span { font-size: 12px; color: var(--muted); line-height: 1.3; }
+#planning .planning-readouts b { font: 500 14.5px var(--f-mono); color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#planning .planning-plots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { #planning .planning-plots { grid-template-columns: minmax(0, 1fr); } }
+#planning .planning-plot { display: grid; gap: 6px; min-width: 0; }
+#planning .planning-plot h4 { font-size: 11.5px; line-height: 1.4; }
+
+/* energy breakdown bars */
+#planning .planning-break { display: grid; gap: 5px; }
+#planning .planning-brow { display: grid; grid-template-columns: 88px minmax(0, 1fr) 56px; gap: 8px; align-items: center; font-size: 13.5px; }
+#planning .planning-brow .l { color: var(--muted); }
+#planning .planning-brow .track { height: 10px; background: var(--panel2); border-radius: 5px; overflow: hidden; }
+#planning .planning-brow .track i { display: block; height: 100%; border-radius: 5px; }
+#planning .planning-brow .v { font-family: var(--f-mono); font-size: 13px; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+#planning .planning-brow.off .v { color: var(--faint); }
+#planning .planning-brow.total { border-top: 1px solid var(--rule); padding-top: 5px; }
+#planning .planning-brow.total .track { background: none; }
+#planning .planning-brow.total .l, #planning .planning-brow.total .v { color: var(--ebt); }
+
+/* experiments */
+#planning .planning-sub { font-size: 24px; margin-top: 14px; }
+#planning .planning-subp { color: var(--muted); max-width: 72ch; margin-top: -6px; }
+#planning .planning-exps { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+@media (max-width: 560px) { #planning .planning-exps { grid-template-columns: minmax(0, 1fr); } }
+#planning .planning-exp { display: grid; gap: 8px; align-content: start; position: relative; padding-left: 52px; }
+#planning .planning-exp .n { position: absolute; left: 16px; top: 16px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 600 13px var(--f-mono); color: #1b1407; background: var(--ebt); }
+#planning .planning-exp h3 { font-size: 18px; margin: 0; }
+#planning .planning-exp p { font-size: 15px; color: var(--ink); line-height: 1.5; }
+#planning .planning-exp p.why { color: var(--muted); font-size: 14px; }
+#planning .planning-exp .row { gap: 6px; margin-top: 2px; }
+#planning .planning-callouts .callout { max-width: none; font-size: 15.5px; line-height: 1.55; }
+#planning .tbl td { font-size: 14.5px; }
+#planning .tbl td:first-child { color: var(--ebt); white-space: nowrap; }
+@media (max-width: 700px) { #planning .tbl td:first-child { white-space: normal; } }

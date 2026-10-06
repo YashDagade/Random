@@ -1,0 +1,76 @@
+/* Training lab (chapter id: training). Every selector is scoped to #training or .training-. */
+#training .badge { white-space: normal; text-align: left; line-height: 1.35; }
+#training .training-badges { display: flex; flex-wrap: wrap; gap: 6px 10px; justify-content: space-between; align-items: center; }
+#training .training-small { font: 12.5px var(--f-mono); color: var(--faint); }
+
+/* two nested loops */
+#training .training-loops { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+#training .training-loop { background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 8px; align-content: start; }
+#training .training-loop.inner { border-top: 3px solid var(--ebt); }
+#training .training-loop.outer { border-top: 3px solid var(--bad); }
+#training .training-loop p { color: var(--muted); font-size: 15px; }
+#training .training-loop-tag { font: 500 12px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+#training .training-loop.inner .training-loop-tag { color: var(--ebt); }
+#training .training-loop.outer .training-loop-tag { color: var(--bad); }
+#training .training-eq { font: 17px var(--f-mono); color: var(--ink); background: var(--bg); border-radius: 8px; padding: 8px 12px; overflow-x: auto; white-space: nowrap; }
+#training .training-eq sub, #training .training-math sub { font-size: .72em; }
+
+/* parts */
+#training .training-part { display: grid; gap: 16px; margin-top: 30px; padding-top: 26px; border-top: 1px dashed var(--rule); }
+#training .training-head { display: grid; gap: 6px; max-width: 80ch; }
+#training .training-num { font: 500 12.5px var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ebt); }
+#training .training-head h3 { font-size: clamp(23px, 2.8vw, 30px); }
+#training .training-intro { color: var(--muted); font-size: 16.5px; }
+#training .training-intro b { color: var(--ink); font-weight: 700; }
+
+/* control column */
+#training .training-ctls { display: grid; gap: 14px; align-content: start; }
+#training .training-ctls .seg { flex-wrap: wrap; }
+#training .training-ctls .seg button { padding: 7px 10px; }
+#training .training-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+#training .btn:disabled { opacity: .45; cursor: default; }
+#training .training-hr { border: 0; border-top: 1px solid var(--rule); margin: 2px 0; width: 100%; }
+#training .training-note { font-size: 14px; color: var(--faint); }
+#training .training-dim { color: var(--muted); }
+#training .training-math { font: 13.5px/1.65 var(--f-mono); color: var(--ink); background: var(--bg); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; overflow-x: auto; }
+
+/* instrument column */
+#training .training-inst { gap: 14px; }
+#training .training-duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
+#training .training-duo.eq { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+@media (max-width: 760px) { #training .training-duo, #training .training-duo.eq { grid-template-columns: minmax(0, 1fr); } }
+#training .training-status { background: var(--panel2); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 13px; font-size: 15px; line-height: 1.55; min-height: 5.2em; color: var(--muted); }
+#training .training-status b { color: var(--ink); }
+#training .training-status code { font-size: 13px; color: var(--ebt); }
+#training .training-cv canvas { border-radius: 0; }
+#training .tbl table { font-size: 14px; }
+#training .tbl td, #training .tbl th { padding: 7px 10px; }
+#training .tbl td.num { white-space: nowrap; }
+#training .legend { font-size: 13.5px; }
+
+/* regularizer toggles */
+#training .training-toggles { display: grid; gap: 8px; }
+#training .training-tg { display: inline-flex; align-items: center; gap: 9px; justify-self: start; }
+#training .training-tg-box { width: 15px; height: 15px; border-radius: 4px; border: 1.5px solid var(--muted); display: inline-block; position: relative; flex: none; }
+#training .training-tg[aria-pressed="true"] .training-tg-box { background: var(--ebt); border-color: var(--ebt); }
+#training .training-tg[aria-pressed="true"] .training-tg-box::after { content: ""; position: absolute; left: 4px; top: 0px; width: 4px; height: 8px; border: solid #1b1407; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+#training .card h4 { margin-bottom: 0; }
+
+@media (max-width: 560px) {
+  #training .training-intro { font-size: 16px; }
+  #training .training-eq { font-size: 15px; }
+  #training .training-part { margin-top: 22px; padding-top: 20px; }
+}
+
+/* part 4: explanation cards mirror the toggles */
+#training .training-why { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+#training .training-whycard { display: grid; gap: 8px; align-content: start; border-top: 3px solid var(--ebt); transition: opacity .2s; }
+#training .training-whycard.off { opacity: .55; border-top-color: var(--faint); }
+#training .training-whycard p { font-size: 14.5px; color: var(--muted); line-height: 1.5; }
+#training .training-whycard h4 { color: var(--ink); }
+#training .training-ev { font-size: 14px !important; color: var(--ink) !important; }
+#training .training-ev .badge { margin-right: 4px; }
+#training .btn.primary[aria-pressed="true"] { color: var(--bg); }
+#training .tbl th { text-transform: none; letter-spacing: .02em; font-size: 12.5px; }
+#training .training-whycard h4 { font: 600 18px var(--f-display); letter-spacing: 0; text-transform: none; }
+#training .training-msg { display: block; color: var(--truth); font-weight: 700; margin-bottom: 4px; }

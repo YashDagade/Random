@@ -30,8 +30,10 @@ def r4(x):
         return {k: r4(v) for k, v in x.items()}
     if isinstance(x, (np.floating, float)):
         x = float(x)
-        if x == 0 or not math.isfinite(x):
-            return 0.0 if not math.isfinite(x) else x
+        if not math.isfinite(x):
+            raise ValueError("non-finite value in export")  # never silently replace NaN/Inf
+        if x == 0:
+            return x
         return float(f"{x:.4g}")
     if isinstance(x, np.integer):
         return int(x)
@@ -95,6 +97,15 @@ def main(work):
         cr = np.mean(ces_rand, 0)
         base_ce = ce_np(blog(pB, ctx), y).mean()
         best_N[name] = int(np.argmin(cf[1:]) + 1)
+        # paired per-position gain from thinking longer (N=3 -> N=16), seed 0, with a bootstrap 95% CI
+        y0 = jax.random.normal(jax.random.PRNGKey(1000), (B, T.V))
+        ys, _ = trace_fixed(h, y0, jnp.full((B,), alpha0))
+        diff = ce_np(ys[cfg["n_max"]], y) - ce_np(ys[NMAX], y)
+        brng = np.random.default_rng(0)
+        boot = [diff[brng.integers(0, B, B)].mean() for _ in range(1000)]
+        paired = {"from_N": cfg["n_max"], "to_N": NMAX, "mean_gain_nats": diff.mean(),
+                  "ci95_nats": [np.percentile(boot, 2.5), np.percentile(boot, 97.5)],
+                  "frac_positions_improved": (diff > 0).mean()}
         thinking["datasets"][name] = {
             "ebt_fixed_alpha_ce": cf, "ebt_random_alpha_ce": cr, "ebt_mean_energy": np.mean(Es_fixed, 0),
             "baseline_ce": base_ce,
@@ -102,6 +113,8 @@ def main(work):
             "best_N_fixed_alpha": best_N[name],
             "train_like_N": cfg["n_max"],
             "gain_vs_train_like_pct": 100 * (1 - math.exp(cf[best_N[name]]) / math.exp(cf[cfg["n_max"]])),
+            "gain_note": "best_N is picked on this same eval set (mild selection effect); paired_gain_N3_to_N16 has no selection",
+            "paired_gain_N3_to_N16": paired,
         }
         print(name, "baseline %.4f" % base_ce, "ebt fixed", np.round(cf, 3), "rand", np.round(cr, 3))
         if name == "val":
@@ -174,17 +187,32 @@ def main(work):
         ys, Es = trace_fixed(h, y0, jnp.full((B,), alpha0))
         yt = arr[np.asarray(positions)].astype(np.int32)
         pt = np.asarray(jax.nn.softmax(ys[NU], -1))[np.arange(B), yt]
-        return np.asarray(Es[:NU + 1]).T, pt, ce_np(ys[NU], yt)
+        Eu = np.asarray(T.energy(pE, h, jnp.zeros((B, T.V))))  # energy of the uniform "no idea" guess
+        pf = np.asarray(jax.nn.softmax(ys[NU], -1))
+        ent = -(pf * np.log(pf + 1e-12)).sum(-1)  # entropy of the final prediction (nats)
+        return np.asarray(Es[:NU + 1]).T, pt, ce_np(ys[NU], yt), Eu, ent
 
     # group means over the val subset
     vctx_idx = T.fixed_eval_set(arrs["val"], C, 4096, 99 + 3)[0]
-    Eall, ptall, ceall = char_energies(vctx_idx, arrs["val"])
+    Eall, ptall, ceall, Euall, entall = char_energies(vctx_idx, arrs["val"])
+    Rall = Eall - Euall[:, None]
     groups = np.array([classify(val_text[i - C:i], val_text[i]) for i in vctx_idx])
     group_curves = {}
     for gname in ["easy", "hard", "other"]:
         m = groups == gname
         group_curves[gname] = {"n": int(m.sum()), "mean_energy": Eall[m].mean(0), "std_energy": Eall[m].std(0),
+                               "mean_rel_energy": Rall[m].mean(0), "std_rel_energy": Rall[m].std(0),
+                               "mean_energy_uniform": Euall[m].mean(),
                                "mean_ce_final": ceall[m].mean(), "mean_p_true_final": ptall[m].mean()}
+    from scipy.stats import spearmanr
+    energy_vs_loss = {"spearman_final_energy_vs_char_loss": float(spearmanr(Eall[:, -1], ceall).correlation),
+                      "spearman_final_energy_vs_p_true": float(spearmanr(Eall[:, -1], ptall).correlation),
+                      "spearman_final_rel_energy_vs_char_loss": float(spearmanr(Rall[:, -1], ceall).correlation),
+                      "spearman_final_entropy_vs_char_loss": float(spearmanr(entall, ceall).correlation),
+                      "char_loss_by_final_energy_quartile": [float(ceall[np.digitize(Eall[:, -1], np.quantile(Eall[:, -1], [0.25, 0.5, 0.75])) == k].mean()) for k in range(4)],
+                      "note": "across 4096 held-out positions, after 8 thinking steps (same yhat_0 for all). "
+                              "Positive energy-vs-loss correlation would mean higher energy = harder/less certain."}
+    print("energy_vs_loss", energy_vs_loss)
     print("groups", {k: (v["n"], round(float(v["mean_ce_final"]), 3), np.round(v["mean_energy"], 3)) for k, v in group_curves.items()})
 
     # two real sentences from held-out text
@@ -202,10 +230,11 @@ def main(work):
     sentences = []
     for s0, sub in picks:
         pos = list(range(s0, s0 + len(sub)))
-        Es, pt, cel = char_energies(pos, arrs["val"])
+        Es, pt, cel, Eu, _ = char_energies(pos, arrs["val"])
         sentences.append({
             "text": sub, "context_before": val_text[s0 - C:s0],
-            "chars": list(sub), "energy": Es, "p_true_final": pt, "ce_final": cel,
+            "chars": list(sub), "energy": Es, "energy_uniform": Eu, "rel_energy": Es - Eu[:, None],
+            "p_true_final": pt, "ce_final": cel,
             "group": [classify(val_text[i - C:i], val_text[i]) for i in pos],
         })
         print("sentence:", sub)
@@ -250,8 +279,18 @@ def main(work):
                           "entropy": float(-(ps[i] * np.log(ps[i] + 1e-12)).sum())})
         bp = np.asarray(jax.nn.softmax(blog(pB, jnp.asarray(ctxa))[0]))
         border = np.argsort(-bp)[:8]
+        # how typical is this one trajectory? same context, 256 other random starts yhat_0
+        NR = 256
+        yr = jax.random.normal(jax.random.PRNGKey(4242), (NR, T.V))
+        ysr, _ = T.think_trace(pE, jnp.repeat(h, NR, 0), yr, jnp.full((NR,), alpha0), NE)
+        psr = np.asarray(jax.nn.softmax(ysr, -1))
+        tid = int(arrs["val"][pos])
+        robust = {"n_starts": NR, "N": [1, 2, 3, 5, 8, 12],
+                  "mean_p_true": [psr[n, :, tid].mean() for n in [1, 2, 3, 5, 8, 12]],
+                  "frac_top1_true": [(psr[n].argmax(-1) == tid).mean() for n in [1, 2, 3, 5, 8, 12]],
+                  "note": "the 'steps' trace above is ONE start (PRNGKey 31); these are averages over 256 other starts"}
         examples.append({"label": label, "kind": kind, "context": val_text[pos - C:pos], "true_next": true_c,
-                         "steps": steps,
+                         "steps": steps, "init_robustness": robust,
                          "baseline_top": [[vocab[j], float(bp[j])] for j in border],
                          "baseline_p_true": float(bp[int(arrs["val"][pos])])})
         print("example", repr(val_text[pos - 20:pos]), "->", repr(true_c),
@@ -287,7 +326,10 @@ def main(work):
             paths.append(pts)
         return {"label": ex["label"], "token_a": vocab[a_tok], "token_b": vocab[b_tok], "extent": [lo, hi, lo, hi],
                 "grid_n": grid_n, "energy": E, "paths_restricted_gd": paths,
-                "note": "Energy over two logits (token_a on x, token_b on y); all other 52 logits held at 0. "
+                "min_energy_in_plane": float(E.min()), "full_space_final_energy": ex["steps"][-1]["energy"],
+                "note": "Energy over two logits (token_a on x, token_b on y); all other 52 logits held at 0, so the "
+                        "lowest energy in this plane is higher than what full-space thinking reaches "
+                        "(compare min_energy_in_plane with full_space_final_energy). "
                         "energy[row][col]: row = token_b logit, col = token_a logit, both from extent lo..hi. "
                         "Paths are exact gradient descent restricted to this plane (alpha = alpha0)."}
 
@@ -323,13 +365,66 @@ def main(work):
         return {"step": log["step"], "train_loss_ema": log["train_loss"], "val_loss": log["val_loss"],
                 "train_eval_loss": log["train_eval_loss"], "wall_s": log["time"]}
 
+    # ------------------------------------------------ honest, number-backed takeaways (generated, not hand-typed)
+    tv = thinking["datasets"]
+    nT = cfg["n_max"]
+    bv = [st for st in bon["settings"] if st["N"] == nT][0]["datasets"]
+    gr = group_curves
+
+    def pct(a, b):  # perplexity reduction in %, from CE a -> b
+        return 100 * (1 - math.exp(b) / math.exp(a))
+    takeaways = [
+        "Toy model trained for this explainer, not a paper result. All numbers are nats per character on held-out text.",
+        "Same-size feed-forward baseline beats the toy EBT by a wide margin: held-out loss %.3f vs %.3f at N=%d "
+        "(per-char perplexity %.2f vs %.2f), after the same %d optimizer steps (EBT %.0f s vs baseline %.0f s wall-clock)."
+        % (tv["val"]["baseline_ce"], tv["val"]["ebt_fixed_alpha_ce"][nT], nT, math.exp(tv["val"]["baseline_ce"]),
+           math.exp(tv["val"]["ebt_fixed_alpha_ce"][nT]), logE["steps"], logE["wall_s"], logB["wall_s"]),
+        "Thinking longer helps the toy EBT in-distribution: N=%d -> %d lowers held-out loss %.3f -> %.3f "
+        "(%.1f%% lower perplexity; paired 95%% CI of the gain %.3f to %.3f nats). It never closes the gap to the baseline."
+        % (nT, NMAX, tv["val"]["ebt_fixed_alpha_ce"][nT], tv["val"]["ebt_fixed_alpha_ce"][NMAX],
+           pct(tv["val"]["ebt_fixed_alpha_ce"][nT], tv["val"]["ebt_fixed_alpha_ce"][NMAX]),
+           *tv["val"]["paired_gain_N3_to_N16"]["ci95_nats"]),
+        "The thinking gain shrinks as the data shift grows (opposite of the paper's Fig 7 trend). Perplexity change from N=%d to "
+        "N=%d: %.1f%% lower on RedPajama held-out, %.1f%% lower on Shakespeare, %.1f%% HIGHER on Python code (code improves "
+        "only %.1f%% up to N=%d, then gets worse)."
+        % (nT, NMAX, pct(tv["val"]["ebt_fixed_alpha_ce"][nT], tv["val"]["ebt_fixed_alpha_ce"][NMAX]),
+           pct(tv["ood_shakespeare"]["ebt_fixed_alpha_ce"][nT], tv["ood_shakespeare"]["ebt_fixed_alpha_ce"][NMAX]),
+           -pct(tv["ood_code"]["ebt_fixed_alpha_ce"][nT], tv["ood_code"]["ebt_fixed_alpha_ce"][NMAX]),
+           pct(tv["ood_code"]["ebt_fixed_alpha_ce"][nT], tv["ood_code"]["ebt_fixed_alpha_ce"][best_N["ood_code"]]),
+           best_N["ood_code"]),
+        "Self-verification works without any external verifier: picking the lowest-energy of M=8 candidates (N=%d) gives "
+        "held-out loss %.3f vs %.3f for a single candidate (%.1f%% lower perplexity), while the average candidate stays at %.3f. "
+        "An oracle that knows the answer would reach %.3f, so energy is a useful but imperfect verifier."
+        % (nT, bv["val"]["energy_select_ce"][-1], bv["val"]["energy_select_ce"][0],
+           pct(bv["val"]["energy_select_ce"][0], bv["val"]["energy_select_ce"][-1]), bv["val"]["mean_ce"][-1],
+           bv["val"]["oracle_ce"][-1]),
+        "Energy as uncertainty is weak in this toy: across held-out characters, final energy correlates with loss at "
+        "Spearman %.2f (prediction entropy: %.2f). Raw energy does NOT separate easy from hard characters the way the paper's "
+        "Fig 8 does (easy %.2f vs hard %.2f mean final energy); only the per-context relative energy E - E(uniform) does "
+        "(easy %.2f vs hard %.2f)."
+        % (energy_vs_loss["spearman_final_energy_vs_char_loss"], energy_vs_loss["spearman_final_entropy_vs_char_loss"],
+           gr["easy"]["mean_energy"][-1], gr["hard"]["mean_energy"][-1],
+           gr["easy"]["mean_rel_energy"][-1], gr["hard"]["mean_rel_energy"][-1]),
+    ]
+    ex0 = examples[0]
+    first_ok = next((s_["step"] for s_ in ex0["steps"] if s_["top"][0][0] == ex0["true_next"]), None)
+    takeaways.append(
+        "Example traces are single random starts. The exported '%s' trace first settles on '%s' and only reaches '%s' at "
+        "step %s; over 256 other starts '%s' is already the top guess at N=3 in %.0f%% of cases. Show it as one start that "
+        "needed more thinking, not as typical behaviour."
+        % (ex0["label"], ex0["steps"][3]["top"][0][0], ex0["true_next"], first_ok, ex0["true_next"],
+           100 * ex0["init_robustness"]["frac_top1_true"][2]))
+
     out = {
         "_meta": {
             "source": "toy experiment trained for this explainer (src/text_prep.py, src/text_ebt.py, src/text_eval.py)",
             "note": "Toy model trained for this explainer, NOT a paper result. Character-level (54 symbols), ~0.27M params, "
                     "a few minutes on 1 CPU thread. Loss in nats per character; perplexity is per character "
                     "(not comparable to the paper's per-token perplexities).",
+            "verified": "Energies, gradients, example traces, energy slices and the held-out thinking curve were recomputed "
+                        "independently in plain numpy from the exported weights (src/text_verify.py).",
         },
+        "takeaways": takeaways,
         "corpus_name": "RedPajama-Data-V2 (sample, snapshot 2023-06, shard 0000, en_head), first ~3 MB of gzip stream",
         "corpus": {
             "source_url": "https://data.together.xyz/redpajama-data-v2/v1.0.0/sample/documents/2023-06/0000/en_head.json.gz",
@@ -374,13 +469,21 @@ def main(work):
         "train_curves": {"ebt": curve(logE["log"]), "baseline": curve(logB["log"]),
                          "note": "ebt train_loss_ema includes Langevin noise, random alpha/N and replay; train_eval/val use "
                                  "deterministic thinking with alpha0 and N=3. Baseline: one forward pass."},
-        "thinking_curve": thinking,
+        "thinking_curve": dict(thinking, bon_M=bon["M"], bon_note="Best-of-M results live in the top-level 'bon' key"),
         "alpha_sweep": alpha_sweep,
         "bon": bon,
         "uncertainty": {"steps": list(range(NU + 1)), "alpha": alpha0,
                         "rule": "easy = 'u' after 'q' or 3rd+ letter inside a word; hard = first letter of a new word; "
-                                "other = everything else. All positions start from the same yhat_0.",
-                        "groups": group_curves, "sentences": sentences},
+                                "other = everything else. All positions start from the same yhat_0. "
+                                "rel_energy = E(x, yhat_i) - E(x, uniform guess yhat=0): our per-context normalization "
+                                "(removes each context's energy offset), not something the paper defines.",
+                        "caveat": ("Raw mean final energy is LOWER for hard characters than for easy ones in this toy "
+                                   "(%.3f vs %.3f), so a raw-energy easy/hard plot would contradict the paper's Fig 8 pattern. "
+                                   "Show rel_energy only with its definition, and label it as our normalization."
+                                   % (gr["hard"]["mean_energy"][-1], gr["easy"]["mean_energy"][-1]))
+                                  if gr["hard"]["mean_energy"][-1] < gr["easy"]["mean_energy"][-1] else
+                                  "Raw mean final energy is higher for hard than for easy characters, as in the paper's Fig 8.",
+                        "groups": group_curves, "energy_vs_loss": energy_vs_loss, "sentences": sentences},
         "examples": examples,
         "energy_slices": slices,
         "weights": weights,

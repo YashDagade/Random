@@ -81,7 +81,7 @@ CTX = [
     (0.25, "right tip: near-deterministic (sigma 0.03)", "low_noise"),
     (0.75, "left tip: very noisy (sigma 0.30)", "high_noise"),
     (0.0, "crossing, moving up-right (sigma 0.165)", "mid_noise"),
-    (0.5, "crossing, moving down-left (sigma 0.165)", "mid_noise"),
+    (0.5, "crossing, moving up-left (sigma 0.165)", "mid_noise"),   # dmu/dx at x=0.5 = (-8.17, +11.3)
     (0.125, "upper-right lobe", "lobe"),
     (0.375, "lower-right lobe", "lobe"),
     (0.625, "upper-left lobe", "lobe"),
@@ -197,7 +197,7 @@ for s in CK[4:]:
 BON_N, BON_SIGMA = 6, LANG
 
 
-def bon_eval(params, Ms, key, n_rep=1, nsteps=BON_N):
+def bon_eval(params, Ms, key, n_rep=1, nsteps=BON_N, noise=BON_SIGMA, alpha_fixed=None):
     """For each eval context, run max(M) candidates (random start, random alpha as in training, Langevin),
     pick argmin energy among the first M. Returns mean ||yhat* - mu||^2 for each M and for a random pick."""
     Mmax = max(Ms)
@@ -207,7 +207,9 @@ def bon_eval(params, Ms, key, n_rep=1, nsteps=BON_N):
         y0 = INIT_SCALE * jax.random.normal(k1, (NV, 2))
         lf = math.log(HP["alpha_rand_factor"])
         al = ALPHA0 * jnp.exp(jax.random.uniform(k2, (NV,), minval=-lf, maxval=lf))
-        Pj, Ej = gd_paths(params, fv, y0, al, nsteps, BON_SIGMA, k3)
+        if alpha_fixed is not None:
+            al = jnp.full((NV,), alpha_fixed)
+        Pj, Ej = gd_paths(params, fv, y0, al, nsteps, noise, k3)
         finals.append(Pj[:, -1])
         energies.append(Ej[:, -1])
     finals = np.stack(finals, 1)
@@ -223,6 +225,11 @@ def bon_eval(params, Ms, key, n_rep=1, nsteps=BON_N):
 
 Ms = [1, 2, 4, 8, 16]
 bon_final = bon_eval(PF, Ms, jax.random.PRNGKey(11))
+# Controls (added by the verifier): Algorithm 2 as written has no Langevin noise. Without noise and with a fixed
+# alpha every candidate falls into the same single basin, so BoN cannot help; the Langevin BoN gain above is mostly
+# the energy picking the candidates least disturbed by the injected noise.
+bon_no_noise = bon_eval(PF, Ms, jax.random.PRNGKey(11), noise=0.0)
+bon_plain = bon_eval(PF, Ms, jax.random.PRNGKey(11), noise=0.0, alpha_fixed=ALPHA0)
 bon_vs_training = dict(step=[], M1=[], M8=[])
 for s in CK[2:]:
     r = bon_eval(to_jax(PARAMS[s]), [1, 8], jax.random.PRNGKey(12))
@@ -252,6 +259,16 @@ bon = dict(
                    note=f"mean ||yhat* - mu(x)||^2 over {NV} eval contexts; each candidate: random start, "
                         f"alpha randomized as in training, {BON_N} steps, Langevin sigma {BON_SIGMA}; "
                         f"yhat* = lowest-energy candidate among the first M (Algorithm 2)."),
+    controls=dict(
+        no_langevin_random_alpha=dict(M=Ms, mse_vs_mu=[sig4(bon_no_noise[M]) for M in Ms],
+                                      oracle_best_of_16=sig4(bon_no_noise["oracle_best_of_max"])),
+        no_langevin_fixed_alpha=dict(alpha=ALPHA0, M=Ms, mse_vs_mu=[sig4(bon_plain[M]) for M in Ms],
+                                     oracle_best_of_16=sig4(bon_plain["oracle_best_of_max"])),
+        note=f"Same {NV} eval contexts, same random starts, {BON_N} steps, but no Langevin noise (Algorithm 2 as written). "
+             "With a fixed alpha all candidates reach the same minimum, so Best-of-N has nothing to choose between. "
+             "The Langevin numbers above are worse for a single candidate (the noise pushes it off the minimum) and BoN "
+             "recovers most of that loss: the energy ranks its own candidates well, but noise-free GD is the most accurate "
+             "inference in this toy. The floor (~1.2e-4) is the gap between the learned minimum and mu(x)."),
 )
 
 # ------------------------------------------------------------------ basin statistics vs noise (Facet 2 check)
@@ -441,7 +458,7 @@ out = dict(
             "Smooth activation (silu) so grad_yhat E and the second-order training gradients are smooth.",
             "Small quadratic term lambda*||yhat||^2 for well-posedness far from data.",
             "alpha is randomized independently per sample (paper App. I.1.3 found per-batch alpha unstable); N is randomized per batch.",
-            "Backprop through all unrolled steps (no detach), loss only at the last step, as for the paper's S2 models; we do not truncate.",
+            "Backprop through all unrolled steps (no detach between steps) with the loss only at the last step, as for the paper's S2 models (their 'truncate optimization' = loss at the final step only). Backprop itself is not truncated.",
             "Replay buffer stores (x, y, yhat_N) and restarts a fraction of each batch from stored predictions.",
             "All exported numbers are computed in float64 from the rounded (4 significant digit) weights in this file. Energies are stored with 4 significant digits but at least 3 decimals.",
         ],
@@ -455,7 +472,7 @@ out = dict(
         findings=None,  # filled below
     ),
     arch=arch,
-    hparams=dict({k: v for k, v in HP.items() if k != "ckpt_steps"}, lambda_=LAMBDA, hidden=HIDDEN, K_features=K_FEAT,
+    hparams=dict({k: (sig4(v) if isinstance(v, float) else v) for k, v in HP.items() if k != "ckpt_steps"}, lambda_=LAMBDA, hidden=HIDDEN, K_features=K_FEAT,
                  loss="mean over batch of ||yhat_N - y||^2", optimizer="Adam, warmup + cosine LR, global-norm clip"),
     checkpoint_steps=CK,
     weights=weights,
@@ -492,6 +509,10 @@ for tb in thinking_by_alpha:
              f" (training used N in [{HP['n_min']},{HP['n_max']}]).")
 f.append("Best-of-N (Langevin, random alpha, %d steps): mse_vs_mu for M=%s: %s; oracle best of 16 = %.4f." % (
     BON_N, Ms, ", ".join(f"{bon_final[M]:.4f}" for M in Ms), bon_final["oracle_best_of_max"]))
+f.append("Best-of-N controls without Langevin (Algorithm 2 as written), mse_vs_mu for M=%s: random alpha %s; fixed alpha %s %s. "
+         "Noise-free GD at alpha0 already reaches the floor, so the Langevin BoN gain means 'the energy picks the least-disturbed candidate', "
+         "not 'BoN beats plain thinking' in this toy." % (
+    Ms, ", ".join(f"{bon_no_noise[M]:.4g}" for M in Ms), ALPHA0, ", ".join(f"{bon_plain[M]:.4g}" for M in Ms)))
 f.append("BoN gain over training (M=1 -> M=8): " + "; ".join(
     f"step {s}: {a} -> {b}" for s, a, b in zip(bon_vs_training["step"], bon_vs_training["M1"], bon_vs_training["M8"])))
 f.append(f"Uncertainty check (64 contexts): corr(sigma, E_min) = {basin['corr_sigma_vs_Emin']}, "

@@ -3,58 +3,39 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Energy-Based Transformers, Explained</title>
-<meta name="description" content="An interactive explainer for Energy-Based Transformers are Scalable Learners and Thinkers (Gladstone et al., 2025).">
+<title>Energy-Based Transformers, Step by Step</title>
+<meta name="description" content="An interactive, step-by-step explainer of Energy-Based Transformers are Scalable Learners and Thinkers (Gladstone et al., 2025).">
+<link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
 <link rel="stylesheet" href="assets/css/base.css">
-<script>window.EBTV_ROOT = './';</script>
-<script src="assets/js/sections/manifest.js"></script>
-<script>
-  // per-section stylesheets (missing files are harmless)
-  (window.EBT_SECTIONS || []).forEach(id => document.write('<link rel="stylesheet" href="assets/css/sections/' + id + '.css">'));
-</script>
+<script>window.EBTV_THEME = 'light'; window.EBTV_ROOT = './';</script>
+<script src="assets/js/panels/manifest.js"></script>
+<script>(window.EBT_PANELS || []).forEach(p => p.ids.forEach(id => document.write('<link rel="stylesheet" href="assets/css/panels/' + id + '.css">')));</script>
 </head>
 <body>
-<header class="wrap hero">
-  <div class="eyebrow">Interactive explainer · arXiv 2507.02092</div>
-  <h1>Energy-Based Transformers learn to <em>think</em> by descending an energy landscape</h1>
-  <p class="lede">A visual walk through Gladstone et al. (2025), <i>Energy-Based Transformers are Scalable Learners and Thinkers</i>. Watch the 10-minute animation, then open each lab to run the ideas yourself: drag a prediction across a real learned energy landscape, watch a text model think token by token, train an EBT one unrolled step at a time, denoise images, plan with energy, and read the scaling laws.</p>
-  <div class="meta"><span>Paper: Gladstone, Nanduru, Islam, Han, Ha, Chadha, Du, Ji, Li, Iqbal</span><span>Runs offline · no tracking</span></div>
-  <div class="row" style="gap:8px"><span class="badge paper">From the paper</span><span class="badge toy">Toy model trained for this explainer</span><span class="badge ext">Beyond the paper</span><span style="color:var(--faint);font-size:13px">Every figure carries one of these labels.</span></div>
-</header>
-<nav class="rail" aria-label="Chapters"><div class="wrap" id="rail"></div></nav>
-<main id="chapters"></main>
-<footer class="wrap">
-  <p>Built as a study aid for Gladstone et al., “Energy-Based Transformers are Scalable Learners and Thinkers” (arXiv:2507.02092v1, 2025). Paper figures and numbers belong to the authors and are cited by figure and table. Toy models were trained from scratch for this explainer on a CPU and are tiny; they illustrate mechanisms, not the paper's results.</p>
-</footer>
+<nav id="rail" aria-label="Sections">
+  <a class="brand" href="#top">Interactive explainer<b>Energy-Based Transformers</b></a>
+  <div id="rail-list"></div>
+  <div class="keys">j / k &nbsp;next / previous section<br>1–9 &nbsp;steps inside a section<br>← → &nbsp;previous / next step</div>
+</nav>
+<div id="topbar"><span>EBT</span><label class="sr" for="jump">Jump to section</label><select id="jump"></select></div>
+<main id="main">
+  <header class="hero" id="top">
+    <div class="k">arXiv 2507.02092 · Gladstone et al. 2025</div>
+    <h1>Energy-Based Transformers learn to <em>think</em> by optimizing against their own verifier</h1>
+    <p>A step-by-step, interactive reading of <i>Energy-Based Transformers are Scalable Learners and Thinkers</i>. Each section pairs a live figure with the text and equations behind it. Drag predictions across real learned energy landscapes, unroll training one gradient at a time, watch a text model think, and plan with an energy.</p>
+    <div class="legend"><span class="src paper">from the paper</span><span class="src toy">toy model trained for this explainer</span><span class="src ext">beyond the paper</span><span class="src concept">illustration</span></div>
+    <div class="meta">Authors: Alexi Gladstone, Ganesh Nanduru, Md Mofijul Islam, Peixuan Han, Hyeonjeong Ha, Aman Chadha, Yilun Du, Heng Ji, Jundong Li, Tariq Iqbal</div>
+    <a class="start" href="#system2">Start reading ↓</a>
+  </header>
+</main>
+<footer class="site-foot"><span>Built as a study aid. Paper numbers and figures belong to the authors and are cited by figure and table. Toy models were trained from scratch for this explainer on a CPU; they show mechanisms, not the paper's results.</span><span><a href="https://arxiv.org/abs/2507.02092">paper ↗</a> · <a href="https://github.com/alexiglad/EBT">code ↗</a> · <a href="https://energy-based-transformers.github.io">project ↗</a></span></footer>
+<script src="assets/vendor/katex/katex.min.js"></script>
+<script src="assets/vendor/katex/auto-render.min.js"></script>
 <script src="data/bundle.js"></script>
-<script src="video/engine.js"></script>
+<script src="assets/js/engine.js"></script>
 <script src="assets/js/lib.js"></script>
 <script src="assets/js/toy2d_model.js"></script>
-<script>
-  (window.EBT_SECTIONS || []).forEach(id => document.write('<script src="assets/js/sections/' + id + '.js"><\/script>'));
-</script>
-<script>
-(function () {
-  const EBT = window.EBT, lib = EBT.lib, main = document.getElementById('chapters'), rail = document.getElementById('rail');
-  (window.EBT_SECTIONS || []).forEach((id, i) => {
-    const def = EBT.sections[id];
-    const n = String(i).padStart(2, '0');
-    const sec = lib.h('section', { class: 'chapter', id, 'aria-labelledby': id + '-h' });
-    const w = lib.h('div', { class: 'wrap' });
-    sec.appendChild(w); main.appendChild(sec);
-    rail.appendChild(lib.h('a', { href: '#' + id, 'data-id': id }, lib.h('span', { class: 'n' }, n), def ? (def.nav || def.title) : id));
-    if (!def) { w.appendChild(lib.h('h2', { id: id + '-h' }, id)); w.appendChild(lib.h('p', { class: 'lede' }, 'This chapter is still being built.')); return; }
-    w.appendChild(lib.h('div', { class: 'kicker', html: `<b>${n}</b> · ${def.kicker || ''}` }));
-    w.appendChild(lib.h('h2', { id: id + '-h' }, def.title));
-    if (def.lede) w.appendChild(lib.h('p', { class: 'lede', html: def.lede }));
-    const body = lib.h('div', { class: 'stack' }); w.appendChild(body);
-    try { def.mount(body, lib); } catch (e) { console.error(e); body.appendChild(lib.h('p', { class: 'callout warn' }, 'This lab failed to load: ' + e.message)); }
-  });
-  // highlight current chapter in the rail
-  const links = [...rail.querySelectorAll('a')];
-  const io = new IntersectionObserver(es => { es.forEach(e => { if (e.isIntersecting) links.forEach(a => a.classList.toggle('on', a.dataset.id === e.target.id)); }); }, { rootMargin: '-45% 0px -50% 0px' });
-  document.querySelectorAll('section.chapter').forEach(s => io.observe(s));
-})();
-</script>
+<script>(window.EBT_PANELS || []).forEach(p => p.ids.forEach(id => document.write('<script src="assets/js/panels/' + id + '.js"><\/script>')));</script>
+<script>EBT.boot();</script>
 </body>
 </html>

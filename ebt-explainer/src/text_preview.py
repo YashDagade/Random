@@ -29,7 +29,7 @@ def style(ax, title):
 def main():
     d = json.load(open(os.path.join(ROOT, "data/text.json")))
     fig = plt.figure(figsize=(18, 10.5), facecolor=BG)
-    gs = fig.add_gridspec(2, 3, hspace=0.38, wspace=0.22, left=0.045, right=0.985, top=0.9, bottom=0.07)
+    gs = fig.add_gridspec(2, 3, hspace=0.38, wspace=0.22, left=0.045, right=0.965, top=0.885, bottom=0.07)
     fig.text(0.045, 0.955, "Tiny character-level EBT vs same-size feed-forward baseline (toy model trained for this explainer)",
              fontsize=17, color=INK, fontweight="bold")
     fig.text(0.045, 0.927, f"{d['corpus_name']}  |  EBT {d['arch']['n_params_ebt']:,} params, baseline "
@@ -68,15 +68,21 @@ def main():
     ax.legend(facecolor=PANEL, edgecolor=RULE, labelcolor=INK, fontsize=8, ncol=2)
 
     # 4 easy vs hard
-    ax = fig.add_subplot(gs[1, 0]); style(ax, "Uncertainty: mean energy per thinking step")
+    ax = fig.add_subplot(gs[1, 0]); style(ax, "Uncertainty: energy relative to a uniform guess")
     u = d["uncertainty"]
     for g, c in [("easy", TRUTH), ("hard", BAD), ("other", MUTED)]:
         gg = u["groups"][g]
-        m, s = np.array(gg["mean_energy"]), np.array(gg["std_energy"])
-        ax.plot(u["steps"], m, color=c, lw=2.2, marker="o", ms=3,
+        m, s = np.array(gg["mean_rel_energy"])[1:], np.array(gg["std_rel_energy"])[1:]
+        ax.plot(u["steps"][1:], m, color=c, lw=2.2, marker="o", ms=3,
                 label=f"{g} (n={gg['n']}, final loss {gg['mean_ce_final']:.2f})")
-        ax.fill_between(u["steps"], m - 0.25 * s, m + 0.25 * s, color=c, alpha=0.12)
-    ax.set_xlabel("thinking step"); ax.set_ylabel("energy"); ax.legend(facecolor=PANEL, edgecolor=RULE, labelcolor=INK, fontsize=9)
+        ax.fill_between(u["steps"][1:], m - 0.25 * s, m + 0.25 * s, color=c, alpha=0.12)
+    ev = u["energy_vs_loss"]
+    ax.text(0.02, 0.04, f"Spearman(final energy, char loss) = {ev['spearman_final_energy_vs_char_loss']:.2f}; "
+            f"relative: {ev['spearman_final_rel_energy_vs_char_loss']:.2f}", transform=ax.transAxes, color=MUTED, fontsize=9.5)
+    ax.text(0.3, 0.6, f"Raw final energy (not relative):\neasy {u['groups']['easy']['mean_energy'][-1]:.2f}, "
+            f"hard {u['groups']['hard']['mean_energy'][-1]:.2f}.\nRaw energy does not separate them.",
+            transform=ax.transAxes, color=BAD, fontsize=9.5, va="top")
+    ax.set_xlabel("thinking step"); ax.set_ylabel("E(x, yhat_i) - E(x, uniform)"); ax.legend(facecolor=PANEL, edgecolor=RULE, labelcolor=INK, fontsize=9)
 
     # 5 example distribution over steps
     ax = fig.add_subplot(gs[1, 1]); ax.set_facecolor(PANEL)
@@ -89,7 +95,7 @@ def main():
         for i, t in enumerate(toks):
             M[i, j] = dd.get(t, 0.0)
     ax.imshow(M, aspect="auto", cmap=ECMAP, vmin=0, vmax=1)
-    ax.set_yticks(range(len(toks))); ax.set_yticklabels([("␣" if t == " " else ("⏎" if t == "\n" else t)) for t in toks], fontfamily="JetBrains Mono")
+    ax.set_yticks(range(len(toks))); ax.set_yticklabels([("space" if t == " " else ("newline" if t == "\n" else t)) for t in toks], fontfamily="JetBrains Mono")
     ax.set_xticks(range(len(ex["steps"]))); ax.set_xlabel("thinking step")
     for j, s in enumerate(ex["steps"]):
         ax.text(j, -0.75, f"{s['energy']:.1f}", ha="center", color=EBT, fontsize=8)
@@ -99,14 +105,17 @@ def main():
     # 6 sentence energy heatmap
     ax = fig.add_subplot(gs[1, 2]); ax.set_facecolor(PANEL)
     sent = u["sentences"][0]
-    E = np.array(sent["energy"]).T  # steps x chars
+    E = np.array(sent["rel_energy"]).T[1:]  # steps 1.. x chars
     n = min(48, E.shape[1])
-    ax.imshow(E[:, :n], aspect="auto", cmap=ECMAP)
-    ax.set_xticks(range(n)); ax.set_xticklabels([("␣" if c == " " else c) for c in sent["chars"][:n]], fontfamily="JetBrains Mono", fontsize=8)
+    im = ax.imshow(E[:, :n], aspect="auto", cmap=ECMAP)
+    cb = fig.colorbar(im, ax=ax, fraction=0.035, pad=0.015)
+    cb.outline.set_visible(False); cb.ax.tick_params(colors=FAINT, labelsize=8)
+    cb.set_label("E - E(uniform)", color=MUTED, fontsize=9)
+    ax.set_xticks(range(n)); ax.set_xticklabels([("·" if c == " " else c) for c in sent["chars"][:n]], fontfamily="JetBrains Mono", fontsize=8)
     for i, g in enumerate(sent["group"][:n]):
         ax.get_xticklabels()[i].set_color(TRUTH if g == "easy" else (BAD if g == "hard" else FAINT))
-    ax.set_ylabel("thinking step")
-    ax.set_title("Energy per character and step (mint = easy, red = hard)", color=INK, fontsize=11, loc="left", pad=8)
+    ax.set_ylabel("thinking step"); ax.set_yticks(range(E.shape[0])); ax.set_yticklabels(range(1, E.shape[0] + 1))
+    ax.set_title("Relative energy per character, steps 1-8 (mint = easy, red = hard)", color=INK, fontsize=11, loc="left", pad=8)
 
     out = os.path.join(ROOT, "media/toy/text_preview.png")
     os.makedirs(os.path.dirname(out), exist_ok=True)

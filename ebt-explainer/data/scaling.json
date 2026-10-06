@@ -2,14 +2,16 @@
  "_meta": {
   "source": "digitized from paper figures (Gladstone et al., arXiv 2507.02092v1)",
   "note": "approx. Values were extracted from the vector graphics inside the PDF (marker centres and line paths) and mapped to data units with the tick positions; tick labels were read visually. Every series is approx. and should be labelled \"approx., read from Fig N\". Mapping residual at the ticks is < 0.002 pt. Checks: (1) the log-log OLS slope ratios of the digitized points reproduce all 11 printed \"X% Faster\" titles to within 0.01 percentage points; (2) Fig 12 endpoints match Table 4 (EBT 23.29 dB, DiT 19.56 dB) to 0.01 dB.",
-  "method": "pymupdf page.get_drawings(): coloured filled paths = markers, coloured strokes = drawn fit lines, black short strokes = ticks; see src note in report.",
+  "method": "pymupdf page.get_drawings(): coloured filled paths = markers, coloured strokes = drawn fit lines, black short strokes = ticks (src/paper_figs/vecplot.py, digitize.py, build_scaling.py), then src/paper_figs/refine_scaling.py. Independent x-axis checks: Fig 5b Transformer++ FLOPs equal 6*N*steps*batch*256 from App. D.1.1 (3.189e16 for xxs), EBT FLOPs are 6.67x that (App. D.5), and the token axes of Figs 4a, 6b, B.3a are whole multiples of steps*batch*context.",
   "paper_colors": {
    "#f5a93d (orange)": "Transformer++ / DiT / EBT-S1",
    "#5d8dfe (blue)": "EBT / EBT-S2"
   },
   "rate_gain": "|slope_EBT| / |slope_baseline| - 1 from log10-log10 fits; positive = EBT perplexity/loss falls faster with scale.",
   "not_digitized": "Fig 8, Fig 11, Fig B.2 are heatmaps (see paper_heatmaps.json if present); Figs 1-3, 10, E.1, H.1 are diagrams/images.",
-  "rounding": "points to 4 significant digits, fit parameters to 5."
+  "rounding": "points: x to 4 significant digits, y to 6 (y needs the extra digits so that refitting the stored points reproduces the printed rates; with 4 digits Fig 9a refits to 33.50% instead of 33.66%); fit parameters to 5; paper_curve points to 4.",
+  "marker_centres": "Circles and triangles: bounding-box centre of the marker path. Stars: centroid of the 10 star vertices (a star's bounding-box centre sits 0.0955 x radius above the data point).",
+  "checked_by": "Independent checker pass: every plot overlaid on its crop (points, ticks and tick labels line up), log/linear axis flags tested against tick spacing, legend colours checked, rates refitted from the stored points (see plots[].rate_gain_from_stored_points). Post-processed by src/paper_figs/refine_scaling.py."
  },
  "plots": [
   {
@@ -45,35 +47,35 @@
      "points": [
       [
        0.4915,
-       64.37
+       64.3699
       ],
       [
        0.983,
-       53.22
+       53.2203
       ],
       [
        1.475,
-       49.25
+       49.2501
       ],
       [
        1.966,
-       47.08
+       47.0802
       ],
       [
        2.458,
-       45.54
+       45.5403
       ],
       [
        2.949,
-       44.49
+       44.4903
       ],
       [
        3.441,
-       43.66
+       43.6602
       ],
       [
        3.932,
-       42.95
+       42.9499
       ],
       [
        4.424,
@@ -81,7 +83,7 @@
       ],
       [
        4.915,
-       41.79
+       41.7903
       ],
       [
        5.407,
@@ -89,11 +91,11 @@
       ],
       [
        5.898,
-       40.78
+       40.7801
       ],
       [
        6.39,
-       40.34
+       40.3403
       ],
       [
        6.881,
@@ -530,11 +532,11 @@
      "points": [
       [
        0.4915,
-       73.68
+       73.6799
       ],
       [
        0.983,
-       57.09
+       57.0901
       ],
       [
        1.475,
@@ -542,15 +544,15 @@
       ],
       [
        1.966,
-       48.39
+       48.3901
       ],
       [
        2.458,
-       46.21
+       46.2099
       ],
       [
        2.949,
-       44.71
+       44.7101
       ],
       [
        3.441,
@@ -558,31 +560,31 @@
       ],
       [
        3.932,
-       42.55
+       42.5503
       ],
       [
        4.424,
-       41.62
+       41.6203
       ],
       [
        4.915,
-       40.93
+       40.9304
       ],
       [
        5.407,
-       40.37
+       40.3701
       ],
       [
        5.898,
-       39.77
+       39.7703
       ],
       [
        6.39,
-       39.29
+       39.2903
       ],
       [
        6.881,
-       38.75
+       38.7502
       ]
      ],
      "n_points": 14,
@@ -1014,7 +1016,9 @@
    "approx": true,
    "label": "approx., read from Fig 4a",
    "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points",
-   "note": "The smooth curves drawn in this panel are display trend lines (quadratic in ln x). The printed rate comes from straight-line fits in log-log space (series[].fit)."
+   "note": "The smooth curves drawn in this panel are display trend lines (quadratic in ln x). The printed rate comes from straight-line fits in log-log space (series[].fit).",
+   "rate_gain_from_stored_points": 0.3598,
+   "rate_gain_source": "reproduces the rate printed in the figure title"
   },
   {
    "id": "fig4b",
@@ -1049,7 +1053,7 @@
      "points": [
       [
        4.096,
-       53.18
+       53.1799
       ],
       [
        8.192,
@@ -1057,7 +1061,7 @@
       ],
       [
        16.38,
-       43.0
+       43.0001
       ],
       [
        32.77,
@@ -1065,7 +1069,7 @@
       ],
       [
        65.54,
-       37.34
+       37.3401
       ]
      ],
      "n_points": 5,
@@ -1498,23 +1502,23 @@
      "points": [
       [
        4.096,
-       56.3
+       56.3001
       ],
       [
        8.192,
-       49.19
+       49.1901
       ],
       [
        16.38,
-       42.31
+       42.3101
       ],
       [
        32.77,
-       38.59
+       38.5901
       ],
       [
        65.54,
-       35.88
+       35.8801
       ]
      ],
      "n_points": 5,
@@ -1946,7 +1950,9 @@
    "approx": true,
    "label": "approx., read from Fig 4b",
    "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points",
-   "note": "The smooth curves drawn in this panel are display trend lines (quadratic in ln x). The printed rate comes from straight-line fits in log-log space (series[].fit)."
+   "note": "The smooth curves drawn in this panel are display trend lines (quadratic in ln x). The printed rate comes from straight-line fits in log-log space (series[].fit).",
+   "rate_gain_from_stored_points": 0.2846,
+   "rate_gain_source": "reproduces the rate printed in the figure title"
   },
   {
    "id": "fig4c",
@@ -1981,19 +1987,19 @@
      "points": [
       [
        4.0,
-       61.68
+       61.6824
       ],
       [
        8.0,
-       54.98
+       54.9816
       ],
       [
        12.0,
-       51.01
+       51.0088
       ],
       [
        16.0,
-       48.09
+       48.0864
       ]
      ],
      "n_points": 4,
@@ -2422,19 +2428,19 @@
      "points": [
       [
        4.0,
-       62.68
+       62.6771
       ],
       [
        8.0,
-       55.42
+       55.4233
       ],
       [
        12.0,
-       51.26
+       51.2646
       ],
       [
        16.0,
-       48.23
+       48.2308
       ]
      ],
      "n_points": 4,
@@ -2861,7 +2867,9 @@
    "rate_gain_printed": 0.0529,
    "approx": true,
    "label": "approx., read from Fig 4c",
-   "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points"
+   "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points",
+   "rate_gain_from_stored_points": 0.05285,
+   "rate_gain_source": "reproduces the rate printed in the figure title"
   },
   {
    "id": "fig5a",
@@ -2896,19 +2904,19 @@
      "points": [
       [
        6.18,
-       51.92
+       51.9202
       ],
       [
        12.4,
-       42.16
+       42.1598
       ],
       [
        48.8,
-       28.55
+       28.5502
       ],
       [
        176.0,
-       20.58
+       20.5801
       ],
       [
        395.5,
@@ -3337,15 +3345,15 @@
      "points": [
       [
        6.18,
-       57.52
+       57.5203
       ],
       [
        12.4,
-       44.57
+       44.5699
       ],
       [
        48.8,
-       30.26
+       30.2602
       ],
       [
        176.0,
@@ -3353,7 +3361,7 @@
       ],
       [
        395.5,
-       17.81
+       17.8101
       ]
      ],
      "n_points": 5,
@@ -3780,7 +3788,9 @@
    "rate_gain_printed": 0.0291,
    "approx": true,
    "label": "approx., read from Fig 5a",
-   "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points"
+   "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points",
+   "rate_gain_from_stored_points": 0.02913,
+   "rate_gain_source": "reproduces the rate printed in the figure title"
   },
   {
    "id": "fig5b",
@@ -3815,11 +3825,11 @@
      "points": [
       [
        3.189e+16,
-       51.92
+       51.9199
       ],
       [
        9.199e+16,
-       42.16
+       42.1601
       ],
       [
        7.083e+17,
@@ -3831,7 +3841,7 @@
       ],
       [
        1.633e+19,
-       17.04
+       17.0401
       ]
      ],
      "n_points": 5,
@@ -4260,11 +4270,11 @@
      "points": [
       [
        2.126e+17,
-       57.52
+       57.5204
       ],
       [
        6.133e+17,
-       44.57
+       44.5698
       ],
       [
        4.722e+18,
@@ -4703,7 +4713,9 @@
    "rate_gain_printed": 0.0292,
    "approx": true,
    "label": "approx., read from Fig 5b",
-   "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points"
+   "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points",
+   "rate_gain_from_stored_points": 0.02918,
+   "rate_gain_source": "reproduces the rate printed in the figure title"
   },
   {
    "id": "fig5c",
@@ -4738,19 +4750,19 @@
      "points": [
       [
        180.0,
-       65.93
+       65.9311
       ],
       [
        240.0,
-       57.42
+       57.4237
       ],
       [
        300.0,
-       52.22
+       52.2172
       ],
       [
        360.0,
-       47.84
+       47.8366
       ]
      ],
      "n_points": 4,
@@ -5183,15 +5195,15 @@
       ],
       [
        240.0,
-       57.08
+       57.0769
       ],
       [
        300.0,
-       51.4
+       51.4037
       ],
       [
        360.0,
-       48.0
+       48.0033
       ]
      ],
      "n_points": 4,
@@ -5618,7 +5630,9 @@
    "rate_gain_printed": 0.0002,
    "approx": true,
    "label": "approx., read from Fig 5c",
-   "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points"
+   "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points",
+   "rate_gain_from_stored_points": 0.0001586,
+   "rate_gain_source": "reproduces the rate printed in the figure title"
   },
   {
    "id": "fig6a",
@@ -5653,23 +5667,23 @@
      "points": [
       [
        2.0,
-       38.41
+       38.4115
       ],
       [
        3.0,
-       38.41
+       38.4115
       ],
       [
        6.0,
-       38.41
+       38.4115
       ],
       [
        15.0,
-       38.41
+       38.4115
       ],
       [
        30.0,
-       38.41
+       38.4115
       ]
      ],
      "n_points": 5,
@@ -5696,23 +5710,23 @@
      "points": [
       [
        2.0,
-       44.77
+       44.7725
       ],
       [
        3.0,
-       35.92
+       35.8883
       ],
       [
        6.0,
-       32.5
+       32.5003
       ],
       [
        15.0,
-       31.9
+       31.8973
       ],
       [
        30.0,
-       31.76
+       31.7615
       ]
      ],
      "n_points": 5,
@@ -5757,7 +5771,8 @@
    "approx": true,
    "label": "approx., read from Fig 6a",
    "note": "EBT improves from 44.77 (no thinking) to 31.76 at 30 passes: 29.1% lower, matching the paper's \"up to 29%\". Transformer++ stays flat at about 38.41: more forward passes cannot change its per-token prediction.",
-   "thinking_improvement": 0.2906
+   "thinking_improvement": 0.2906,
+   "data_note": "Mean over the four downstream datasets of Table 3 (GSM8K, SQuAD, BigBench Elementary Math QA, BigBench Dyck Languages), p.34. The paper does not say exactly how \"perplexity increase\" is computed, and the plotted values do not follow from Table 3 by a simple mean, so show them as plotted."
   },
   {
    "id": "fig6b",
@@ -5792,135 +5807,135 @@
      "points": [
       [
        0.9831,
-       4.361
+       4.36147
       ],
       [
        1.966,
-       5.924
+       5.92357
       ],
       [
        2.949,
-       9.427
+       9.42727
       ],
       [
        3.932,
-       9.26
+       9.26022
       ],
       [
        4.915,
-       7.912
+       7.91169
       ],
       [
        5.898,
-       7.84
+       7.84028
       ],
       [
        6.881,
-       11.93
+       11.9314
       ],
       [
        7.864,
-       10.34
+       10.3383
       ],
       [
        8.847,
-       10.48
+       10.4759
       ],
       [
        9.83,
-       6.118
+       6.11847
       ],
       [
        10.81,
-       8.529
+       8.52853
       ],
       [
        11.8,
-       8.739
+       8.73892
       ],
       [
        12.78,
-       10.44
+       10.4356
       ],
       [
        13.76,
-       9.317
+       9.31727
       ],
       [
        14.75,
-       8.866
+       8.8655
       ],
       [
        15.73,
-       8.912
+       8.91151
       ],
       [
        16.71,
-       7.779
+       7.77933
       ],
       [
        17.91,
-       8.265
+       8.26495
       ],
       [
        18.89,
-       9.158
+       9.15779
       ],
       [
        19.87,
-       10.93
+       10.9269
       ],
       [
        20.86,
-       9.084
+       9.08421
       ],
       [
        21.84,
-       9.827
+       9.82705
       ],
       [
        22.82,
-       13.86
+       13.8572
       ],
       [
        23.81,
-       9.043
+       9.04273
       ],
       [
        24.79,
-       8.999
+       8.99858
       ],
       [
        25.77,
-       9.664
+       9.66391
       ],
       [
        26.76,
-       5.712
+       5.71173
       ],
       [
        27.74,
-       9.863
+       9.86262
       ],
       [
        28.72,
-       13.53
+       13.5253
       ],
       [
        29.71,
-       9.22
+       9.21999
       ],
       [
        30.69,
-       10.86
+       10.857
       ],
       [
        31.67,
-       11.34
+       11.3357
       ],
       [
        32.65,
-       10.27
+       10.2727
       ]
      ],
      "n_points": 33,
@@ -6171,7 +6186,8 @@
    "rate_gain_printed": null,
    "approx": true,
    "label": "approx., read from Fig 6b",
-   "note": "Same 33 points as Fig B.1b (x there in tokens). Paper text: verification gain grows from 4%-8% to 10%-14% (p.10)."
+   "note": "Same 33 points as Fig B.1b (x there in tokens). Paper text: verification gain grows from 4%-8% to 10%-14% (p.10).",
+   "data_note": "BigBench Dyck Languages only (p.34: \"Figure 6b was solely from the Dyck Languages benchmark\")."
   },
   {
    "id": "fig7",
@@ -6206,7 +6222,7 @@
      "points": [
       [
        1.0,
-       11.84
+       11.8421
       ],
       [
        1.316,
@@ -6214,15 +6230,15 @@
       ],
       [
        1.774,
-       16.32
+       16.3205
       ],
       [
        2.318,
-       16.12
+       16.118
       ],
       [
        4.374,
-       22.98
+       22.9844
       ]
      ],
      "n_points": 5,
@@ -6584,7 +6600,8 @@
    "rate_gain": null,
    "rate_gain_printed": null,
    "approx": true,
-   "label": "approx., read from Fig 7"
+   "label": "approx., read from Fig 7",
+   "data_note": "Five points: the RedPajamaV2 pretraining data (shift 1.0) and the four downstream datasets of Table 3 (p.34). The x values are not the Table 3 perplexity ratios of either model, so use them as plotted."
   },
   {
    "id": "fig9a",
@@ -6635,7 +6652,7 @@
       ],
       [
        2048.0,
-       1.484
+       1.48437
       ]
      ],
      "n_points": 5,
@@ -7080,7 +7097,7 @@
       ],
       [
        2048.0,
-       1.513
+       1.51295
       ]
      ],
      "n_points": 5,
@@ -7507,7 +7524,9 @@
    "rate_gain_printed": 0.3366,
    "approx": true,
    "label": "approx., read from Fig 9a",
-   "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points"
+   "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points",
+   "rate_gain_from_stored_points": 0.3366,
+   "rate_gain_source": "reproduces the rate printed in the figure title"
   },
   {
    "id": "fig9b",
@@ -7558,7 +7577,7 @@
       ],
       [
        708.2,
-       1.484
+       1.48437
       ]
      ],
      "n_points": 5,
@@ -8003,7 +8022,7 @@
       ],
       [
        708.2,
-       1.513
+       1.51295
       ]
      ],
      "n_points": 5,
@@ -8430,7 +8449,9 @@
    "rate_gain_printed": 0.3428,
    "approx": true,
    "label": "approx., read from Fig 9b",
-   "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points"
+   "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points",
+   "rate_gain_from_stored_points": 0.3428,
+   "rate_gain_source": "reproduces the rate printed in the figure title"
   },
   {
    "id": "fig12",
@@ -8466,15 +8487,15 @@
      "points": [
       [
        100.0,
-       14.31
+       14.306
       ],
       [
        200.0,
-       18.86
+       18.8554
       ],
       [
        300.0,
-       19.57
+       19.566
       ]
      ],
      "n_points": 3,
@@ -8513,15 +8534,15 @@
      "points": [
       [
        1.0,
-       13.92
+       13.919
       ],
       [
        2.0,
-       18.82
+       18.8151
       ],
       [
        3.0,
-       23.29
+       23.287
       ]
      ],
      "n_points": 3,
@@ -8559,7 +8580,9 @@
    "approx": true,
    "label": "approx., read from Fig 12",
    "rate_gain_definition": "|slope_EBT| / |slope_DiT| - 1, slopes of log10-log10 OLS fits to the digitized points",
-   "note": "Paper prints no rate for this figure; rate_gain here is an explainer computation from 3 points per model (EBT 1-3 passes vs DiT 100-300 passes). EBT at 3 passes ≈ Table 4 EBT OOD PSNR 23.29; DiT at 300 ≈ Table 4 DiT 19.56."
+   "note": "Paper prints no rate for this figure; rate_gain here is an explainer computation from 3 points per model (EBT 1-3 passes vs DiT 100-300 passes). EBT at 3 passes ≈ Table 4 EBT OOD PSNR 23.29; DiT at 300 ≈ Table 4 DiT 19.56.",
+   "rate_gain_from_stored_points": 0.5639,
+   "rate_gain_source": "explainer computation; the paper prints no rate for this figure"
   },
   {
    "id": "figB1a",
@@ -8594,127 +8617,127 @@
      "points": [
       [
        2.949,
-       1.56
+       1.55994
       ],
       [
        3.932,
-       1.271
+       1.27099
       ],
       [
        4.915,
-       1.431
+       1.43089
       ],
       [
        5.898,
-       1.756
+       1.75634
       ],
       [
        6.881,
-       0.9964
+       0.996366
       ],
       [
        7.864,
-       1.118
+       1.11832
       ],
       [
        8.847,
-       -0.225
+       -0.225048
       ],
       [
        9.831,
-       0.5295
+       0.529483
       ],
       [
        10.81,
-       1.621
+       1.62093
       ],
       [
        11.8,
-       1.363
+       1.36341
       ],
       [
        12.78,
-       1.029
+       1.02947
       ],
       [
        13.76,
-       1.877
+       1.87717
       ],
       [
        14.75,
-       1.932
+       1.93243
       ],
       [
        15.73,
-       1.596
+       1.59616
       ],
       [
        16.71,
-       2.317
+       2.31667
       ],
       [
        17.91,
-       1.247
+       1.24719
       ],
       [
        18.89,
-       1.902
+       1.90173
       ],
       [
        19.87,
-       0.987
+       0.987021
       ],
       [
        20.86,
-       2.081
+       2.08121
       ],
       [
        21.84,
-       1.776
+       1.77635
       ],
       [
        22.82,
-       0.9515
+       0.95149
       ],
       [
        23.81,
-       2.567
+       2.56721
       ],
       [
        24.79,
-       1.976
+       1.97596
       ],
       [
        25.77,
-       2.07
+       2.07028
       ],
       [
        26.76,
-       1.943
+       1.94263
       ],
       [
        27.74,
-       1.312
+       1.31204
       ],
       [
        28.72,
-       1.88
+       1.87976
       ],
       [
        29.71,
-       2.326
+       2.32608
       ],
       [
        30.69,
-       2.152
+       2.15198
       ],
       [
        31.67,
-       2.126
+       2.12612
       ],
       [
        32.65,
-       2.195
+       2.19469
       ]
      ],
      "n_points": 31,
@@ -8980,7 +9003,8 @@
    "rate_gain": null,
    "rate_gain_printed": null,
    "approx": true,
-   "label": "approx., read from Fig B.1a"
+   "label": "approx., read from Fig B.1a",
+   "data_note": "RedPajamaV2 validation set (p.34)."
   },
   {
    "id": "figB1b",
@@ -9015,135 +9039,135 @@
      "points": [
       [
        983100000.0,
-       4.362
+       4.36163
       ],
       [
        1966000000.0,
-       5.924
+       5.92388
       ],
       [
        2949000000.0,
-       9.427
+       9.42741
       ],
       [
        3932000000.0,
-       9.26
+       9.26038
       ],
       [
        4915000000.0,
-       7.912
+       7.91183
       ],
       [
        5898000000.0,
-       7.841
+       7.84076
       ],
       [
        6882000000.0,
-       11.93
+       11.9316
       ],
       [
        7864000000.0,
-       10.34
+       10.3389
       ],
       [
        8848000000.0,
-       10.48
+       10.4765
       ],
       [
        9830000000.0,
-       6.119
+       6.11875
       ],
       [
        10810000000.0,
-       8.529
+       8.52856
       ],
       [
        11800000000.0,
-       8.739
+       8.73923
       ],
       [
        12780000000.0,
-       10.44
+       10.4356
       ],
       [
        13760000000.0,
-       9.317
+       9.31731
       ],
       [
        14750000000.0,
-       8.866
+       8.86595
       ],
       [
        15730000000.0,
-       8.912
+       8.91202
       ],
       [
        16710000000.0,
-       7.78
+       7.7796
       ],
       [
        17910000000.0,
-       8.265
+       8.26491
       ],
       [
        18890000000.0,
-       9.158
+       9.15829
       ],
       [
        19870000000.0,
-       10.93
+       10.9273
       ],
       [
        20860000000.0,
-       9.084
+       9.0841
       ],
       [
        21840000000.0,
-       9.827
+       9.82728
       ],
       [
        22820000000.0,
-       13.86
+       13.8577
       ],
       [
        23810000000.0,
-       9.043
+       9.0433
       ],
       [
        24790000000.0,
-       8.999
+       8.99859
       ],
       [
        25770000000.0,
-       9.664
+       9.66449
       ],
       [
        26760000000.0,
-       5.712
+       5.71194
       ],
       [
        27740000000.0,
-       9.863
+       9.86285
       ],
       [
        28720000000.0,
-       13.53
+       13.5256
       ],
       [
        29710000000.0,
-       9.22
+       9.22017
       ],
       [
        30690000000.0,
-       10.86
+       10.8573
       ],
       [
        31670000000.0,
-       11.34
+       11.336
       ],
       [
        32650000000.0,
-       10.27
+       10.2726
       ]
      ],
      "n_points": 33,
@@ -9334,7 +9358,7 @@
      },
      "extrapolated_point": [
       15000000000000.0,
-      1345.0
+      1330.4
      ],
      "extrapolated_legend": "BoN-5 Samples (extrapolated)"
     }
@@ -9343,7 +9367,8 @@
    "rate_gain_printed": null,
    "approx": true,
    "label": "approx., read from Fig B.1b",
-   "note": "Circles = Fig 6b data. The curve is the Fig 6b linear regression (in tokens) extended to 1.5e13 tokens (Llama3 scale); it looks curved only because both axes are log. The star is the extrapolated value, not a measurement."
+   "note": "Circles = Fig 6b data. The curve is the Fig 6b linear regression (in tokens) extended to 1.5e13 tokens (Llama3 scale); it looks curved only because both axes are log. The star is the extrapolated value (about 1330%), not a measurement; it lies on that line.",
+   "data_note": "Same Dyck Languages points as Fig 6b, x in tokens."
   },
   {
    "id": "figB3a",
@@ -9378,71 +9403,71 @@
      "points": [
       [
        3.931,
-       40.08
+       40.0849
       ],
       [
        11.8,
-       31.5
+       31.5004
       ],
       [
        19.66,
-       29.52
+       29.518
       ],
       [
        27.52,
-       28.53
+       28.5313
       ],
       [
        35.39,
-       27.85
+       27.8547
       ],
       [
        43.25,
-       27.41
+       27.4124
       ],
       [
        51.12,
-       27.09
+       27.0855
       ],
       [
        58.98,
-       26.76
+       26.7625
       ],
       [
        66.85,
-       26.47
+       26.4698
       ],
       [
        74.71,
-       26.23
+       26.2324
       ],
       [
        82.57,
-       26.02
+       26.0236
       ],
       [
        90.44,
-       25.82
+       25.8161
       ],
       [
        98.3,
-       25.64
+       25.6361
       ],
       [
        106.2,
-       25.46
+       25.4571
       ],
       [
        114.0,
-       25.28
+       25.2795
       ],
       [
        121.9,
-       25.1
+       25.1033
       ],
       [
        130.0,
-       24.93
+       24.9282
       ]
      ],
      "n_points": 17,
@@ -9875,71 +9900,71 @@
      "points": [
       [
        3.931,
-       45.97
+       45.9705
       ],
       [
        11.8,
-       34.12
+       34.1241
       ],
       [
        19.66,
-       31.44
+       31.4374
       ],
       [
        27.52,
-       30.02
+       30.0242
       ],
       [
        35.39,
-       29.11
+       29.1075
       ],
       [
        43.25,
-       28.42
+       28.4174
       ],
       [
        51.12,
-       27.8
+       27.7988
       ],
       [
        58.98,
-       27.3
+       27.3032
       ],
       [
        66.85,
-       26.87
+       26.8697
       ],
       [
        74.71,
-       26.44
+       26.4432
       ],
       [
        82.57,
-       26.13
+       26.1279
       ],
       [
        90.44,
-       25.82
+       25.8161
       ],
       [
        98.3,
-       25.51
+       25.5083
       ],
       [
        106.2,
-       25.25
+       25.2544
       ],
       [
        114.0,
-       25.03
+       25.0281
       ],
       [
        121.9,
-       24.78
+       24.7792
       ],
       [
        130.0,
-       24.56
+       24.557
       ]
      ],
      "n_points": 17,
@@ -10371,7 +10396,10 @@
    "approx": true,
    "label": "approx., read from Fig B.3a",
    "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points",
-   "note": "The smooth curves drawn in this panel are display trend lines (quadratic in ln x). The printed rate comes from straight-line fits in log-log space (series[].fit)."
+   "note": "The smooth curves drawn in this panel are display trend lines (quadratic in ln x). The printed rate comes from straight-line fits in log-log space (series[].fit).",
+   "rate_gain_from_stored_points": 0.3569,
+   "rate_gain_source": "reproduces the rate printed in the figure title",
+   "data_note": "FineWeb, small models, batch 256, context 1024, 500,000 steps (p.28)."
   },
   {
    "id": "figB3b",
@@ -10406,47 +10434,47 @@
      "points": [
       [
        51.12,
-       27.09
+       27.0855
       ],
       [
        58.98,
-       26.76
+       26.7625
       ],
       [
        66.85,
-       26.47
+       26.4697
       ],
       [
        74.71,
-       26.23
+       26.2325
       ],
       [
        82.58,
-       26.02
+       26.0235
       ],
       [
        90.44,
-       25.82
+       25.8161
       ],
       [
        98.3,
-       25.64
+       25.6361
       ],
       [
        106.2,
-       25.46
+       25.4572
       ],
       [
        114.0,
-       25.28
+       25.2797
       ],
       [
        121.9,
-       25.1
+       25.1033
       ],
       [
        130.0,
-       24.93
+       24.9282
       ]
      ],
      "n_points": 11,
@@ -10879,47 +10907,47 @@
      "points": [
       [
        51.12,
-       27.8
+       27.799
       ],
       [
        58.98,
-       27.3
+       27.3031
       ],
       [
        66.85,
-       26.87
+       26.8697
       ],
       [
        74.71,
-       26.44
+       26.4432
       ],
       [
        82.58,
-       26.13
+       26.1278
       ],
       [
        90.44,
-       25.82
+       25.8161
       ],
       [
        98.3,
-       25.51
+       25.5082
       ],
       [
        106.2,
-       25.25
+       25.2544
       ],
       [
        114.0,
-       25.03
+       25.0281
       ],
       [
        121.9,
-       24.78
+       24.7791
       ],
       [
        130.0,
-       24.56
+       24.5571
       ]
      ],
      "n_points": 11,
@@ -11351,7 +11379,10 @@
    "approx": true,
    "label": "approx., read from Fig B.3b",
    "rate_gain_definition": "|slope_EBT| / |slope_Transformer++| - 1, slopes of log10-log10 OLS fits to the digitized points",
-   "note": "The smooth curves drawn in this panel are display trend lines (quadratic in ln x). The printed rate comes from straight-line fits in log-log space (series[].fit)."
+   "note": "The smooth curves drawn in this panel are display trend lines (quadratic in ln x). The printed rate comes from straight-line fits in log-log space (series[].fit).",
+   "rate_gain_from_stored_points": 0.517,
+   "rate_gain_source": "reproduces the rate printed in the figure title",
+   "data_note": "FineWeb, same runs as Fig B.3a, only the points from about 51B tokens on (p.28-29)."
   },
   {
    "id": "figC1",
@@ -11386,11 +11417,11 @@
      "points": [
       [
        0.9,
-       69.18
+       69.1805
       ],
       [
        2.4,
-       57.55
+       57.5499
       ],
       [
        4.6,
@@ -11398,7 +11429,7 @@
       ],
       [
        12.4,
-       43.71
+       43.7099
       ]
      ],
      "n_points": 4,
@@ -11827,19 +11858,19 @@
      "points": [
       [
        0.9,
-       78.88
+       78.8802
       ],
       [
        2.4,
-       65.6
+       65.6003
       ],
       [
        4.6,
-       57.05
+       57.0499
       ],
       [
        12.4,
-       49.35
+       49.3498
       ]
      ],
      "n_points": 4,
@@ -12267,64 +12298,77 @@
    "approx": true,
    "label": "approx., read from Fig C.1",
    "rate_gain_definition": "|slope_EBT-S2| / |slope_EBT-S1| - 1, slopes of log10-log10 OLS fits to the digitized points",
-   "note": "EBT-S1 = EBT trained with System 1 hyperparameters, EBT-S2 = with System 2 (thinking) hyperparameters, see Appendix C."
+   "note": "EBT-S1 = EBT trained with System 1 hyperparameters, EBT-S2 = with System 2 (thinking) hyperparameters, see Appendix C.",
+   "rate_gain_from_stored_points": 0.033,
+   "rate_gain_source": "reproduces the rate printed in the figure title"
   }
  ],
  "printed_rate_check": [
   {
    "id": "fig4a",
    "computed": 0.3598,
-   "printed": 0.3598
+   "printed": 0.3598,
+   "from_stored_points": 0.3598
   },
   {
    "id": "fig4b",
    "computed": 0.2846,
-   "printed": 0.2846
+   "printed": 0.2846,
+   "from_stored_points": 0.2846
   },
   {
    "id": "fig4c",
    "computed": 0.05285,
-   "printed": 0.0529
+   "printed": 0.0529,
+   "from_stored_points": 0.05285
   },
   {
    "id": "fig5a",
    "computed": 0.02913,
-   "printed": 0.0291
+   "printed": 0.0291,
+   "from_stored_points": 0.02913
   },
   {
    "id": "fig5b",
    "computed": 0.02922,
-   "printed": 0.0292
+   "printed": 0.0292,
+   "from_stored_points": 0.02918
   },
   {
    "id": "fig5c",
    "computed": 0.0001614,
-   "printed": 0.0002
+   "printed": 0.0002,
+   "from_stored_points": 0.0001586
   },
   {
    "id": "fig9a",
    "computed": 0.3366,
-   "printed": 0.3366
+   "printed": 0.3366,
+   "from_stored_points": 0.3366
   },
   {
    "id": "fig9b",
    "computed": 0.3429,
-   "printed": 0.3428
+   "printed": 0.3428,
+   "from_stored_points": 0.3428
   },
   {
    "id": "figB3a",
    "computed": 0.3569,
-   "printed": 0.3569
+   "printed": 0.3569,
+   "from_stored_points": 0.3569
   },
   {
    "id": "figB3b",
    "computed": 0.517,
-   "printed": 0.517
+   "printed": 0.517,
+   "from_stored_points": 0.517
   },
   {
    "id": "figC1",
    "computed": 0.033,
-   "printed": 0.033
+   "printed": 0.033,
+   "from_stored_points": 0.033
   }
  ]
 }

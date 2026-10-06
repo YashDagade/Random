@@ -1,0 +1,115 @@
+/* Energy landscape lab. Every selector is scoped to #landscape or .landscape-*. Colors come from base.css tokens. */
+#landscape .landscape-h3 { font-size: clamp(21px, 2.6vw, 26px); margin-top: 26px; }
+#landscape .landscape-h3 .n { display: inline-block; font-family: var(--f-mono); font-size: 13px; font-weight: 500; color: var(--bg); background: var(--ebt); border-radius: 6px; padding: 1px 8px; margin-right: 10px; vertical-align: 4px; }
+#landscape .landscape-p { max-width: 76ch; color: var(--ink); }
+#landscape .landscape-eq { font-family: var(--f-mono); font-size: .9em; white-space: nowrap; color: var(--ebt); }
+#landscape .landscape-hint { font-size: 14px; color: var(--muted); line-height: 1.45; }
+
+/* canvases sized to their CSS width (logical px = CSS px) */
+.landscape-cv { position: relative; width: 100%; min-width: 0; }
+.landscape-cv canvas { display: block; width: 100%; border-radius: 10px; background: var(--bg); }
+.landscape-cv.drag canvas { touch-action: none; cursor: crosshair; }
+.landscape-cv.rot canvas { touch-action: pan-y; cursor: grab; }
+.landscape-cv.rot canvas:active { cursor: grabbing; }
+
+/* lab bench */
+#landscape .landscape-bench { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); }
+@media (max-width: 960px) { #landscape .landscape-bench { grid-template-columns: minmax(0, 1fr); } }
+#landscape .landscape-ctl { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-content: start; }
+#landscape .landscape-ctl h4 { margin: 6px 0 0; }
+#landscape .landscape-ctl h4:first-child { margin-top: 0; }
+#landscape .landscape-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#landscape .landscape-chip { appearance: none; text-align: left; background: var(--panel2); color: var(--ink); border: 1px solid var(--rule); border-radius: 8px; padding: 5px 8px; cursor: pointer; display: flex; flex-direction: column; gap: 0; font: 13.5px/1.3 var(--f-body); min-width: 0; }
+#landscape .landscape-chip b { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#landscape .landscape-chip span { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+#landscape .landscape-chip:hover { border-color: var(--muted); }
+#landscape .landscape-chip[aria-pressed="true"] { border-color: var(--ebt); background: rgba(255, 201, 92, .12); }
+#landscape .landscape-chip[aria-pressed="true"] span { color: var(--ebt); }
+#landscape .landscape-sliders { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (max-width: 960px) and (min-width: 360px) { #landscape .landscape-sliders { grid-template-columns: 1fr 1fr; gap: 10px 14px; } }
+#landscape .landscape-check { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--ink); cursor: pointer; line-height: 1.35; }
+#landscape .landscape-check input { accent-color: var(--ebt); margin: 2px 0 0; width: 16px; height: 16px; flex: none; }
+#landscape .landscape-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+#landscape .landscape-preset { font-size: 13px; padding: 6px 10px; }
+
+/* instrument */
+#landscape .landscape-inst { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+#landscape .landscape-tbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+#landscape .landscape-status { font-family: var(--f-mono); font-size: 13px; color: var(--muted); }
+#landscape .landscape-badges { gap: 6px 12px; }
+#landscape .landscape-src { font-family: var(--f-mono); font-size: 12px; color: var(--faint); }
+#landscape .landscape-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+@media (max-width: 680px) { #landscape .landscape-pair { grid-template-columns: minmax(0, 1fr); } }
+#landscape .landscape-fig { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; align-content: start; }
+#landscape .landscape-fig figcaption { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+#landscape .landscape-fig figcaption.landscape-cap { display: block; }
+#landscape .landscape-cap { font-size: 14px; color: var(--muted); line-height: 1.45; }
+#landscape .landscape-cap b { color: var(--ink); font-weight: 700; }
+#landscape .landscape-cbar { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+#landscape .legend i.ring { background: transparent; border: 2px solid var(--ink); border-radius: 50%; width: 11px; height: 11px; }
+#landscape .landscape-plots { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+@media (max-width: 680px) { #landscape .landscape-plots { grid-template-columns: minmax(0, 1fr); } }
+#landscape .landscape-plots canvas { background: var(--panel2); }
+#landscape .landscape-readout { gap: 4px 18px; }
+#landscape .landscape-readout span { white-space: nowrap; }
+@media (max-width: 560px) { #landscape .landscape-readout span { white-space: normal; } }
+#landscape .landscape-lower { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 1100px) { #landscape .landscape-lower { grid-template-columns: minmax(0, 1fr); } }
+#landscape .landscape-eqcard { background: var(--panel2); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; min-width: 0; overflow-x: auto; }
+#landscape .landscape-eqh { font-size: 13px; color: var(--ink); font-weight: 700; margin-bottom: 4px; }
+#landscape .landscape-eqh span { font-weight: 400; color: var(--muted); }
+#landscape .landscape-eqcard table { font-family: var(--f-mono); font-size: 13px; width: auto; }
+#landscape .landscape-eqcard td { padding: 2px 10px 2px 0; border: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#landscape .landscape-eqcard td:first-child { color: var(--ebt); }
+#landscape .landscape-eqcard td:last-child { color: var(--muted); }
+#landscape .landscape-eqcard tr.sum td { border-top: 1px solid var(--rule); padding-top: 4px; }
+#landscape .landscape-notes { max-width: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; font-size: 15px; line-height: 1.5; }
+#landscape .landscape-notes b { color: var(--truth); }
+
+/* part 2 */
+#landscape .landscape-vgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { #landscape .landscape-vgrid { grid-template-columns: minmax(0, 1fr); } }
+#landscape .landscape-vgrid .card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+#landscape .landscape-cardhead { justify-content: space-between; }
+#landscape .landscape-bars { display: grid; gap: 8px; min-height: 84px; align-content: start; }
+#landscape .landscape-bar { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 14px; }
+#landscape .landscape-bar .l { color: var(--ink); }
+#landscape .landscape-bar .b { height: 14px; background: var(--panel2); border-radius: 4px; overflow: hidden; }
+#landscape .landscape-bar .b i { display: block; height: 100%; border-radius: 4px; }
+#landscape .landscape-bar .v { font-family: var(--f-mono); font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+@media (max-width: 420px) { #landscape .landscape-bar { grid-template-columns: minmax(0, 1fr) auto; } #landscape .landscape-bar .b { grid-column: 1 / -1; grid-row: 2; } }
+#landscape .landscape-prog { height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+#landscape .landscape-prog i { display: block; height: 100%; background: var(--ebt); }
+#landscape .landscape-paperrow { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 14px; align-items: start; border-left: 3px solid var(--ar); background: rgba(142, 167, 255, .06); padding: 12px 16px; border-radius: 0 10px 10px 0; }
+#landscape .landscape-paperrow p { font-size: 15px; max-width: 90ch; }
+@media (max-width: 700px) { #landscape .landscape-paperrow { grid-template-columns: minmax(0, 1fr); } #landscape .landscape-paperrow .badge { justify-self: start; white-space: normal; } }
+
+/* part 3 */
+#landscape .landscape-ugrid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { #landscape .landscape-ugrid { grid-template-columns: minmax(0, 1fr); } }
+#landscape .landscape-ugrid .card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+#landscape .landscape-utext p { max-width: 70ch; }
+#landscape .landscape-utext .callout { font-size: 15px; }
+
+/* part 4 */
+#landscape .landscape-lcard { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+#landscape .landscape-lhead { gap: 8px 10px; }
+#landscape .landscape-lhead .badge { margin-left: auto; }
+#landscape .landscape-ltitle { font-size: 14.5px; color: var(--muted); }
+#landscape .landscape-ltitle b { font-family: var(--f-display); font-size: 18px; color: var(--ink); font-weight: 600; margin-right: 4px; }
+#landscape .landscape-lgrid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { #landscape .landscape-lgrid { grid-template-columns: minmax(0, 1fr); } }
+#landscape .landscape-lgrid .card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+#landscape .landscape-code { margin: 0; font-family: var(--f-mono); font-size: 13px; line-height: 1.55; color: var(--ink); background: var(--panel2); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; overflow-x: auto; white-space: pre; }
+#landscape .landscape-code .c { color: var(--muted); }
+#landscape .landscape-lgrid table th[scope="row"] { color: var(--muted); white-space: nowrap; }
+#landscape .landscape-lgrid table td { font-size: 14px; }
+@media (max-width: 560px) { #landscape .landscape-lgrid table th[scope="row"] { white-space: normal; } #landscape .landscape-lgrid th, #landscape .landscape-lgrid td { padding: 7px 8px; } }
+#landscape .landscape-fig3 { max-width: 640px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+#landscape .landscape-fig3 figcaption { margin: 0; }
+#landscape .landscape-fig3 .badge { margin-right: 4px; }
+@media (max-width: 560px) { #landscape .landscape-ctl, #landscape .landscape-inst { padding: 12px; } #landscape .landscape-fig3 .badge { white-space: normal; } }
+
+#landscape .landscape-utext { grid-template-columns: minmax(0, 1fr); }
+#landscape > .wrap > .stack > * { min-width: 0; }
+#landscape .badge { white-space: normal; max-width: 100%; line-height: 1.35; }

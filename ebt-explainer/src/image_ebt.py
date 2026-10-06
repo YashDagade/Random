@@ -200,15 +200,15 @@ def train(mode, npz, run_dir, seconds, est_steps, max_steps=10**9, tag=None):
     os.makedirs(run_dir, exist_ok=True)
     tr, te, _ = load_data(npz)
     rng = np.random.default_rng(0)
-    key = jax.random.PRNGKey({"ebt": 1, "ff": 2, "diff": 3}[mode])
-    cin = {"ebt": 6, "ff": 3, "diff": 4}[mode]
-    p = init_trunk(key, cin, out_gain=0.3 if mode == "ebt" else 0.1)
+    key = jax.random.PRNGKey({"ebt": 1, "ff": 2, "diff": 3, "ebtx": 4}[mode])
+    cin = {"ebt": 6, "ff": 3, "diff": 4, "ebtx": 6}[mode]
+    p = init_trunk(key, cin, out_gain=0.3 if mode in ("ebt", "ebtx") else 0.1)
     st = adam_init(p)
     bs = HP["batch"]
     t_tr = t_of_sigma(HP["sigma_train"])
     gen = batches(rng, tr, bs)
 
-    if mode == "ebt":
+    if mode in ("ebt", "ebtx"):
         fns = {}
         for k in HP["ebt_steps_choices"]:
             lf = make_ebt_loss(k)
@@ -230,10 +230,11 @@ def train(mode, npz, run_dir, seconds, est_steps, max_steps=10**9, tag=None):
     while time.time() - t0 < seconds and step < max_steps:
         y = jnp.asarray(next(gen))
         key, k1, k2, k3, k4 = jax.random.split(key, 5)
-        if mode == "ebt":
+        if mode in ("ebt", "ebtx"):
             x, _ = add_noise(k1, y, t_tr)
             n = int(rng.choice(HP["ebt_steps_choices"]))
-            y0 = jax.random.normal(k2, y.shape)
+            # ebt: yhat_0 ~ N(0, I) (paper Alg. 1); ebtx: yhat_0 = x_noisy (start from the observation)
+            y0 = jax.random.normal(k2, y.shape) if mode == "ebt" else x
             lnr = np.log(HP["ebt_alpha_rand"])
             alphas = HP["ebt_alpha"] * jnp.exp(jax.random.uniform(k3, (bs,), minval=-lnr, maxval=lnr))
             etas = HP["ebt_langevin"] * jax.random.normal(k4, (n,) + y.shape)

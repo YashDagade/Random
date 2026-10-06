@@ -3,3 +3,4 @@ video/build/
 video/*.wav
 src/__pycache__/
 *.pyc
+legacy/video/

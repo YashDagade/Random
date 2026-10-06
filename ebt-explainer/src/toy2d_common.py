@@ -46,10 +46,10 @@ def sig4(a):
     a = np.asarray(a, dtype=np.float64)
     if a.ndim == 0:
         v = float(a)
-        if v == 0 or not np.isfinite(v):
-            return 0.0 if v == 0 else v
+        if abs(v) < 1e-12 or not np.isfinite(v):   # |v| < 1e-12: float noise such as sin(pi) = 1.2e-16 -> 0
+            return 0.0 if np.isfinite(v) else v
         return float(f"{v:.4g}")
-    flat = np.array([float(f"{v:.4g}") if v != 0 else 0.0 for v in a.ravel()])
+    flat = np.array([float(f"{v:.4g}") if abs(v) >= 1e-12 else 0.0 for v in a.ravel()])
     return flat.reshape(a.shape).tolist()
 
 
