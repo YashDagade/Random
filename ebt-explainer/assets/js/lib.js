@@ -73,7 +73,7 @@
   lib.fmt = (v, d = 2) => (v == null || !isFinite(v)) ? '–' : Math.abs(v) >= 1e4 ? v.toExponential(2) : v.toFixed(d);
   lib.loop = function (cb) {
     let raf = null, last = 0;
-    const tick = (now) => { const dt = Math.min(0.1, (now - last) / 1000); last = now; if (cb(dt) === false) { raf = null; return; } raf = requestAnimationFrame(tick); };
+    const tick = (now) => { const dt = Math.max(0, Math.min(0.1, (now - last) / 1000)); last = now; if (cb(dt) === false) { raf = null; return; } raf = requestAnimationFrame(tick); };
     return { start() { if (raf) return; last = performance.now(); raf = requestAnimationFrame(tick); }, stop() { if (raf) cancelAnimationFrame(raf); raf = null; }, get running() { return !!raf; } };
   };
   // value at quantile q (0..1) of a 2-D grid: use for heatmap ranges so basins stay visible, e.g. range: [lo, lib.quantile(E, 0.6)]

@@ -633,7 +633,9 @@ def build_setups():
              "input": "128 x 128 pixels, patch size 16; noise from a linear variance schedule 1e-4 to 2e-2 with "
                       "sigma = fraction of the schedule: 0.1 for training and in-distribution test, 0.2 for OOD "
                       "test (p.13)",
-             "loss": "mean squared error (p.7)",
+             "loss": "mean squared error (paper text, p.7). Note: the authors' public code (model/img/ebt_denoise.py, "
+                     "checked at commit 19420cb) trains the EBT denoiser with Smooth L1 (beta 1.0); metrics are "
+                     "PSNR / pixel MSE.",
              "baseline": "DiT (Diffusion Transformer implementation from [26]); best inference found was DDIM "
                          "applied recursively on its own output (p.35)",
              "metrics": "PSNR and pixel MSE at sigma 0.1 and 0.2; ImageNet-1k linear probe top-1 / top-5 using "

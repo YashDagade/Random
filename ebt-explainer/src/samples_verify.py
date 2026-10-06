@@ -1,6 +1,8 @@
 """Independent verifier for data/samples.json (run with python3 -I).
 
 Usage: python3 -I src/samples_verify.py <downloads_dir> <project_root> [<fresh_dir>]
+  <fresh_dir>: independent datasets-server responses named fresh_gsm8k*.json, fresh_squad*.json, fresh_dyck*.json,
+  fresh_emqa*.json (fetched with curl into scratchpad/ebt/downloads/samples_verify/).
 
 Checks (prints PASS/FAIL lines, exits non-zero on any FAIL):
   text   : re-tokenizes every snippet with the GPT-NeoX tokenizer.json, checks ids, text spans, BPE pieces,

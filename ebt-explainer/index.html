@@ -23,6 +23,7 @@
     <div class="k">arXiv 2507.02092 · Gladstone et al. 2025</div>
     <h1>Energy-Based Transformers learn to <em>think</em> by optimizing against their own verifier</h1>
     <p>A step-by-step, interactive reading of <i>Energy-Based Transformers are Scalable Learners and Thinkers</i>. Each section pairs a live figure with the text and equations behind it. Drag predictions across real learned energy landscapes, unroll training one gradient at a time, watch a text model think, and plan with an energy.</p>
+    <div class="hero-fig frame" id="hero-fig"><span class="cnr"></span></div>
     <div class="legend"><span class="src paper">from the paper</span><span class="src toy">toy model trained for this explainer</span><span class="src ext">beyond the paper</span><span class="src concept">illustration</span></div>
     <div class="meta">Authors: Alexi Gladstone, Ganesh Nanduru, Md Mofijul Islam, Peixuan Han, Hyeonjeong Ha, Aman Chadha, Yilun Du, Heng Ji, Jundong Li, Tariq Iqbal</div>
     <a class="start" href="#system2">Start reading ↓</a>
@@ -37,5 +38,33 @@
 <script src="assets/js/toy2d_model.js"></script>
 <script>(window.EBT_PANELS || []).forEach(p => p.ids.forEach(id => document.write('<script src="assets/js/panels/' + id + '.js"><\/script>')));</script>
 <script>EBT.boot();</script>
+<script>
+// Hero: the toy EBT's real landscape for one context; three random guesses think their way down, on a loop.
+(function () {
+  const M = EBT.toy2d, lib = EBT.lib, host = document.getElementById('hero-fig');
+  if (!M || !M.ready || !host) { if (host) host.remove(); return; }
+  const W = 640, H = 240, cv = lib.canvas(host, W, H, { label: 'Three random predictions descending an energy landscape to its low-energy basin' });
+  const K = M.nCkpt - 1, x = M.contexts[0].x, ext = [-2.6, 2.6, -0.98, 0.98], g = M.grid(K, x, 80, ext);
+  const box = { x: 0, y: 0, w: W, h: H }, q = lib.quantile(g.E, 0.5);
+  const starts = [[-2.3, 0.7], [-1.0, -0.8], [2.4, 0.85]];
+  const paths = starts.map((s, i) => M.descend(K, x, s, { alpha: 0.08, steps: 44, sigma: 0.0, seed: i + 1 }).path);
+  let t = 0; const L = lib.loop((dt) => { t += dt; draw(); });
+  function draw() {
+    const c = cv.ctx; cv.clear();
+    lib.heatmap(c, g.E, 0, 0, W, H, { key: 'hero', range: [g.lo, q], gamma: 0.7 });
+    lib.contours(c, g.E, 0, 0, W, H, Array.from({ length: 9 }, (_, i) => g.lo + (q - g.lo) * Math.pow((i + 1) / 10, 1.4)), { color: 'rgba(17,17,17,0.18)', width: 1 });
+    const k = Math.min(44, Math.floor((t % 9) / 0.16));
+    paths.forEach(pth => {
+      const px = pth.slice(0, k + 1).map(p => M.toPx(p, box, ext));
+      lib.line(c, px, { color: lib.C.blue, width: 1.6 });
+      const e = px[px.length - 1]; lib.dot(c, e[0], e[1], 5, lib.C.blue, { stroke: '#fff', lw: 1.5 });
+    });
+    lib.text(c, 'thinking step ' + k, 10, 10, { size: 12, kind: 'mono', color: '#111' });
+    lib.text(c, 'E(x, ŷ): darker = lower energy', W - 10, H - 22, { size: 11, kind: 'mono', color: '#fff', align: 'right' });
+  }
+  draw();
+  if (!lib.reducedMotion) new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? L.start() : L.stop())).observe(host);
+})();
+</script>
 </body>
 </html>

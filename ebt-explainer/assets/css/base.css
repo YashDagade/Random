@@ -59,7 +59,9 @@ main { margin-left: var(--rail); }
 /* ---------- hero ---------- */
 .hero { min-height: 92vh; display: grid; align-content: center; justify-items: center; text-align: center; gap: 22px; padding: 60px 40px; border-bottom: 1px solid var(--rule); }
 .hero .k { font-family: var(--f-mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-.hero h1 { font-size: clamp(36px, 5.2vw, 64px); max-width: 18ch; }
+.hero h1 { font-size: clamp(32px, 4.2vw, 54px); max-width: 24ch; }
+.hero .hero-fig { width: min(640px, 100%); display: grid; gap: 6px; justify-items: center; }
+.hero .hero-fig canvas { width: 100%; height: auto; display: block; }
 .hero h1 em { color: var(--blue); }
 .hero p { max-width: 62ch; color: var(--ink2); font-size: 19px; }
 .hero .meta { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
